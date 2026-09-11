@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rancho Doble S</title>
+    <meta
+      name="description"
+      content="Sistema de acceso, control de visitas y reservas del Rancho Doble S."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section class="screen auth-screen active" id="authScreen" aria-live="polite">
+        <div class="auth-shell">
+          <div class="brand-panel glass-card">
+            <div class="brand-mark">RDS</div>
+            <p class="eyebrow">Portal</p>
+            <h1>Rancho Doble S</h1>
+            <p class="brand-copy">
+              Portal digital para novedades, reservas y servicios del predio.
+            </p>
+            <ul class="brand-features">
+              <li>Novedades del predio</li>
+              <li>Reservas de tenis</li>
+              <li>Notificaciones del barrio</li>
+            </ul>
+          </div>
+
+          <div class="auth-panel glass-card">
+            <div class="auth-tabs" role="tablist" aria-label="Acceso">
+              <button class="auth-tab active" type="button" data-auth-view="login" aria-selected="true">
+                Iniciar sesión
+              </button>
+              <button class="auth-tab" type="button" data-auth-view="register" aria-selected="false">
+                Registro
+              </button>
+            </div>
+
+            <form id="loginForm" class="auth-form active">
+              <div class="form-header">
+                <h2>Bienvenido</h2>
+                <p>Accedé con tu cuenta aprobada.</p>
+              </div>
+
+              <label>
+                <span>Email</span>
+                <input type="email" name="email" id="loginEmail" placeholder="tuemail@ejemplo.com" required />
+              </label>
+
+              <label>
+                <span>Contraseña</span>
+                <input type="password" name="password" id="loginPassword" placeholder="••••••••" required />
+              </label>
+
+              <button type="submit" class="primary-btn">Ingresar</button>
+            </form>
+
+            <form id="registerForm" class="auth-form" novalidate>
+              <div class="form-header">
+                <h2>Crear cuenta</h2>
+                <p>Tu solicitud será revisada por administración.</p>
+              </div>
+
+              <div class="field-grid two-col">
+                <label>
+                  <span>Apellido</span>
+                  <input type="text" name="apellido" required />
+                </label>
+                <label>
+                  <span>Nombre</span>
+                  <input type="text" name="nombre" required />
+                </label>
+              </div>
+
+              <div class="field-grid two-col">
+                <label>
+                  <span>Tipo de documento</span>
+                  <select name="tipoDocumento" required>
+                    <option value="">Seleccionar</option>
+                    <option value="DNI">DNI</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Número de documento</span>
+                  <input type="text" name="numeroDocumento" required />
+                </label>
+              </div>
+
+              <div class="field-grid two-col">
+                <label>
+                  <span>Teléfono</span>
+                  <input type="tel" name="telefono" required />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input type="email" name="email" required />
+                </label>
+              </div>
+
+              <label>
+                <span>Contraseña</span>
+                <input type="password" name="password" id="registerPassword" required />
+              </label>
+
+              <label>
+                <span>Confirmar contraseña</span>
+                <input type="password" name="confirmPassword" id="confirmPassword" required />
+              </label>
+
+              <button type="submit" class="primary-btn">Solicitar acceso</button>
+              <div class="form-status" id="registerStatus" aria-live="polite"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen app-screen" id="dashboardScreen" aria-live="polite">
+        <header class="topbar glass-card">
+          <div class="topbar-brand">
+            <div class="brand-mini">RDS</div>
+            <div>
+              <p class="eyebrow">Portal</p>
+              <h2>Rancho Doble S</h2>
+            </div>
+          </div>
+
+          <nav class="topbar-nav" aria-label="Navegación principal">
+            <button type="button" class="nav-link active" data-view="news">Novedades</button>
+            <button type="button" class="nav-link" data-view="booking">Reservas</button>
+            <button type="button" class="nav-link" data-view="visits">Mis visitas</button>
+            <button type="button" class="notification-trigger" id="notificationsToggle" aria-label="Abrir notificaciones">
+              <span class="icon">🔔</span>
+              <span class="badge" id="notificationBadge">3</span>
+            </button>
+          </nav>
+
+          <div class="topbar-actions">
+            <div class="user-chip">
+              <span class="avatar" id="userInitials">LS</span>
+              <div>
+                <strong id="userFullName">Lucía S.</strong>
+                <small>Propietario</small>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="dashboard-layout">
+          <main class="content-panel">
+            <section id="newsSection" class="content-section active">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Portal</p>
+                  <h3>Novedades</h3>
+                </div>
+              </div>
+
+              <div class="news-layout">
+                <div class="glass-card panel-block">
+                  <div class="panel-heading">
+                    <h4>Novedades del predio</h4>
+                    <span class="badge soft">Portal</span>
+                  </div>
+                  <ul id="predioNewsList" class="list-stack news-feed"></ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="myVisitsSection" class="content-section">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Portal</p>
+                  <h3>Mis visitas</h3>
+                </div>
+              </div>
+
+              <div class="glass-card panel-block visit-panel">
+                <div class="panel-heading">
+                  <h4>Registro de visitas</h4>
+                  <span class="badge soft">Portal</span>
+                </div>
+
+                <form id="visitForm" class="visit-form" novalidate>
+                  <div class="field-grid two-col">
+                    <label>
+                      <span>Nombre y apellido</span>
+                      <input type="text" name="visitName" placeholder="Ej: Ana López" required />
+                    </label>
+                    <label>
+                      <span>DNI</span>
+                      <input type="text" name="visitDni" placeholder="Ej: 43.123.456" required />
+                    </label>
+                  </div>
+
+                  <div class="field-grid two-col">
+                    <label>
+                      <span>Fecha</span>
+                      <input type="date" name="visitDate" required />
+                    </label>
+                    <label>
+                      <span>Horario</span>
+                      <input type="time" name="visitTime" required />
+                    </label>
+                  </div>
+
+                  <button type="submit" class="primary-btn small-btn">Registrar visita</button>
+                </form>
+
+                <div class="visit-list-wrap">
+                  <h5>Visitas programadas</h5>
+                  <ul id="userVisitsList" class="list-stack visit-list"></ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="bookingSection" class="content-section">
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Reservas</p>
+                  <h3>Reserva de tenis</h3>
+                </div>
+              </div>
+
+              <div class="booking-card glass-card">
+                <div class="booking-header">
+                  <div>
+                    <strong>Horario permitido</strong>
+                    <small>07:00 hs a 22:00 hs</small>
+                  </div>
+                  <div class="legend">
+                    <span><i class="dot free"></i> Disponibles</span>
+                    <span><i class="dot booked"></i> Reservadas</span>
+                  </div>
+                </div>
+
+                <div class="booking-filters" role="tablist" aria-label="Filtros de reservas">
+                  <button type="button" class="booking-filter active" data-filter="all">Ver todas</button>
+                  <button type="button" class="booking-filter" data-filter="reserved">Reservadas</button>
+                  <button type="button" class="booking-filter" data-filter="free">Disponibles</button>
+                </div>
+
+                <div id="bookingGrid" class="booking-grid" aria-live="polite"></div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </section>
+    </div>
+
+    <aside id="notificationPanel" class="notification-panel glass-card" aria-label="Centro de alertas">
+      <div class="panel-top">
+        <div>
+          <p class="eyebrow">Centro de alertas</p>
+          <h3>Notificaciones</h3>
+        </div>
+        <button type="button" id="closeNotifications" class="icon-btn" aria-label="Cerrar panel">✕</button>
+      </div>
+
+      <div class="notification-toolbar">
+        <button type="button" class="text-btn" id="markAllRead">Marcar todo como leído</button>
+      </div>
+
+      <ul id="notificationList" class="notification-list"></ul>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
