@@ -622,8 +622,8 @@ function renderExpenses() {
       expensesList.innerHTML = state.expenses
         .map((item) => `
           <li class="visit-item">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <div>
+            <div class="expense-item-row">
+              <div class="expense-item-info">
                 <strong>${escapeHTML(item.period)} — $ ${Number(item.amount).toLocaleString('es-AR')}</strong>
                 <small>${escapeHTML(item.concept || 'Expensas ordinarias')} · Vencimiento: ${escapeHTML(item.dueDate)}</small>
               </div>

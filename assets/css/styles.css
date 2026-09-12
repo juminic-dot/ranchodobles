@@ -1186,6 +1186,32 @@ body.notification-open {
     width: 100%;
     padding: 0.75rem 0.5rem;
   }
+
+  .expenses-summary-card {
+    padding: 0.85rem;
+  }
+
+  .bank-details-box {
+    padding: 0.8rem;
+  }
+
+  .bank-details-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .bank-details-grid strong {
+    font-size: 0.88rem;
+  }
+
+  .expense-action-row {
+    width: 100%;
+  }
+
+  .expense-action-row .primary-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* User chip & Logout */
@@ -1761,11 +1787,27 @@ body.notification-open {
 .expenses-layout {
   display: grid;
   gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .expenses-layout {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: start;
+  }
 }
 
 .expenses-summary-card {
   display: grid;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .expense-highlight {
@@ -1773,9 +1815,16 @@ body.notification-open {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.8rem;
   padding: 0.5rem 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  width: 100%;
+  min-width: 0;
+}
+
+.expense-highlight > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .expense-label {
@@ -1786,17 +1835,34 @@ body.notification-open {
 }
 
 .expense-amount {
-  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-size: clamp(1.6rem, 5vw, 2.5rem);
   color: #2dd4bf;
   letter-spacing: -0.03em;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .expense-dates-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  font-size: 0.92rem;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.9rem;
   color: var(--muted);
+  width: 100%;
+  min-width: 0;
+}
+
+.expense-dates-row span {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 600px) {
+  .expense-dates-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
 }
 
 .expense-dates-row strong {
@@ -1807,49 +1873,97 @@ body.notification-open {
   display: flex;
   justify-content: flex-start;
   margin-top: 0.2rem;
+  width: 100%;
 }
 
 .bank-details-box {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 1.1rem;
+  padding: 1rem;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.75rem;
   margin-top: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .bank-details-box h5 {
   margin: 0;
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  word-break: break-word;
 }
 
 .bank-details-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.75rem;
   font-size: 0.88rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.bank-details-grid > div {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .bank-details-grid small {
   display: block;
   color: var(--muted);
   font-size: 0.75rem;
+  margin-bottom: 0.15rem;
 }
 
 .bank-details-grid strong {
+  display: block;
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .copyable {
   cursor: pointer;
   user-select: all;
   color: var(--secondary) !important;
+}
+
+/* History items in expenses */
+.expense-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+}
+
+.expense-item-info {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.expense-item-info strong {
+  display: block;
+  word-break: break-word;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.expense-item-info small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  word-break: break-word;
+  line-height: 1.4;
+  margin-top: 0.2rem;
 }
 
 /* ============================================================
