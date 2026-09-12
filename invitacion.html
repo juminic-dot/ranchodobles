@@ -70,10 +70,12 @@
       }
 
       .qr-box img {
-        width: 240px;
-        height: 240px;
+        width: min(220px, 58vw);
+        height: min(220px, 58vw);
+        max-width: 100%;
         display: block;
         border-radius: 8px;
+        object-fit: contain;
       }
 
       .qr-message-banner {

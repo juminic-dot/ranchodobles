@@ -896,6 +896,7 @@ select:focus {
   pointer-events: auto;
 }
 
+body.modal-open,
 body.notification-open {
   overflow: hidden;
   touch-action: none;
@@ -1136,6 +1137,54 @@ body.notification-open {
     border-radius: 0;
     border-left: none;
     padding: 1.25rem 1rem max(1.5rem, env(safe-area-inset-bottom, 1.5rem)) 1rem;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem 0.5rem;
+    align-items: center;
+  }
+
+  .modal-card {
+    padding: 1.1rem 0.9rem;
+    border-radius: 18px;
+    max-height: calc(100dvh - 1.5rem);
+    width: 100%;
+  }
+
+  .qr-box {
+    padding: 0.8rem;
+  }
+
+  .qr-box img {
+    width: min(155px, 44vw);
+    height: min(155px, 44vw);
+  }
+
+  .qr-message-banner {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.88rem;
+    border-radius: 12px;
+  }
+
+  .guest-summary-table {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.84rem;
+    gap: 0.45rem;
+  }
+
+  .guest-summary-table div {
+    padding-bottom: 0.3rem;
+  }
+
+  .qr-modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .qr-modal-actions .primary-btn,
+  .qr-modal-actions .text-btn {
+    width: 100%;
+    padding: 0.75rem 0.5rem;
   }
 }
 
@@ -1396,19 +1445,35 @@ body.notification-open {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 9, 15, 0.78);
+  background: rgba(4, 9, 15, 0.82);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  box-sizing: border-box;
 }
 
 .modal-card {
   width: min(580px, 100%);
-  padding: 1.6rem;
-  background: linear-gradient(180deg, rgba(21, 33, 46, 0.96), rgba(12, 19, 28, 0.96));
+  max-width: 100%;
+  margin: auto;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, rgba(21, 33, 46, 0.98), rgba(12, 19, 28, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2.5rem);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 .modal-header {
@@ -1416,6 +1481,7 @@ body.notification-open {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.2rem;
+  flex-shrink: 0;
 }
 
 .modal-form {
@@ -1935,53 +2001,81 @@ body.notification-open {
 
 /* QR Pass Modal and Banners */
 .qr-modal-card {
-  width: min(520px, 95vw);
+  width: min(490px, 100%);
   text-align: center;
 }
 
 .qr-modal-body {
-  display: grid;
-  gap: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.2rem 0.35rem 0.5rem 0.2rem;
+  scrollbar-width: thin;
+}
+
+.qr-modal-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.qr-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.qr-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
 }
 
 .qr-message-banner {
   background: linear-gradient(135deg, rgba(105, 210, 166, 0.18), rgba(138, 206, 255, 0.14));
   border: 1px solid rgba(105, 210, 166, 0.38);
   border-radius: 16px;
-  padding: 1.1rem 1.2rem;
+  padding: 0.95rem 1.1rem;
   color: #edf4ff;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.45;
   box-shadow: 0 8px 24px rgba(53, 181, 125, 0.18);
   text-align: center;
+  flex-shrink: 0;
 }
 
 .qr-box {
   background: #ffffff;
-  padding: 1.2rem;
-  border-radius: 20px;
+  padding: 1rem;
+  border-radius: 18px;
   display: inline-block;
   margin: 0 auto;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
 }
 
 .qr-box img {
-  width: 220px;
-  height: 220px;
+  width: min(180px, 46vw);
+  height: min(180px, 46vw);
+  max-width: 100%;
   display: block;
   border-radius: 8px;
+  object-fit: contain;
 }
 
 .guest-summary-table {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 1rem 1.2rem;
+  padding: 0.9rem 1.1rem;
   text-align: left;
   display: grid;
-  gap: 0.6rem;
-  font-size: 0.9rem;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  flex-shrink: 0;
 }
 
 .guest-summary-table div {
@@ -1989,7 +2083,7 @@ body.notification-open {
   justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
 }
 
 .guest-summary-table div:last-child {
@@ -2006,7 +2100,9 @@ body.notification-open {
   justify-content: center;
   gap: 0.8rem;
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  margin-top: 0.2rem;
+  padding-bottom: 0.4rem;
+  flex-shrink: 0;
 }
 
 

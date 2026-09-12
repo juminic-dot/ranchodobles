@@ -440,7 +440,14 @@ function showQrPassModal(visit) {
     };
   }
 
-  viewQrModal.style.display = 'grid';
+  viewQrModal.style.display = 'flex';
+  document.body.classList.add('modal-open');
+}
+
+function hideQrPassModal() {
+  if (!viewQrModal) return;
+  viewQrModal.style.display = 'none';
+  document.body.classList.remove('modal-open');
 }
 
 async function loadUserVisits() {
@@ -1158,15 +1165,18 @@ function attachEventListeners() {
 
   // QR Modal close handlers
   if (closeViewQrModal) {
-    closeViewQrModal.addEventListener('click', () => {
-      if (viewQrModal) viewQrModal.style.display = 'none';
-    });
+    closeViewQrModal.addEventListener('click', hideQrPassModal);
   }
   if (viewQrModal) {
     viewQrModal.addEventListener('click', (e) => {
-      if (e.target === viewQrModal) viewQrModal.style.display = 'none';
+      if (e.target === viewQrModal) hideQrPassModal();
     });
   }
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && viewQrModal && viewQrModal.style.display !== 'none') {
+      hideQrPassModal();
+    }
+  });
 
   // Listen to session expiry
   window.addEventListener('auth:expired', () => {
