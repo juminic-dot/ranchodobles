@@ -1,4 +1,12 @@
-const API_BASE = '';
+// Auto-detect base path when hosted under a subfolder (e.g. /ranchos)
+const getApiBase = () => {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') {
+    return `/${parts[0]}`;
+  }
+  return '';
+};
+const API_BASE = getApiBase();
 
 const API = {
   getToken() {

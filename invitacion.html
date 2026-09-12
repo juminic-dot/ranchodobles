@@ -285,7 +285,9 @@
         submitGuestBtn.textContent = 'Generando código QR...';
 
         try {
-          const res = await fetch('/api/visits/guest-register', {
+          const parts = window.location.pathname.split('/').filter(Boolean);
+          const apiBase = (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') ? `/${parts[0]}` : '';
+          const res = await fetch(`${apiBase}/api/visits/guest-register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

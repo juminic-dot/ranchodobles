@@ -24,19 +24,31 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend assets
 app.use(express.static(path.join(__dirname)));
+app.use('/ranchos', express.static(path.join(__dirname)));
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/bookings', bookingsRoutes);
-app.use('/api/visits', visitsRoutes);
-app.use('/api/news', newsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/expenses', expensesRoutes);
+const registerApi = (prefix = '') => {
+  app.use(`${prefix}/api/auth`, authRoutes);
+  app.use(`${prefix}/api/admin`, adminRoutes);
+  app.use(`${prefix}/api/bookings`, bookingsRoutes);
+  app.use(`${prefix}/api/visits`, visitsRoutes);
+  app.use(`${prefix}/api/news`, newsRoutes);
+  app.use(`${prefix}/api/notifications`, notificationsRoutes);
+  app.use(`${prefix}/api/expenses`, expensesRoutes);
+  app.get(`${prefix}/api/health`, (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+};
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+registerApi('');
+registerApi('/ranchos');
+
+// Fallback for missing API endpoints
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/ranchos/api/')) {
+    return res.status(404).json({ error: 'Endpoint de API no encontrado.' });
+  }
+  next();
 });
 
 // SPA fallback: send index.html
