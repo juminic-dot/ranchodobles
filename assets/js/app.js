@@ -52,6 +52,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 const adminNavBtn = document.getElementById('adminNavBtn');
 const adminPendingCountBadge = document.getElementById('adminPendingCountBadge');
 const notificationPanel = document.getElementById('notificationPanel');
+const notificationBackdrop = document.getElementById('notificationBackdrop');
 const notificationList = document.getElementById('notificationList');
 const notificationBadge = document.getElementById('notificationBadge');
 const notificationsToggle = document.getElementById('notificationsToggle');
@@ -178,6 +179,10 @@ function toggleNotificationsPanel(forceOpen) {
   if (!notificationPanel) return;
   const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !notificationPanel.classList.contains('open');
   notificationPanel.classList.toggle('open', shouldOpen);
+  if (notificationBackdrop) {
+    notificationBackdrop.classList.toggle('open', shouldOpen);
+  }
+  document.body.classList.toggle('notification-open', shouldOpen);
 }
 
 // ----------------- NOTIFICATIONS ----------------- //
@@ -1114,6 +1119,7 @@ function attachEventListeners() {
   // Notifications drawer
   if (notificationsToggle) notificationsToggle.addEventListener('click', () => toggleNotificationsPanel());
   if (closeNotifications) closeNotifications.addEventListener('click', () => toggleNotificationsPanel(false));
+  if (notificationBackdrop) notificationBackdrop.addEventListener('click', () => toggleNotificationsPanel(false));
   if (markAllRead) markAllRead.addEventListener('click', handleMarkAllNotificationsRead);
 
   // Admin news creation modal

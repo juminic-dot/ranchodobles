@@ -878,22 +878,50 @@ select:focus {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Backdrop & Body Lock for Notifications */
+.notification-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 9, 15, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 38;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.notification-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.notification-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
 .notification-panel {
   position: fixed;
   right: 0;
   top: 0;
   width: min(86vw, 420px);
+  height: 100%;
   height: 100vh;
-  padding: 1rem;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 1.25rem 1rem 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   transform: translateX(115%);
-  transition: transform 0.3s ease;
-  z-index: 20;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 40;
   border-radius: 26px 0 0 26px;
-  background: linear-gradient(180deg, rgba(13, 21, 29, 0.98), rgba(7, 12, 18, 0.96));
+  background: linear-gradient(180deg, rgba(13, 21, 29, 0.98), rgba(7, 12, 18, 0.97));
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.22);
+  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .notification-panel.open {
@@ -906,6 +934,7 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .panel-top {
@@ -934,13 +963,32 @@ select:focus {
 .notification-list {
   list-style: none;
   margin: 0;
-  padding: 0 0.15rem 0 0;
-  display: grid;
+  padding: 0 0.35rem 2rem 0;
+  display: flex;
+  flex-direction: column;
   gap: 0.8rem;
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-width: thin;
+}
+
+.notification-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
 }
 
 .notification-item {
@@ -950,6 +998,7 @@ select:focus {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
 }
 
 .notification-item.unread {
@@ -1079,6 +1128,14 @@ select:focus {
 
   .booking-grid {
     grid-template-columns: 1fr;
+  }
+
+  .notification-panel {
+    width: 100vw;
+    width: 100%;
+    border-radius: 0;
+    border-left: none;
+    padding: 1.25rem 1rem max(1.5rem, env(safe-area-inset-bottom, 1.5rem)) 1rem;
   }
 }
 
