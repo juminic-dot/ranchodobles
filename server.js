@@ -1,0 +1,66 @@
+require('dotenv').config();
+const path = require('path');
+const express = require('express');
+const cors = require('cors');
+
+// Initialize database schema and seeds
+require('./server/db');
+
+const authRoutes = require('./server/routes/auth');
+const adminRoutes = require('./server/routes/admin');
+const bookingsRoutes = require('./server/routes/bookings');
+const visitsRoutes = require('./server/routes/visits');
+const newsRoutes = require('./server/routes/news');
+const notificationsRoutes = require('./server/routes/notifications');
+const expensesRoutes = require('./server/routes/expenses');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Security & utility middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static frontend assets
+app.use(express.static(path.join(__dirname)));
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/bookings', bookingsRoutes);
+app.use('/api/visits', visitsRoutes);
+app.use('/api/news', newsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/expenses', expensesRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// SPA fallback: send index.html
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('[Server Error]', err);
+  res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
+});
+
+let server = null;
+if (require.main === module) {
+  server = app.listen(PORT, () => {
+    console.log(`=========================================`);
+    console.log(` Rancho Doble S - Servidor en ejecución`);
+    console.log(` URL Local: http://localhost:${PORT}`);
+    console.log(` Modo: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`=========================================`);
+  });
+}
+
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;

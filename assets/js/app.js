@@ -1,208 +1,109 @@
-const STORAGE_KEYS = {
-  users: 'ranchodobles_users',
-  bookings: 'ranchodobles_bookings',
-  notifications: 'ranchodobles_notifications',
-  userVisits: 'ranchodobles_user_visits'
-};
+// Rancho Doble S - Portal Web (Client-Server Architecture)
 
-const defaultUser = {
-  id: 'user-1',
-  apellido: 'Sánchez',
-  nombre: 'Lucía',
-  tipoDocumento: 'DNI',
-  numeroDocumento: '30123456',
-  telefono: '1123456789',
-  username: 'lucia',
-  email: 'lucia@ranchodobles.com',
-  password: '123456',
-  approved: true
-};
-
-const adminUser = {
-  id: 'admin-1',
-  apellido: 'Administrador',
-  nombre: 'Admin',
-  tipoDocumento: 'DNI',
-  numeroDocumento: '00000000',
-  telefono: '1100000000',
-  username: 'admin',
-  email: 'admin@ranchodobles.com',
-  password: 'admin123',
-  approved: true,
-  role: 'admin'
-};
-
-const commonUser = {
-  id: 'user-2',
-  apellido: 'García',
-  nombre: 'Nicolás',
-  tipoDocumento: 'DNI',
-  numeroDocumento: '40222333',
-  telefono: '1166677788',
-  username: 'nicolas',
-  email: 'nicolas@gmail.com',
-  password: '123456',
-  approved: true
-};
-
-const builtInUsers = [defaultUser, adminUser, commonUser];
-
-const defaultBookings = [
-  { id: '07:00 - 08:00', slot: '07:00 - 08:00', occupant: 'Gimenez', status: 'booked' },
-  { id: '10:00 - 11:00', slot: '10:00 - 11:00', occupant: 'Mendoza', status: 'booked' },
-  { id: '15:00 - 16:00', slot: '15:00 - 16:00', occupant: 'Martinez', status: 'booked' },
-  { id: '16:00 - 17:00', slot: '16:00 - 17:00', occupant: 'Ruiz', status: 'booked' },
-  { id: '17:00 - 18:00', slot: '17:00 - 18:00', occupant: 'Lopez', status: 'booked' },
-  { id: '18:00 - 19:00', slot: '18:00 - 19:00', occupant: 'Varela', status: 'booked' },
-  { id: '19:00 - 20:00', slot: '19:00 - 20:00', occupant: 'Pereyra', status: 'booked' }
-];
-
-function mergeBookings(savedBookings) {
-  const merged = [...defaultBookings, ...(Array.isArray(savedBookings) ? savedBookings : [])];
-  const seen = new Map();
-
-  merged.forEach((booking) => {
-    const key = booking.id || booking.slot;
-    if (!seen.has(key)) {
-      seen.set(key, booking);
-    }
-  });
-
-  return [...seen.values()];
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-const defaultNotifications = [
-  {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-n1',
-    title: 'Mantenimiento programado',
-    text: 'Se realizará mantenimiento del portón principal el viernes a las 10:00 hs.',
-    time: 'Hace 15 min',
-    read: false
-  },
-  {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-n2',
-    title: 'Reserva confirmada',
-    text: 'Tu reserva de cancha para mañana a las 18:00 hs fue confirmada.',
-    time: 'Hace 1 hora',
-    read: false
-  },
-  {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-n3',
-    title: 'Novedad de administración',
-    text: 'La reunión vecinal se realizará este miércoles a las 20:00 hs.',
-    time: 'Ayer',
-    read: true
-  }
-];
-
-function getInitialUsers() {
-  const savedUsers = loadStorage(STORAGE_KEYS.users, builtInUsers);
-  const mergedUsers = [...builtInUsers, ...savedUsers.filter((user) => !builtInUsers.some((builtUser) => builtUser.email.toLowerCase() === user.email.toLowerCase()))];
-  return mergedUsers;
+function getTodayISO() {
+  const today = new Date();
+  return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 }
 
-const defaultPredioNews = [
-  {
-    title: 'Inauguracion de la nueva cancha de voley del predio!! Los esperamos con las reservas.',
-    category: 'Infraestructura',
-    date: '2026-09-12',
-    status: 'Nueva',
-    description: 'La inauguración de la nueva cancha de voley del predio!! Los esperamos con las reservas.',
-    image: 'https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    title: 'Se terminó la obra de iluminación del ingreso por Solís.',
-    category: 'Seguridad',
-    date: '2026-09-11',
-    status: 'Actualizado',
-    description: 'Quedó finalizada la obra de iluminación del ingreso por Solís, mejorando la visibilidad y la seguridad del acceso al predio.',
-    image: './descarga.jfif'
-  }
-];
-
-const defaultUserVisits = [
-  {
-    userId: defaultUser.id,
-    userEmail: defaultUser.email,
-    name: 'María López',
-    dni: '24.222.333',
-    date: '2026-09-12',
-    time: '18:30',
-    status: 'Confirmada'
-  },
-  {
-    userId: defaultUser.id,
-    userEmail: defaultUser.email,
-    name: 'José Martínez',
-    dni: '28.556.441',
-    date: '2026-09-15',
-    time: '12:00',
-    status: 'Pendiente'
-  }
-];
+function getTomorrowISO() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+}
 
 const state = {
   authenticatedUser: null,
   activeAuthView: 'login',
-  activeDashboardView: 'visits',
+  activeDashboardView: 'news',
   bookingFilter: 'all',
-  bookings: mergeBookings(loadStorage(STORAGE_KEYS.bookings, defaultBookings)),
-  notifications: loadStorage(STORAGE_KEYS.notifications, defaultNotifications),
-  users: getInitialUsers(),
-  newsItems: [...defaultPredioNews],
-  userVisits: loadStorage(STORAGE_KEYS.userVisits, defaultUserVisits).map((visit) => ({
-    ...visit,
-    userId: visit.userId || defaultUser.id,
-    userEmail: visit.userEmail || defaultUser.email
-  }))
+  selectedBookingDate: getTodayISO(),
+  bookings: [],
+  validSlots: [],
+  notifications: [],
+  newsItems: [],
+  userVisits: [],
+  adminVisits: [],
+  pendingUsers: [],
+  adminStats: null
 };
 
+// DOM Elements
+const authScreen = document.getElementById('authScreen');
+const dashboardScreen = document.getElementById('dashboardScreen');
 const authTabs = document.querySelectorAll('.auth-tab');
 const authForms = document.querySelectorAll('.auth-form');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const registerStatus = document.getElementById('registerStatus');
-const dashboardScreen = document.getElementById('dashboardScreen');
-const authScreen = document.getElementById('authScreen');
-const notificationPanel = document.getElementById('notificationPanel');
-const notificationList = document.getElementById('notificationList');
-const bookingGrid = document.getElementById('bookingGrid');
-const visitForm = document.getElementById('visitForm');
-const toast = document.getElementById('toast');
 const userFullName = document.getElementById('userFullName');
 const userInitials = document.getElementById('userInitials');
+const userRoleBadge = document.getElementById('userRoleBadge');
+const logoutBtn = document.getElementById('logoutBtn');
+const adminNavBtn = document.getElementById('adminNavBtn');
+const adminPendingCountBadge = document.getElementById('adminPendingCountBadge');
+const notificationPanel = document.getElementById('notificationPanel');
+const notificationList = document.getElementById('notificationList');
 const notificationBadge = document.getElementById('notificationBadge');
-const statNotifications = document.getElementById('statNotifications');
+const notificationsToggle = document.getElementById('notificationsToggle');
+const closeNotifications = document.getElementById('closeNotifications');
+const markAllRead = document.getElementById('markAllRead');
+const toast = document.getElementById('toast');
+
+// Bookings DOM
+const bookingGrid = document.getElementById('bookingGrid');
+const bookingDateInput = document.getElementById('bookingDateInput');
+const btnDateToday = document.getElementById('btnDateToday');
+const btnDateTomorrow = document.getElementById('btnDateTomorrow');
+
+// Visits & Invitations DOM
+const visitForm = document.getElementById('visitForm');
+const visitDateField = document.getElementById('visitDateField');
+const visitTimeField = document.getElementById('visitTimeField');
 const userVisitsList = document.getElementById('userVisitsList');
+const openGmailInviteBtn = document.getElementById('openGmailInviteBtn');
+const copyInviteLinkEmailBtn = document.getElementById('copyInviteLinkEmailBtn');
+const openWhatsAppInviteBtn = document.getElementById('openWhatsAppInviteBtn');
+const copyInviteLinkWhatsappBtn = document.getElementById('copyInviteLinkWhatsappBtn');
+const toggleManualVisitFormBtn = document.getElementById('toggleManualVisitFormBtn');
+const viewQrModal = document.getElementById('viewQrModal');
+const closeViewQrModal = document.getElementById('closeViewQrModal');
+
+// News & Modal DOM
 const predioNewsList = document.getElementById('predioNewsList');
+const adminNewsActions = document.getElementById('adminNewsActions');
+const openCreateNewsModalBtn = document.getElementById('openCreateNewsModalBtn');
+const createNewsModal = document.getElementById('createNewsModal');
+const closeCreateNewsModal = document.getElementById('closeCreateNewsModal');
+const cancelCreateNewsBtn = document.getElementById('cancelCreateNewsBtn');
+const createNewsForm = document.getElementById('createNewsForm');
 
-const timeSlots = [
-  '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
-  '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00',
-  '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00',
-  '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00'
-];
-
-function loadStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (error) {
-    return fallback;
-  }
-}
-
-function saveStorage(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
+// Admin DOM
+const pendingUsersList = document.getElementById('pendingUsersList');
+const adminPendingStatusCount = document.getElementById('adminPendingStatusCount');
+const adminVisitsList = document.getElementById('adminVisitsList');
+const refreshAdminVisitsBtn = document.getElementById('refreshAdminVisitsBtn');
+const statTotalUsers = document.getElementById('statTotalUsers');
+const statPendingUsers = document.getElementById('statPendingUsers');
+const statTodayVisits = document.getElementById('statTodayVisits');
 
 function showToast(message) {
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.add('show');
   window.clearTimeout(showToast.timeoutId);
   showToast.timeoutId = window.setTimeout(() => {
     toast.classList.remove('show');
-  }, 2200);
+  }, 2600);
 }
 
 function setAuthView(view) {
@@ -226,306 +127,855 @@ function setDashboardView(view) {
   });
 
   const sectionMap = {
+    home: 'homeSection',
+    expenses: 'expensesSection',
     news: 'newsSection',
     visits: 'myVisitsSection',
-    booking: 'bookingSection'
+    booking: 'bookingSection',
+    admin: 'adminSection'
   };
 
   document.querySelectorAll('.content-section').forEach((section) => {
     section.classList.toggle('active', section.id === sectionMap[view]);
   });
+
+  // Load section-specific data on navigation
+  if (view === 'expenses') loadExpenses();
+  if (view === 'news') loadNews();
+  if (view === 'visits') loadUserVisits();
+  if (view === 'booking') loadBookings();
+  if (view === 'admin' && state.authenticatedUser?.role === 'admin') loadAdminData();
+  if (view === 'home' && state.authenticatedUser?.role === 'admin') loadAdminData();
 }
 
 function renderUserProfile() {
   if (!state.authenticatedUser) return;
-
   const user = state.authenticatedUser;
-  const initials = `${user.nombre[0] || ''}${user.apellido[0] || ''}`.toUpperCase();
-  userFullName.textContent = `${user.nombre} ${user.apellido}`;
-  userInitials.textContent = initials;
+  const initials = `${user.nombre?.[0] || ''}${user.apellido?.[0] || ''}`.toUpperCase();
+
+  if (userFullName) userFullName.textContent = `${user.nombre} ${user.apellido}`;
+  if (userInitials) userInitials.textContent = initials || 'US';
+  if (userRoleBadge) {
+    userRoleBadge.textContent = user.role === 'admin' ? 'Administrador' : 'Propietario';
+    userRoleBadge.style.color = user.role === 'admin' ? 'var(--gold)' : 'var(--muted)';
+  }
+
+  const homeWelcomeTitle = document.getElementById('homeWelcomeTitle');
+  if (homeWelcomeTitle) {
+    homeWelcomeTitle.textContent = `¡Hola, ${user.nombre}!`;
+  }
+
+  // Show or hide admin controls
+  const isAdmin = user.role === 'admin';
+  if (adminNavBtn) adminNavBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (adminNewsActions) adminNewsActions.style.display = isAdmin ? 'block' : 'none';
+
+  const homeAdminBtn = document.getElementById('homeAdminBtn');
+  if (homeAdminBtn) homeAdminBtn.style.display = isAdmin ? 'flex' : 'none';
 }
 
-function getUnreadNotificationsCount() {
-  return state.notifications.filter((notification) => !notification.read).length;
+function toggleNotificationsPanel(forceOpen) {
+  if (!notificationPanel) return;
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !notificationPanel.classList.contains('open');
+  notificationPanel.classList.toggle('open', shouldOpen);
+}
+
+// ----------------- NOTIFICATIONS ----------------- //
+
+async function loadNotifications() {
+  try {
+    const notifications = await API.notifications.get();
+    state.notifications = notifications;
+    renderNotifications();
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
 }
 
 function renderNotifications() {
-  const unreadCount = getUnreadNotificationsCount();
+  if (!notificationList) return;
+  const unreadCount = state.notifications.filter((n) => !n.read).length;
 
   if (notificationBadge) {
     notificationBadge.textContent = unreadCount;
     notificationBadge.style.display = unreadCount > 0 ? 'inline-flex' : 'none';
   }
 
-  if (statNotifications) {
-    statNotifications.textContent = state.notifications.length;
+  if (state.notifications.length === 0) {
+    notificationList.innerHTML = `
+      <li class="notification-item">
+        <p>No tenés notificaciones pendientes.</p>
+      </li>
+    `;
+    return;
   }
 
   notificationList.innerHTML = state.notifications
-    .map(
-      (notification) => `
+    .map((notification) => {
+      const dateStr = notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : '';
+      return `
         <li class="notification-item ${notification.read ? '' : 'unread'}">
-          <strong>${notification.title}</strong>
-          <small>${notification.time}</small>
-          <p>${notification.text}</p>
+          <strong>${escapeHTML(notification.title)}</strong>
+          <small>${escapeHTML(dateStr)}</small>
+          <p>${escapeHTML(notification.text)}</p>
         </li>
-      `
-    )
+      `;
+    })
     .join('');
 }
 
-function renderPredioNews() {
+async function handleMarkAllNotificationsRead() {
+  try {
+    await API.notifications.markAllRead();
+    state.notifications = state.notifications.map((n) => ({ ...n, read: 1 }));
+    renderNotifications();
+    showToast('Notificaciones marcadas como leídas.');
+  } catch (error) {
+    showToast(error.message || 'Error al actualizar notificaciones.');
+  }
+}
+
+// ----------------- NEWS ----------------- //
+
+async function loadNews() {
+  try {
+    const news = await API.news.get();
+    state.newsItems = news;
+    renderNews();
+  } catch (error) {
+    console.error('Error loading news:', error);
+  }
+}
+
+function renderNews() {
   if (!predioNewsList) return;
+  const isAdmin = state.authenticatedUser?.role === 'admin';
 
-  const news = state.newsItems.length ? state.newsItems : [{
-    title: 'Sin novedades por el momento',
-    category: 'Actualización',
-    date: '-',
-    status: 'Sin registro',
-    description: 'No hay publicaciones del sector de administración cargadas.',
-    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80'
-  }];
+  if (!state.newsItems || state.newsItems.length === 0) {
+    predioNewsList.innerHTML = `
+      <li class="news-card">
+        <div class="news-content">
+          <strong>Sin novedades por el momento</strong>
+          <p>No hay publicaciones de la administración cargadas actualmente.</p>
+        </div>
+      </li>
+    `;
+    return;
+  }
 
-  predioNewsList.innerHTML = news
-    .map(
-      (item) => `
-        <li class="news-card">
-          <img src="${item.image || 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80'}" alt="${item.title || 'Novedad del predio'}" />
-          <div class="news-content">
-            <span class="news-category">${item.category || 'Novedad'}</span>
-            <strong>${item.title || item.name}</strong>
-            <small>${item.date || '-'} · ${item.status || 'Aviso'}</small>
-            <p>${item.description || ''}</p>
+  predioNewsList.innerHTML = state.newsItems
+    .map((item) => `
+      <li class="news-card">
+        <img src="${escapeHTML(item.image || './descarga.jfif')}" alt="${escapeHTML(item.title)}" onerror="this.src='./descarga.jfif'" />
+        <div class="news-content">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="news-category">${escapeHTML(item.category || 'Novedad')}</span>
+            ${isAdmin ? `<button type="button" class="btn-inline-action danger delete-news-btn" data-id="${item.id}" title="Eliminar noticia">Eliminar</button>` : ''}
           </div>
-        </li>
-      `
-    )
+          <strong>${escapeHTML(item.title)}</strong>
+          <small>${escapeHTML(item.date || '-')} · ${escapeHTML(item.status || 'Publicado')}</small>
+          <p>${escapeHTML(item.description)}</p>
+        </div>
+      </li>
+    `)
     .join('');
+
+  if (isAdmin) {
+    predioNewsList.querySelectorAll('.delete-news-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Estás seguro de eliminar esta noticia?')) return;
+        try {
+          await API.news.delete(btn.dataset.id);
+          showToast('Noticia eliminada.');
+          loadNews();
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    });
+  }
+}
+
+async function handleCreateNews(event) {
+  event.preventDefault();
+  const formData = new FormData(createNewsForm);
+  const title = String(formData.get('newsTitle') || '').trim();
+  const category = String(formData.get('newsCategory') || '').trim();
+  const description = String(formData.get('newsDescription') || '').trim();
+  const image = String(formData.get('newsImage') || '').trim();
+
+  try {
+    await API.news.create({ title, category, description, image });
+    showToast('Noticia publicada con éxito.');
+    createNewsForm.reset();
+    createNewsModal.style.display = 'none';
+    loadNews();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+// ----------------- VISITAS & INVITACIONES ----------------- //
+
+function getInvitationUrl() {
+  const hostId = state.authenticatedUser?.id || '';
+  const hostName = encodeURIComponent(`${state.authenticatedUser?.nombre || ''} ${state.authenticatedUser?.apellido || ''}`.trim());
+  const origin = window.location.origin;
+  const path = window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+  return `${origin}${path}/invitacion.html?host=${hostId}&name=${hostName}`;
+}
+
+function openGmailInvite() {
+  const inviteUrl = getInvitationUrl();
+  const residentName = `${state.authenticatedUser?.nombre || ''} ${state.authenticatedUser?.apellido || ''}`.trim();
+  const subject = `Invitación de acceso a Rancho Doble S — ${residentName}`;
+  const body = `Hola!\n\nTe envío esta invitación para ingresar al predio Rancho Doble S.\n\nPor favor completá tus datos en el formulario de acreditación:\n${inviteUrl}\n\nIngresá con: apellido, nombre, DNI y patente de tu vehículo.\nUna vez registrado, el sistema te devolverá tu código QR de acceso con la indicación:\n“Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”\n\nSaludos,\n${residentName}`;
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const win = window.open(gmailUrl, '_blank');
+  if (!win) {
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+}
+
+function openWhatsAppInvite() {
+  const inviteUrl = getInvitationUrl();
+  const residentName = `${state.authenticatedUser?.nombre || ''} ${state.authenticatedUser?.apellido || ''}`.trim();
+  const message = `Hola! Te envío la invitación para ingresar a Rancho Doble S (de parte de ${residentName}).\n\nCompletá tus datos (apellido, nombre, DNI y patente del vehículo) en este enlace:\n${inviteUrl}\n\nAl registrarte recibirás tu código QR con el siguiente texto: “Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”.`;
+
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+  window.open(waUrl, '_blank');
+}
+
+function copyInviteLink(buttonElement) {
+  const inviteUrl = getInvitationUrl();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      showToast('Enlace de invitación copiado al portapapeles.');
+      if (buttonElement) {
+        const original = buttonElement.innerHTML;
+        buttonElement.innerHTML = '✅ Copiado';
+        setTimeout(() => {
+          buttonElement.innerHTML = original;
+        }, 2200);
+      }
+    }).catch(() => {
+      fallbackCopy(inviteUrl);
+    });
+  } else {
+    fallbackCopy(inviteUrl);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Enlace de invitación copiado.');
+  } catch (e) {
+    showToast('No se pudo copiar automáticamente.');
+  }
+  document.body.removeChild(ta);
+}
+
+function toggleManualVisitForm() {
+  if (!visitForm || !toggleManualVisitFormBtn) return;
+  const isHidden = visitForm.style.display === 'none' || !visitForm.style.display;
+  if (isHidden) {
+    visitForm.style.display = 'grid';
+    toggleManualVisitFormBtn.textContent = '✖️ Ocultar formulario de carga manual';
+    visitForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    visitForm.style.display = 'none';
+    toggleManualVisitFormBtn.textContent = '➕ O bien, registrar visita manualmente aquí';
+  }
+}
+
+function showQrPassModal(visit) {
+  if (!viewQrModal) return;
+
+  const modalQrImage = document.getElementById('modalQrImage');
+  const modalQrVisitorName = document.getElementById('modalQrVisitorName');
+  const modalQrVisitorDni = document.getElementById('modalQrVisitorDni');
+  const modalQrVisitorPlate = document.getElementById('modalQrVisitorPlate');
+  const modalQrDateTime = document.getElementById('modalQrDateTime');
+  const modalQrStatus = document.getElementById('modalQrStatus');
+  const downloadModalQrBtn = document.getElementById('downloadModalQrBtn');
+  const shareModalQrWhatsAppBtn = document.getElementById('shareModalQrWhatsAppBtn');
+
+  if (modalQrVisitorName) modalQrVisitorName.textContent = visit.visitorName || '--';
+  if (modalQrVisitorDni) modalQrVisitorDni.textContent = visit.visitorDni || '--';
+  if (modalQrVisitorPlate) modalQrVisitorPlate.textContent = visit.vehiclePlate || 'Sin vehículo';
+  if (modalQrDateTime) modalQrDateTime.textContent = `${visit.date || ''} a las ${visit.time || ''} hs`;
+  if (modalQrStatus) {
+    modalQrStatus.textContent = visit.status || 'Confirmada';
+    modalQrStatus.className = `visit-status ${visit.status === 'Ingresado' ? 'confirmed' : 'pending'}`;
+  }
+
+  // QR image
+  const qrSrc = visit.qrCode || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`RDS-PASS|VISITANTE:${visit.visitorName}|DNI:${visit.visitorDni}|PATENTE:${visit.vehiclePlate || 'Sin vehículo'}|FECHA:${visit.date}`)}`;
+  if (modalQrImage) {
+    modalQrImage.src = qrSrc;
+  }
+
+  if (downloadModalQrBtn) {
+    downloadModalQrBtn.href = qrSrc;
+    downloadModalQrBtn.download = `qr-pase-${(visit.visitorName || 'visita').replace(/\s+/g, '-').toLowerCase()}.png`;
+  }
+
+  if (shareModalQrWhatsAppBtn) {
+    shareModalQrWhatsAppBtn.onclick = () => {
+      const msg = `Hola ${visit.visitorName}! Este es tu pase de acceso a Rancho Doble S para el ${visit.date} a las ${visit.time} hs.\n\n“Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+  }
+
+  viewQrModal.style.display = 'grid';
+}
+
+async function loadUserVisits() {
+  try {
+    const visits = await API.visits.get();
+    state.userVisits = visits;
+    renderUserVisits();
+  } catch (error) {
+    console.error('Error loading visits:', error);
+  }
 }
 
 function renderUserVisits() {
   if (!userVisitsList) return;
 
-  const currentUserId = state.authenticatedUser?.id;
-  const currentUserEmail = state.authenticatedUser?.email?.toLowerCase();
+  if (state.userVisits.length === 0) {
+    userVisitsList.innerHTML = `
+      <li class="visit-item">
+        <div>
+          <strong>Sin visitas registradas</strong>
+          <small>Podés enviar una invitación por Gmail/WhatsApp o registrarla manualmente.</small>
+        </div>
+      </li>
+    `;
+    return;
+  }
 
-  const visits = state.userVisits.filter((item) => {
-    const itemUserId = item.userId ? String(item.userId) : '';
-    const itemUserEmail = typeof item.userEmail === 'string' ? item.userEmail.toLowerCase() : '';
-
-    if (currentUserId && itemUserId === String(currentUserId)) return true;
-    if (currentUserEmail && itemUserEmail === currentUserEmail) return true;
-    return false;
-  });
-
-  const displayVisits = visits.length ? visits : [{
-    name: 'Sin visitas registradas',
-    dni: '',
-    date: '-',
-    time: '-',
-    status: 'Sin registro'
-  }];
-
-  userVisitsList.innerHTML = displayVisits
-    .map(
-      (item) => `
-        <li class="visit-item">
+  userVisitsList.innerHTML = state.userVisits
+    .map((item) => `
+      <li class="visit-item">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
           <div>
-            <strong>${item.name}</strong>
-            <small>${item.dni ? `DNI ${item.dni}` : 'Sin DNI'}</small>
+            <strong>${escapeHTML(item.visitorName)}</strong>
+            <small>DNI ${escapeHTML(item.visitorDni)} · Patente: <strong>${escapeHTML(item.vehiclePlate || 'Sin vehículo')}</strong></small>
           </div>
-          <div class="visit-meta">
-            <span>${item.date || '-'} · ${item.time || '-'}</span>
-            <em class="visit-status ${item.status === 'Confirmada' ? 'confirmed' : item.status === 'Pendiente' ? 'pending' : 'neutral'}">${item.status || 'Sin estado'}</em>
+          <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center;">
+            <button type="button" class="btn-inline-action view-visit-qr-btn" data-id="${item.id}" title="Ver Pase con Código QR">📱 Ver QR</button>
+            <button type="button" class="btn-inline-action danger cancel-visit-btn" data-id="${item.id}" title="Cancelar visita">Cancelar</button>
           </div>
-        </li>
-      `
-    )
-    .join('');
-}
-
-function markAllNotificationsRead() {
-  state.notifications = state.notifications.map((notification) => ({ ...notification, read: true }));
-  saveStorage(STORAGE_KEYS.notifications, state.notifications);
-  renderNotifications();
-}
-
-function toggleNotificationsPanel(forceOpen) {
-  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !notificationPanel.classList.contains('open');
-  notificationPanel.classList.toggle('open', shouldOpen);
-}
-
-function getFilteredBookings() {
-  const currentUserName = state.authenticatedUser?.apellido || '';
-  const now = new Date();
-  const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-
-  return timeSlots
-    .filter((slot) => {
-      const [startHour, , endHour] = slot.split(/[:\s-]+/).filter(Boolean);
-      const startMinutes = Number(startHour) * 60;
-      const endMinutes = Number(endHour) * 60;
-      return endMinutes > currentTimeMinutes && startMinutes >= 0;
-    })
-    .map((slot) => {
-      const booking = state.bookings.find((item) => item.id === slot || item.slot === slot) || null;
-      const isBooked = Boolean(booking);
-      const isActive = isBooked && booking.occupant === currentUserName;
-      const isReserved = isBooked;
-
-      if (state.bookingFilter === 'free' && isBooked) return null;
-      if (state.bookingFilter === 'reserved' && !isReserved) return null;
-      if (state.bookingFilter === 'all') {
-        return { slot, booking, isBooked, isActive, isReserved };
-      }
-
-      return { slot, booking, isBooked, isActive, isReserved };
-    })
-    .filter(Boolean);
-}
-
-function updateBookingFilterButtons() {
-  document.querySelectorAll('.booking-filter').forEach((button) => {
-    const isActive = button.dataset.filter === state.bookingFilter;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-selected', String(isActive));
-  });
-}
-
-function generateBookingSlots() {
-  const filteredSlots = getFilteredBookings();
-
-  bookingGrid.innerHTML = filteredSlots
-    .map(({ slot, booking, isBooked, isActive }) => {
-      const statusText = state.bookingFilter === 'free'
-        ? 'Libre'
-        : state.bookingFilter === 'reserved' && isBooked
-          ? 'Reservada'
-          : isBooked
-            ? booking.occupant
-            : 'Disponible';
-
-      if (isActive) {
-        return `
-          <div class="booking-slot booked my-booking" data-slot="${slot}" aria-label="Tu horario reservado">
-            <strong>${slot}</strong>
-            <small>Tu reserva</small>
-            <button type="button" class="cancel-booking-btn" data-slot="${slot}">Cancelar</button>
-          </div>
-        `;
-      }
-
-      return `
-        <button
-          type="button"
-          class="booking-slot ${isBooked ? 'booked' : 'free'}"
-          data-slot="${slot}"
-          ${isBooked ? 'disabled' : ''}
-          aria-label="${isBooked ? 'Horario reservado' : 'Reservar horario'}"
-        >
-          <strong>${slot}</strong>
-          <small>${statusText}</small>
-        </button>
-      `;
-    })
+        </div>
+        <div class="visit-meta">
+          <span>📅 ${escapeHTML(item.date)} · ${escapeHTML(item.time)} hs</span>
+          <em class="visit-status ${item.status === 'Confirmada' || item.status === 'Ingresado' ? 'confirmed' : item.status === 'Pendiente' ? 'pending' : 'neutral'}">${escapeHTML(item.status)}</em>
+        </div>
+      </li>
+    `)
     .join('');
 
-  bookingGrid.querySelectorAll('.booking-slot.free').forEach((slotButton) => {
-    slotButton.addEventListener('click', () => reserveSlot(slotButton.dataset.slot));
+  userVisitsList.querySelectorAll('.view-visit-qr-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const visit = state.userVisits.find((v) => String(v.id) === String(btn.dataset.id));
+      if (visit) showQrPassModal(visit);
+    });
   });
 
-  bookingGrid.querySelectorAll('.cancel-booking-btn').forEach((cancelButton) => {
-    cancelButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      cancelReservation(cancelButton.dataset.slot);
+  userVisitsList.querySelectorAll('.cancel-visit-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Deseas cancelar esta visita?')) return;
+      try {
+        await API.visits.delete(btn.dataset.id);
+        showToast('Visita eliminada.');
+        loadUserVisits();
+      } catch (err) {
+        showToast(err.message);
+      }
     });
   });
 }
 
-function cancelReservation(slotKey) {
-  if (!state.authenticatedUser) {
-    showToast('Debes iniciar sesión para cancelar una reserva.');
-    return;
-  }
-
-  const booking = state.bookings.find((item) => item.id === slotKey || item.slot === slotKey);
-  if (!booking) {
-    showToast('La reserva no existe.');
-    return;
-  }
-
-  if (booking.occupant !== state.authenticatedUser.apellido) {
-    showToast('Solo podés cancelar una reserva realizada por vos.');
-    return;
-  }
-
-  state.bookings = state.bookings.filter((item) => item.id !== slotKey && item.slot !== slotKey);
-  saveStorage(STORAGE_KEYS.bookings, state.bookings);
-  generateBookingSlots();
-  showToast(`Reserva de ${slotKey} cancelada.`);
-}
-
-function reserveSlot(slotKey) {
-  if (!state.authenticatedUser) {
-    showToast('Debes iniciar sesión para reservar una cancha.');
-    return;
-  }
-
-  const slotAlreadyTaken = state.bookings.some((booking) => booking.id === slotKey);
-  if (slotAlreadyTaken) {
-    showToast('Este horario ya está reservado.');
-    return;
-  }
-
-  const booking = {
-    id: slotKey,
-    slot: slotKey,
-    occupant: state.authenticatedUser.apellido,
-    status: 'booked'
-  };
-
-  state.bookings = [...state.bookings, booking];
-  saveStorage(STORAGE_KEYS.bookings, state.bookings);
-  generateBookingSlots();
-  showToast(`Horario ${slotKey} reservado a nombre de ${state.authenticatedUser.apellido}.`);
-}
-
-function handleLogin(event) {
+async function handleVisitSubmit(event) {
   event.preventDefault();
+  const formData = new FormData(visitForm);
+  const visitorName = String(formData.get('visitName') || '').trim();
+  const visitorDni = String(formData.get('visitDni') || '').trim();
+  const vehiclePlate = String(formData.get('visitPlate') || '').trim() || 'Sin vehículo';
+  const date = String(formData.get('visitDate') || '').trim();
+  const time = String(formData.get('visitTime') || '').trim();
 
-  const formData = new FormData(loginForm);
-  const loginInput = String(formData.get('email') || '').trim();
-  const password = String(formData.get('password') || '').trim();
-  const normalizedInput = loginInput.toLowerCase();
+  if (!visitorName || !visitorDni || !date || !time) {
+    showToast('Completá todos los campos de la visita.');
+    return;
+  }
 
-  const user = state.users.find((item) => {
-    if (!item.approved || item.password !== password) return false;
+  try {
+    const res = await API.visits.create({ visitorName, visitorDni, vehiclePlate, date, time });
+    showToast('Visita registrada con éxito. Pase QR generado.');
+    visitForm.reset();
+    if (visitDateField) visitDateField.value = getTodayISO();
+    loadUserVisits();
+    loadNotifications();
 
-    const usernameMatches = (item.username || '').toLowerCase() === normalizedInput;
-    const emailMatches = (item.email || '').toLowerCase() === normalizedInput;
-    const fullNameMatches = `${item.nombre} ${item.apellido}`.toLowerCase() === normalizedInput;
+    if (res && res.qrCode) {
+      showQrPassModal({
+        visitorName,
+        visitorDni,
+        vehiclePlate,
+        date,
+        time,
+        status: 'Confirmada',
+        qrCode: res.qrCode
+      });
+    }
+  } catch (error) {
+    showToast(error.message);
+  }
+}
 
-    return usernameMatches || emailMatches || fullNameMatches;
+// ----------------- EXPENSAS ----------------- //
+
+async function loadExpenses() {
+  try {
+    const data = await API.expenses.get();
+    state.expenses = data.expenses || [];
+    state.bankInfo = data.bankInfo || null;
+    renderExpenses();
+  } catch (error) {
+    console.error('Error loading expenses:', error);
+  }
+}
+
+function renderExpenses() {
+  const expenseCurrentBadge = document.getElementById('expenseCurrentBadge');
+  const expenseCurrentAmount = document.getElementById('expenseCurrentAmount');
+  const expenseCurrentStatus = document.getElementById('expenseCurrentStatus');
+  const expenseCurrentDueDate = document.getElementById('expenseCurrentDueDate');
+  const expenseCurrentConcept = document.getElementById('expenseCurrentConcept');
+  const payExpenseBtn = document.getElementById('payExpenseBtn');
+  const expensesList = document.getElementById('expensesList');
+  const bankAlias = document.getElementById('bankAlias');
+  const bankCbu = document.getElementById('bankCbu');
+
+  if (state.bankInfo) {
+    if (bankAlias) bankAlias.textContent = state.bankInfo.alias || 'RANCHO.DOBLE.S';
+    if (bankCbu) bankCbu.textContent = state.bankInfo.cbu || '0070123420000012345678';
+  }
+
+  const latest = state.expenses[0];
+  if (latest) {
+    if (expenseCurrentBadge) expenseCurrentBadge.textContent = latest.period;
+    if (expenseCurrentAmount) expenseCurrentAmount.textContent = `$ ${Number(latest.amount).toLocaleString('es-AR')}`;
+    if (expenseCurrentDueDate) expenseCurrentDueDate.textContent = latest.dueDate;
+    if (expenseCurrentConcept) expenseCurrentConcept.innerHTML = `📄 <strong>Concepto:</strong> ${escapeHTML(latest.concept || 'Expensas ordinarias')}`;
+
+    const isPending = latest.status === 'Pendiente';
+    if (expenseCurrentStatus) {
+      expenseCurrentStatus.textContent = latest.status;
+      expenseCurrentStatus.className = `visit-status ${isPending ? 'pending' : 'confirmed'}`;
+    }
+
+    if (payExpenseBtn) {
+      if (isPending) {
+        payExpenseBtn.style.display = 'inline-block';
+        payExpenseBtn.textContent = 'Informar Pago';
+        payExpenseBtn.onclick = () => handlePayExpense(latest.id);
+      } else {
+        payExpenseBtn.style.display = 'none';
+      }
+    }
+  }
+
+  if (expensesList) {
+    if (!state.expenses || state.expenses.length === 0) {
+      expensesList.innerHTML = `
+        <li class="visit-item">
+          <div>
+            <strong>Sin liquidaciones registradas</strong>
+            <small>No hay registros de expensas para tu unidad.</small>
+          </div>
+        </li>
+      `;
+    } else {
+      expensesList.innerHTML = state.expenses
+        .map((item) => `
+          <li class="visit-item">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong>${escapeHTML(item.period)} — $ ${Number(item.amount).toLocaleString('es-AR')}</strong>
+                <small>${escapeHTML(item.concept || 'Expensas ordinarias')} · Vencimiento: ${escapeHTML(item.dueDate)}</small>
+              </div>
+              <div class="visit-actions">
+                ${item.status === 'Pendiente' ? `
+                  <button type="button" class="btn-inline-action success pay-item-btn" data-id="${item.id}">Informar Pago</button>
+                ` : `
+                  <span class="btn-inline-action" style="cursor: default;">Pagado</span>
+                `}
+              </div>
+            </div>
+            <div class="visit-meta">
+              <span>Registrado</span>
+              <em class="visit-status ${item.status === 'Pendiente' ? 'pending' : 'confirmed'}">${escapeHTML(item.status)}</em>
+            </div>
+          </li>
+        `)
+        .join('');
+
+      expensesList.querySelectorAll('.pay-item-btn').forEach((btn) => {
+        btn.addEventListener('click', () => handlePayExpense(btn.dataset.id));
+      });
+    }
+  }
+}
+
+async function handlePayExpense(expenseId) {
+  if (!confirm('¿Deseas informar el pago de este periodo?')) return;
+  try {
+    await API.expenses.pay(expenseId);
+    showToast('Pago informado correctamente.');
+    loadExpenses();
+    loadNotifications();
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+// ----------------- RESERVAS ----------------- //
+
+async function loadBookings() {
+  try {
+    const data = await API.bookings.get(state.selectedBookingDate);
+    state.bookings = data.bookings || [];
+    state.validSlots = data.validSlots || [];
+    renderBookingSlots();
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+  }
+}
+
+function renderBookingSlots() {
+  if (!bookingGrid) return;
+
+  const today = getTodayISO();
+  const isToday = state.selectedBookingDate === today;
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentUserId = state.authenticatedUser?.id;
+  const isAdmin = state.authenticatedUser?.role === 'admin';
+
+  const renderedSlots = state.validSlots.map((slot) => {
+    const booking = state.bookings.find((b) => b.slot === slot) || null;
+    const isBooked = Boolean(booking);
+    const isMine = isBooked && booking.userId === currentUserId;
+
+    // Check if past (only for today)
+    const [startHour, , endHour] = slot.split(/[:\s-]+/).filter(Boolean);
+    const endMinutes = Number(endHour) * 60;
+    const isPast = isToday && endMinutes <= currentMinutes;
+
+    if (state.bookingFilter === 'free' && isBooked) return null;
+    if (state.bookingFilter === 'reserved' && !isBooked) return null;
+
+    if (isPast) {
+      return `
+        <div class="booking-slot past" aria-disabled="true">
+          <strong>${escapeHTML(slot)}</strong>
+          <small>Finalizado</small>
+        </div>
+      `;
+    }
+
+    if (isMine) {
+      return `
+        <div class="booking-slot booked my-booking" data-slot="${escapeHTML(slot)}" aria-label="Tu horario reservado">
+          <strong>${escapeHTML(slot)}</strong>
+          <small>Tu reserva (${escapeHTML(booking.userName)})</small>
+          <button type="button" class="cancel-booking-btn" data-booking-id="${booking.id}">Cancelar</button>
+        </div>
+      `;
+    }
+
+    if (isBooked) {
+      return `
+        <div class="booking-slot booked" data-slot="${escapeHTML(slot)}" aria-label="Horario reservado">
+          <strong>${escapeHTML(slot)}</strong>
+          <small>Reservado (${escapeHTML(booking.userName)})</small>
+          ${isAdmin ? `<button type="button" class="cancel-booking-btn" data-booking-id="${booking.id}">Liberar (Admin)</button>` : ''}
+        </div>
+      `;
+    }
+
+    return `
+      <button
+        type="button"
+        class="booking-slot free"
+        data-slot="${escapeHTML(slot)}"
+        aria-label="Reservar horario"
+      >
+        <strong>${escapeHTML(slot)}</strong>
+        <small>Disponible</small>
+      </button>
+    `;
+  }).filter(Boolean);
+
+  if (renderedSlots.length === 0) {
+    bookingGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--muted);">
+        No hay turnos que coincidan con el filtro seleccionado para esta fecha.
+      </div>
+    `;
+    return;
+  }
+
+  bookingGrid.innerHTML = renderedSlots.join('');
+
+  // Reserve slot handler
+  bookingGrid.querySelectorAll('.booking-slot.free').forEach((button) => {
+    button.addEventListener('click', () => handleReserveSlot(button.dataset.slot));
   });
 
-  if (!user) {
-    showToast('Credenciales inválidas o usuario pendiente de aprobación.');
+  // Cancel reservation handler
+  bookingGrid.querySelectorAll('.cancel-booking-btn').forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleCancelReservation(button.dataset.bookingId);
+    });
+  });
+}
+
+async function handleReserveSlot(slot) {
+  if (!confirm(`¿Confirmás la reserva de tenis para el ${state.selectedBookingDate} a las ${slot}?`)) return;
+  try {
+    await API.bookings.create(state.selectedBookingDate, slot);
+    showToast(`Turno ${slot} reservado con éxito.`);
+    loadBookings();
+    loadNotifications();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleCancelReservation(bookingId) {
+  if (!confirm('¿Deseas cancelar esta reserva?')) return;
+  try {
+    await API.bookings.cancel(bookingId);
+    showToast('Reserva cancelada.');
+    loadBookings();
+    loadNotifications();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function updateDateControls() {
+  const today = getTodayISO();
+  const tomorrow = getTomorrowISO();
+
+  if (bookingDateInput) bookingDateInput.value = state.selectedBookingDate;
+  if (btnDateToday) btnDateToday.classList.toggle('active', state.selectedBookingDate === today);
+  if (btnDateTomorrow) btnDateTomorrow.classList.toggle('active', state.selectedBookingDate === tomorrow);
+}
+
+// ----------------- ADMIN ----------------- //
+
+async function loadAdminData() {
+  if (state.authenticatedUser?.role !== 'admin') return;
+
+  try {
+    const [stats, pendingUsers, allVisits] = await Promise.all([
+      API.admin.getStats(),
+      API.admin.getUsers('pending'),
+      API.visits.get({ all: 'true' })
+    ]);
+
+    state.adminStats = stats;
+    state.pendingUsers = pendingUsers;
+    state.adminVisits = allVisits;
+
+    renderAdminPanel();
+  } catch (error) {
+    console.error('Error loading admin data:', error);
+  }
+}
+
+function renderAdminPanel() {
+  // Stats
+  if (statTotalUsers) statTotalUsers.textContent = state.adminStats?.totalUsers ?? 0;
+  if (statPendingUsers) statPendingUsers.textContent = state.adminStats?.pendingUsers ?? 0;
+  if (statTodayVisits) statTodayVisits.textContent = state.adminStats?.todayVisits ?? 0;
+
+  // Pending count badge in nav and home hub
+  const pendingCount = state.pendingUsers.length;
+  if (adminPendingCountBadge) {
+    adminPendingCountBadge.textContent = pendingCount;
+    adminPendingCountBadge.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+  }
+  const homeAdminPendingBadge = document.getElementById('homeAdminPendingBadge');
+  if (homeAdminPendingBadge) {
+    homeAdminPendingBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+    homeAdminPendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+  }
+  if (adminPendingStatusCount) {
+    adminPendingStatusCount.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+  }
+
+  // Pending users list
+  if (pendingUsersList) {
+    if (pendingCount === 0) {
+      pendingUsersList.innerHTML = `
+        <div style="padding: 1.2rem; text-align: center; color: var(--muted);">
+          No hay solicitudes de registro pendientes de aprobación.
+        </div>
+      `;
+    } else {
+      pendingUsersList.innerHTML = state.pendingUsers
+        .map((user) => `
+          <div class="pending-user-card">
+            <div class="pending-user-header">
+              <strong>${escapeHTML(user.nombre)} ${escapeHTML(user.apellido)}</strong>
+              <small>${escapeHTML(user.tipoDocumento)}: ${escapeHTML(user.numeroDocumento)}</small>
+            </div>
+            <div class="pending-user-details">
+              <span>📧 ${escapeHTML(user.email)}</span>
+              <span>📞 ${escapeHTML(user.telefono)}</span>
+            </div>
+            <div class="pending-actions">
+              <button type="button" class="success-btn approve-user-btn" data-id="${user.id}">Aprobar acceso</button>
+              <button type="button" class="danger-btn reject-user-btn" data-id="${user.id}">Rechazar</button>
+            </div>
+          </div>
+        `)
+        .join('');
+
+      pendingUsersList.querySelectorAll('.approve-user-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          try {
+            await API.admin.approveUser(btn.dataset.id);
+            showToast('Usuario aprobado correctamente.');
+            loadAdminData();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      });
+
+      pendingUsersList.querySelectorAll('.reject-user-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('¿Rechazar y eliminar esta solicitud de registro?')) return;
+          try {
+            await API.admin.deleteUser(btn.dataset.id);
+            showToast('Solicitud rechazada y eliminada.');
+            loadAdminData();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      });
+    }
+  }
+
+  // Admin visits list (Access control for guard)
+  if (adminVisitsList) {
+    if (!state.adminVisits || state.adminVisits.length === 0) {
+      adminVisitsList.innerHTML = `
+        <li class="visit-item">
+          <div>
+            <strong>Sin visitas registradas</strong>
+            <small>No hay registros de visitas en el sistema.</small>
+          </div>
+        </li>
+      `;
+    } else {
+      adminVisitsList.innerHTML = state.adminVisits
+        .slice(0, 30)
+        .map((visit) => `
+          <li class="visit-item">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+              <div>
+                <strong>${escapeHTML(visit.visitorName)} <small>(Visita a ${escapeHTML(visit.residentName)})</small></strong>
+                <small>DNI ${escapeHTML(visit.visitorDni)} · Patente: <strong>${escapeHTML(visit.vehiclePlate || 'Sin vehículo')}</strong></small>
+              </div>
+              <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center;">
+                <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR">📱 Ver QR</button>
+                ${visit.status !== 'Ingresado' ? `
+                  <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}">Marcar Ingreso</button>
+                ` : ''}
+              </div>
+            </div>
+            <div class="visit-meta">
+              <span>📅 ${escapeHTML(visit.date)} a las ${escapeHTML(visit.time)} hs</span>
+              <em class="visit-status ${visit.status === 'Ingresado' ? 'confirmed' : 'pending'}">${escapeHTML(visit.status)}</em>
+            </div>
+          </li>
+        `)
+        .join('');
+
+      adminVisitsList.querySelectorAll('.admin-view-visit-qr-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const visit = state.adminVisits.find((v) => String(v.id) === String(btn.dataset.id));
+          if (visit) showQrPassModal(visit);
+        });
+      });
+
+      adminVisitsList.querySelectorAll('.mark-ingreso-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          try {
+            await API.visits.updateStatus(btn.dataset.id, 'Ingresado');
+            showToast('Ingreso registrado en guardia. Propietario notificado.');
+            loadAdminData();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      });
+    }
+  }
+}
+
+// ----------------- AUTHENTICATION FLOWS ----------------- //
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const formData = new FormData(loginForm);
+  const email = String(formData.get('email') || '').trim();
+  const password = String(formData.get('password') || '').trim();
+
+  if (!email || !password) {
+    showToast('Por favor completá email y contraseña.');
     return;
   }
 
-  state.authenticatedUser = user;
-  renderUserProfile();
-  renderUserVisits();
-  authScreen.classList.add('hidden');
-  authScreen.style.display = 'none';
-  dashboardScreen.classList.add('active');
-  toggleNotificationsPanel(false);
-  showToast(`Bienvenido ${user.nombre} ${user.apellido}.`);
+  const submitBtn = document.getElementById('loginSubmitBtn');
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const data = await API.auth.login(email, password);
+    API.setToken(data.token);
+    state.authenticatedUser = data.user;
+
+    loginForm.reset();
+    showToast(`Bienvenido ${data.user.nombre} ${data.user.apellido}.`);
+    enterDashboard();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
-function handleRegister(event) {
+async function handleRegister(event) {
   event.preventDefault();
-  registerStatus.textContent = '';
+  if (registerStatus) registerStatus.textContent = '';
 
   const formData = new FormData(registerForm);
   const values = Object.fromEntries(formData.entries());
@@ -534,86 +984,64 @@ function handleRegister(event) {
     'apellido', 'nombre', 'tipoDocumento', 'numeroDocumento', 'telefono', 'email', 'password', 'confirmPassword'
   ];
 
-  const missingField = requiredFields.find((field) => !String(values[field] || '').trim());
-  if (missingField) {
-    registerStatus.textContent = 'Completa todos los campos obligatorios.';
+  const missing = requiredFields.find((f) => !String(values[f] || '').trim());
+  if (missing) {
+    if (registerStatus) registerStatus.textContent = 'Completá todos los campos obligatorios.';
     return;
   }
 
   if (values.password !== values.confirmPassword) {
-    registerStatus.textContent = 'Las contraseñas no coinciden.';
+    if (registerStatus) registerStatus.textContent = 'Las contraseñas no coinciden.';
     return;
   }
 
-  const alreadyExists = state.users.some(
-    (user) => user.email.toLowerCase() === String(values.email).trim().toLowerCase()
-  );
-
-  if (alreadyExists) {
-    registerStatus.textContent = 'Ya existe un usuario con ese email.';
+  if (values.password.length < 6) {
+    if (registerStatus) registerStatus.textContent = 'La contraseña debe tener al menos 6 caracteres.';
     return;
   }
 
-  const newUser = {
-    id: `user-${Date.now()}`,
-    apellido: String(values.apellido).trim(),
-    nombre: String(values.nombre).trim(),
-    tipoDocumento: String(values.tipoDocumento).trim(),
-    numeroDocumento: String(values.numeroDocumento).trim(),
-    telefono: String(values.telefono).trim(),
-    email: String(values.email).trim(),
-    password: String(values.password).trim(),
-    approved: false
-  };
+  const submitBtn = document.getElementById('registerSubmitBtn');
+  if (submitBtn) submitBtn.disabled = true;
 
-  state.users = [...state.users, newUser];
-  saveStorage(STORAGE_KEYS.users, state.users);
-  registerForm.reset();
-  registerStatus.textContent = 'Pendiente de aprobación por la administración.';
-  showToast('Solicitud de registro enviada.');
+  try {
+    const res = await API.auth.register(values);
+    registerForm.reset();
+    if (registerStatus) registerStatus.textContent = res.message || 'Solicitud enviada para revisión.';
+    showToast('Solicitud enviada con éxito.');
+  } catch (error) {
+    if (registerStatus) registerStatus.textContent = error.message;
+    showToast(error.message);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
-function handleVisit(event) {
-  event.preventDefault();
-
-  const formData = new FormData(visitForm);
-  const visitName = String(formData.get('visitName') || '').trim();
-  const visitDni = String(formData.get('visitDni') || '').trim();
-  const visitDate = String(formData.get('visitDate') || '').trim();
-  const visitTime = String(formData.get('visitTime') || '').trim();
-
-  if (!visitName || !visitDni || !visitDate || !visitTime) {
-    showToast('Completá todos los campos de la visita.');
-    return;
-  }
-
-  const newNotification = {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-visit',
-    title: 'Aviso de ingreso registrado',
-    text: `${visitName} (DNI ${visitDni}) tiene ingreso previsto para ${visitDate} a las ${visitTime}.`,
-    time: 'Ahora',
-    read: false
-  };
-
-  const visitEntry = {
-    userId: state.authenticatedUser?.id || 'guest',
-    userEmail: state.authenticatedUser?.email || '',
-    name: visitName,
-    dni: visitDni,
-    date: visitDate,
-    time: visitTime,
-    status: 'Pendiente'
-  };
-
-  state.notifications = [newNotification, ...state.notifications];
-  state.userVisits = [visitEntry, ...state.userVisits];
-  saveStorage(STORAGE_KEYS.notifications, state.notifications);
-  saveStorage(STORAGE_KEYS.userVisits, state.userVisits);
-  renderNotifications();
-  renderUserVisits();
-  visitForm.reset();
-  showToast('Visita registrada correctamente.');
+function handleLogout() {
+  API.clearToken();
+  state.authenticatedUser = null;
+  authScreen.classList.remove('hidden');
+  authScreen.style.display = 'grid';
+  dashboardScreen.classList.remove('active');
+  toggleNotificationsPanel(false);
+  setAuthView('login');
+  showToast('Sesión cerrada correctamente.');
 }
+
+function enterDashboard() {
+  renderUserProfile();
+  authScreen.classList.add('hidden');
+  authScreen.style.display = 'none';
+  dashboardScreen.classList.add('active');
+
+  setDashboardView('home');
+  loadNotifications();
+
+  if (state.authenticatedUser?.role === 'admin') {
+    loadAdminData();
+  }
+}
+
+// ----------------- INITIALIZATION & LISTENERS ----------------- //
 
 function attachEventListeners() {
   authTabs.forEach((tab) => {
@@ -622,48 +1050,147 @@ function attachEventListeners() {
 
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
-  if (visitForm) visitForm.addEventListener('submit', handleVisit);
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  if (visitForm) visitForm.addEventListener('submit', handleVisitSubmit);
 
+  // Big menu buttons on main home screen
+  document.querySelectorAll('[data-target-view]').forEach((button) => {
+    button.addEventListener('click', () => {
+      setDashboardView(button.dataset.targetView);
+    });
+  });
+
+  // Back to menu buttons on inner pages
+  document.querySelectorAll('[data-back-to-menu]').forEach((button) => {
+    button.addEventListener('click', () => {
+      setDashboardView('home');
+    });
+  });
+
+  // Navigation tabs
   document.querySelectorAll('.nav-link').forEach((button) => {
     button.addEventListener('click', () => setDashboardView(button.dataset.view));
   });
 
+  // Booking filters
   document.querySelectorAll('.booking-filter').forEach((button) => {
     button.addEventListener('click', () => {
       state.bookingFilter = button.dataset.filter;
-      updateBookingFilterButtons();
-      generateBookingSlots();
+      document.querySelectorAll('.booking-filter').forEach((b) => {
+        const isActive = b.dataset.filter === state.bookingFilter;
+        b.classList.toggle('active', isActive);
+      });
+      renderBookingSlots();
     });
   });
 
-  const notificationsToggle = document.getElementById('notificationsToggle');
-  const closeNotifications = document.getElementById('closeNotifications');
-  const markAllRead = document.getElementById('markAllRead');
+  // Booking Date selectors
+  if (bookingDateInput) {
+    bookingDateInput.addEventListener('change', (e) => {
+      if (e.target.value) {
+        state.selectedBookingDate = e.target.value;
+        updateDateControls();
+        loadBookings();
+      }
+    });
+  }
 
+  if (btnDateToday) {
+    btnDateToday.addEventListener('click', () => {
+      state.selectedBookingDate = getTodayISO();
+      updateDateControls();
+      loadBookings();
+    });
+  }
+
+  if (btnDateTomorrow) {
+    btnDateTomorrow.addEventListener('click', () => {
+      state.selectedBookingDate = getTomorrowISO();
+      updateDateControls();
+      loadBookings();
+    });
+  }
+
+  // Notifications drawer
   if (notificationsToggle) notificationsToggle.addEventListener('click', () => toggleNotificationsPanel());
   if (closeNotifications) closeNotifications.addEventListener('click', () => toggleNotificationsPanel(false));
-  if (markAllRead) markAllRead.addEventListener('click', markAllNotificationsRead);
+  if (markAllRead) markAllRead.addEventListener('click', handleMarkAllNotificationsRead);
+
+  // Admin news creation modal
+  if (openCreateNewsModalBtn) {
+    openCreateNewsModalBtn.addEventListener('click', () => {
+      createNewsModal.style.display = 'grid';
+    });
+  }
+
+  if (closeCreateNewsModal) {
+    closeCreateNewsModal.addEventListener('click', () => {
+      createNewsModal.style.display = 'none';
+    });
+  }
+
+  if (cancelCreateNewsBtn) {
+    cancelCreateNewsBtn.addEventListener('click', () => {
+      createNewsModal.style.display = 'none';
+    });
+  }
+
+  if (createNewsForm) {
+    createNewsForm.addEventListener('submit', handleCreateNews);
+  }
+
+  if (refreshAdminVisitsBtn) {
+    refreshAdminVisitsBtn.addEventListener('click', loadAdminData);
+  }
+
+  // Invitations (Gmail & WhatsApp) & Manual form toggle
+  if (openGmailInviteBtn) openGmailInviteBtn.addEventListener('click', openGmailInvite);
+  if (copyInviteLinkEmailBtn) copyInviteLinkEmailBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkEmailBtn));
+  if (openWhatsAppInviteBtn) openWhatsAppInviteBtn.addEventListener('click', openWhatsAppInvite);
+  if (copyInviteLinkWhatsappBtn) copyInviteLinkWhatsappBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkWhatsappBtn));
+  if (toggleManualVisitFormBtn) toggleManualVisitFormBtn.addEventListener('click', toggleManualVisitForm);
+
+  // QR Modal close handlers
+  if (closeViewQrModal) {
+    closeViewQrModal.addEventListener('click', () => {
+      if (viewQrModal) viewQrModal.style.display = 'none';
+    });
+  }
+  if (viewQrModal) {
+    viewQrModal.addEventListener('click', (e) => {
+      if (e.target === viewQrModal) viewQrModal.style.display = 'none';
+    });
+  }
+
+  // Listen to session expiry
+  window.addEventListener('auth:expired', () => {
+    handleLogout();
+    showToast('Tu sesión ha expirado. Por favor ingresá nuevamente.');
+  });
 }
 
-function initApp() {
+async function initApp() {
   attachEventListeners();
-  setAuthView('login');
-  setDashboardView('news');
-  updateBookingFilterButtons();
-  renderNotifications();
-  generateBookingSlots();
-  renderPredioNews();
-  renderUserVisits();
-  renderUserProfile();
+  updateDateControls();
 
-  if (visitForm) {
-    const dateField = visitForm.querySelector('input[name="visitDate"]');
-    if (dateField) {
-      const today = new Date();
-      const isoDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-      dateField.value = isoDate;
+  if (visitDateField) visitDateField.value = getTodayISO();
+
+  // Check persistent session with server
+  const token = API.getToken();
+  if (token) {
+    try {
+      const data = await API.auth.me();
+      state.authenticatedUser = data.user;
+      enterDashboard();
+      return;
+    } catch (error) {
+      API.clearToken();
+      console.warn('Existing token invalid or expired.');
     }
   }
+
+  // If no token or invalid session:
+  setAuthView('login');
 }
 
-initApp();
+document.addEventListener('DOMContentLoaded', initApp);

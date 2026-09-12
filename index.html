@@ -18,6 +18,7 @@
   </head>
   <body>
     <div id="app">
+      <!-- Pantalla de autenticación -->
       <section class="screen auth-screen active" id="authScreen" aria-live="polite">
         <div class="auth-shell">
           <div class="brand-panel glass-card">
@@ -30,6 +31,7 @@
             <ul class="brand-features">
               <li>Novedades del predio</li>
               <li>Reservas de tenis</li>
+              <li>Control de visitas y accesos</li>
               <li>Notificaciones del barrio</li>
             </ul>
           </div>
@@ -51,16 +53,16 @@
               </div>
 
               <label>
-                <span>Email</span>
-                <input type="email" name="email" id="loginEmail" placeholder="tuemail@ejemplo.com" required />
+                <span>Email o DNI</span>
+                <input type="text" name="email" id="loginEmail" placeholder="tuemail@ejemplo.com o DNI" required autocomplete="username" />
               </label>
 
               <label>
                 <span>Contraseña</span>
-                <input type="password" name="password" id="loginPassword" placeholder="••••••••" required />
+                <input type="password" name="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
               </label>
 
-              <button type="submit" class="primary-btn">Ingresar</button>
+              <button type="submit" class="primary-btn" id="loginSubmitBtn">Ingresar</button>
             </form>
 
             <form id="registerForm" class="auth-form" novalidate>
@@ -85,7 +87,7 @@
                   <span>Tipo de documento</span>
                   <select name="tipoDocumento" required>
                     <option value="">Seleccionar</option>
-                    <option value="DNI">DNI</option>
+                    <option value="DNI" selected>DNI</option>
                     <option value="Pasaporte">Pasaporte</option>
                     <option value="Otro">Otro</option>
                   </select>
@@ -103,27 +105,28 @@
                 </label>
                 <label>
                   <span>Email</span>
-                  <input type="email" name="email" required />
+                  <input type="email" name="email" required autocomplete="email" />
                 </label>
               </div>
 
               <label>
-                <span>Contraseña</span>
-                <input type="password" name="password" id="registerPassword" required />
+                <span>Contraseña (mínimo 6 caracteres)</span>
+                <input type="password" name="password" id="registerPassword" required autocomplete="new-password" />
               </label>
 
               <label>
                 <span>Confirmar contraseña</span>
-                <input type="password" name="confirmPassword" id="confirmPassword" required />
+                <input type="password" name="confirmPassword" id="confirmPassword" required autocomplete="new-password" />
               </label>
 
-              <button type="submit" class="primary-btn">Solicitar acceso</button>
+              <button type="submit" class="primary-btn" id="registerSubmitBtn">Solicitar acceso</button>
               <div class="form-status" id="registerStatus" aria-live="polite"></div>
             </form>
           </div>
         </div>
       </section>
 
+      <!-- Pantalla principal del Dashboard -->
       <section class="screen app-screen" id="dashboardScreen" aria-live="polite">
         <header class="topbar glass-card">
           <div class="topbar-brand">
@@ -134,49 +137,202 @@
             </div>
           </div>
 
-          <nav class="topbar-nav" aria-label="Navegación principal">
-            <button type="button" class="nav-link active" data-view="news">Novedades</button>
-            <button type="button" class="nav-link" data-view="booking">Reservas</button>
-            <button type="button" class="nav-link" data-view="visits">Mis visitas</button>
+          <div class="topbar-actions">
             <button type="button" class="notification-trigger" id="notificationsToggle" aria-label="Abrir notificaciones">
               <span class="icon">🔔</span>
-              <span class="badge" id="notificationBadge">3</span>
+              <span class="badge" id="notificationBadge" style="display: none;">0</span>
             </button>
-          </nav>
 
-          <div class="topbar-actions">
-            <div class="user-chip">
-              <span class="avatar" id="userInitials">LS</span>
-              <div>
-                <strong id="userFullName">Lucía S.</strong>
-                <small>Propietario</small>
+            <div class="user-chip" id="userChip">
+              <span class="avatar" id="userInitials">--</span>
+              <div class="user-details">
+                <strong id="userFullName">--</strong>
+                <small id="userRoleBadge">Propietario</small>
               </div>
+              <button type="button" id="logoutBtn" class="logout-btn" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
             </div>
           </div>
         </header>
 
         <div class="dashboard-layout">
           <main class="content-panel">
-            <section id="newsSection" class="content-section active">
+            <!-- Sección Menú Principal (Pantalla de inicio con botones grandes apilados) -->
+            <section id="homeSection" class="content-section active">
+              <div class="home-hero">
+                <p class="eyebrow">Portal Rancho Doble S</p>
+                <h3 id="homeWelcomeTitle">Menú Principal</h3>
+                <p class="home-subtitle">Seleccioná un servicio para gestionar en el predio:</p>
+              </div>
+
+              <div class="main-menu-stack">
+                <button type="button" class="menu-big-btn btn-booking" data-target-view="booking">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🎾</div>
+                    <div class="menu-btn-text">
+                      <h4>Reserva de cancha</h4>
+                      <p>Consultá disponibilidad de turnos de tenis y realizá tu reserva.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <button type="button" class="menu-big-btn btn-visits" data-target-view="visits">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🚗</div>
+                    <div class="menu-btn-text">
+                      <h4>Mis visitas</h4>
+                      <p>Registrá ingresos anticipados de invitados y gestioná el acceso en guardia.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <button type="button" class="menu-big-btn btn-expenses" data-target-view="expenses">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">💳</div>
+                    <div class="menu-btn-text">
+                      <h4>Expensas</h4>
+                      <p>Consultá tu estado de cuenta, liquidaciones y medios de pago.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <button type="button" class="menu-big-btn btn-news" data-target-view="news">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">📢</div>
+                    <div class="menu-btn-text">
+                      <h4>Novedades</h4>
+                      <p>Enterate de los comunicados oficiales, obras y avisos del predio.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <button type="button" class="menu-big-btn btn-admin" id="homeAdminBtn" data-target-view="admin" style="display: none;">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🛡️</div>
+                    <div class="menu-btn-text">
+                      <div class="title-with-badge">
+                        <h4>Administración</h4>
+                        <span class="badge soft" id="homeAdminPendingBadge" style="display: none;">0 pendientes</span>
+                      </div>
+                      <p>Aprobación de solicitudes de vecinos, métricas y control de guardia.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+              </div>
+            </section>
+
+            <!-- Sección Expensas -->
+            <section id="expensesSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al menú principal
+                </button>
+              </div>
+
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Administración Contable</p>
+                  <h3>Liquidación de Expensas</h3>
+                </div>
+              </div>
+
+              <div class="expenses-layout">
+                <!-- Tarjeta de estado actual / periodo vigente -->
+                <div class="glass-card panel-block expenses-summary-card">
+                  <div class="panel-heading">
+                    <h4>Periodo vigente</h4>
+                    <span class="badge soft" id="expenseCurrentBadge">Septiembre 2026</span>
+                  </div>
+
+                  <div class="expense-highlight">
+                    <div>
+                      <span class="expense-label">Monto a abonar:</span>
+                      <strong class="expense-amount" id="expenseCurrentAmount">$ 145.000</strong>
+                    </div>
+                    <div class="expense-status-tag" id="expenseCurrentStatusTag">
+                      <em class="visit-status pending" id="expenseCurrentStatus">Pendiente</em>
+                    </div>
+                  </div>
+
+                  <div class="expense-dates-row">
+                    <span>📅 <strong>Vencimiento:</strong> <span id="expenseCurrentDueDate">15/09/2026</span></span>
+                    <span id="expenseCurrentConcept">📄 <strong>Concepto:</strong> Expensas ordinarias + mantenimiento general</span>
+                  </div>
+
+                  <div class="expense-action-row" id="expenseActionRow">
+                    <button type="button" class="primary-btn small-btn" id="payExpenseBtn">Informar Pago</button>
+                  </div>
+
+                  <div class="bank-details-box">
+                    <h5>Datos para transferencia bancaria</h5>
+                    <div class="bank-details-grid">
+                      <div><small>Banco:</small> <strong>Banco Galicia</strong></div>
+                      <div><small>Titular:</small> <strong>Consorcio Rancho Doble S</strong></div>
+                      <div><small>CUIT:</small> <strong>30-71234567-8</strong></div>
+                      <div><small>Alias CBU:</small> <strong class="copyable" id="bankAlias">RANCHO.DOBLE.S</strong></div>
+                      <div><small>CBU:</small> <strong class="copyable" id="bankCbu">0070123420000012345678</strong></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Historial de liquidaciones -->
+                <div class="glass-card panel-block">
+                  <div class="panel-heading">
+                    <h4>Historial de liquidaciones</h4>
+                    <span class="badge soft">Comprobantes</span>
+                  </div>
+                  <ul id="expensesList" class="list-stack visit-list"></ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sección Novedades -->
+            <section id="newsSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al menú principal
+                </button>
+              </div>
+
               <div class="section-header">
                 <div>
                   <p class="eyebrow">Portal</p>
-                  <h3>Novedades</h3>
+                  <h3>Novedades del predio</h3>
+                </div>
+                <div id="adminNewsActions" style="display: none;">
+                  <button type="button" class="primary-btn small-btn" id="openCreateNewsModalBtn">+ Publicar novedad</button>
                 </div>
               </div>
 
               <div class="news-layout">
                 <div class="glass-card panel-block">
                   <div class="panel-heading">
-                    <h4>Novedades del predio</h4>
-                    <span class="badge soft">Portal</span>
+                    <h4>Comunicados oficiales</h4>
+                    <span class="badge soft">Predio</span>
                   </div>
                   <ul id="predioNewsList" class="list-stack news-feed"></ul>
                 </div>
               </div>
             </section>
 
+            <!-- Sección Mis Visitas -->
             <section id="myVisitsSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al menú principal
+                </button>
+              </div>
+
               <div class="section-header">
                 <div>
                   <p class="eyebrow">Portal</p>
@@ -186,48 +342,121 @@
 
               <div class="glass-card panel-block visit-panel">
                 <div class="panel-heading">
-                  <h4>Registro de visitas</h4>
-                  <span class="badge soft">Portal</span>
+                  <h4>Invitar a tus visitas</h4>
+                  <span class="badge soft">Acceso Rápido</span>
+                </div>
+                <p class="panel-subtext">Seleccioná cómo deseas enviar la invitación a tu contacto para que complete sus datos y obtenga su código QR de ingreso:</p>
+
+                <!-- Las 2 opciones de invitación -->
+                <div class="invite-methods-grid">
+                  <!-- Opción 1: Enviar invitación por Gmail / Email -->
+                  <div class="invite-method-card gmail-card">
+                    <div class="invite-card-header">
+                      <div class="invite-card-icon gmail-icon">✉️</div>
+                      <div>
+                        <h5>1. Enviar invitación por Email (Gmail)</h5>
+                        <p>Abre tu Gmail para seleccionar a tus contactos y enviarles el enlace personal de registro.</p>
+                      </div>
+                    </div>
+                    <div class="invite-card-actions">
+                      <button type="button" class="primary-btn invite-action-btn gmail-btn" id="openGmailInviteBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+                          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                        </svg>
+                        Abrir Gmail para invitar
+                      </button>
+                      <button type="button" class="btn-inline-action" id="copyInviteLinkEmailBtn" title="Copiar enlace de invitación">
+                        📋 Copiar enlace
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Opción 2: Invitación por WhatsApp -->
+                  <div class="invite-method-card whatsapp-card">
+                    <div class="invite-card-header">
+                      <div class="invite-card-icon whatsapp-icon">💬</div>
+                      <div>
+                        <h5>2. Invitación por WhatsApp</h5>
+                        <p>Abre WhatsApp para seleccionar a varios contactos o grupos y enviarles el enlace de acreditación directa.</p>
+                      </div>
+                    </div>
+                    <div class="invite-card-actions">
+                      <button type="button" class="primary-btn invite-action-btn whatsapp-btn" id="openWhatsAppInviteBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+                          <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/>
+                        </svg>
+                        Abrir WhatsApp (Varios contactos)
+                      </button>
+                      <button type="button" class="btn-inline-action" id="copyInviteLinkWhatsappBtn" title="Copiar enlace de invitación">
+                        📋 Copiar enlace
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <form id="visitForm" class="visit-form" novalidate>
+                <!-- Botón para desplegar / alternar formulario manual -->
+                <div class="manual-visit-toggle-wrap">
+                  <button type="button" class="text-btn" id="toggleManualVisitFormBtn">
+                    ➕ O bien, registrar visita manualmente aquí
+                  </button>
+                </div>
+
+                <!-- Formulario manual (oculto inicialmente) -->
+                <form id="visitForm" class="visit-form" style="display: none;" novalidate>
+                  <div class="panel-heading" style="margin-top: 0.5rem;">
+                    <h4>Carga manual de visita</h4>
+                  </div>
                   <div class="field-grid two-col">
                     <label>
-                      <span>Nombre y apellido</span>
+                      <span>Nombre y apellido de la visita</span>
                       <input type="text" name="visitName" placeholder="Ej: Ana López" required />
                     </label>
                     <label>
-                      <span>DNI</span>
+                      <span>DNI de la visita</span>
                       <input type="text" name="visitDni" placeholder="Ej: 43.123.456" required />
                     </label>
                   </div>
 
                   <div class="field-grid two-col">
                     <label>
-                      <span>Fecha</span>
-                      <input type="date" name="visitDate" required />
+                      <span>Patente del vehículo</span>
+                      <input type="text" name="visitPlate" placeholder="Ej: AB 123 CD (o 'Sin vehículo')" />
                     </label>
                     <label>
-                      <span>Horario</span>
-                      <input type="time" name="visitTime" required />
+                      <span>Fecha</span>
+                      <input type="date" name="visitDate" id="visitDateField" required />
                     </label>
                   </div>
 
-                  <button type="submit" class="primary-btn small-btn">Registrar visita</button>
+                  <div class="field-grid two-col">
+                    <label>
+                      <span>Horario estimado</span>
+                      <input type="time" name="visitTime" id="visitTimeField" required />
+                    </label>
+                  </div>
+
+                  <button type="submit" class="primary-btn small-btn" id="submitVisitBtn">Registrar y generar QR</button>
                 </form>
 
                 <div class="visit-list-wrap">
-                  <h5>Visitas programadas</h5>
+                  <h5>Visitas programadas en el predio</h5>
                   <ul id="userVisitsList" class="list-stack visit-list"></ul>
                 </div>
               </div>
             </section>
 
+            <!-- Sección Reservas de Tenis -->
             <section id="bookingSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al menú principal
+                </button>
+              </div>
+
               <div class="section-header">
                 <div>
                   <p class="eyebrow">Reservas</p>
-                  <h3>Reserva de tenis</h3>
+                  <h3>Reserva de canchas de tenis</h3>
                 </div>
               </div>
 
@@ -235,21 +464,94 @@
                 <div class="booking-header">
                   <div>
                     <strong>Horario permitido</strong>
-                    <small>07:00 hs a 22:00 hs</small>
+                    <small>07:00 hs a 22:00 hs (turnos de 1 hora)</small>
                   </div>
                   <div class="legend">
                     <span><i class="dot free"></i> Disponibles</span>
                     <span><i class="dot booked"></i> Reservadas</span>
+                    <span><i class="dot mine"></i> Tu reserva</span>
                   </div>
                 </div>
 
-                <div class="booking-filters" role="tablist" aria-label="Filtros de reservas">
-                  <button type="button" class="booking-filter active" data-filter="all">Ver todas</button>
-                  <button type="button" class="booking-filter" data-filter="reserved">Reservadas</button>
-                  <button type="button" class="booking-filter" data-filter="free">Disponibles</button>
+                <!-- Selector de fecha y filtros -->
+                <div class="booking-toolbar">
+                  <div class="date-selector-group">
+                    <span class="date-label">Fecha del turno:</span>
+                    <input type="date" id="bookingDateInput" class="booking-date-input" />
+                    <button type="button" class="date-chip active" id="btnDateToday">Hoy</button>
+                    <button type="button" class="date-chip" id="btnDateTomorrow">Mañana</button>
+                  </div>
+
+                  <div class="booking-filters" role="tablist" aria-label="Filtros de reservas">
+                    <button type="button" class="booking-filter active" data-filter="all">Ver todas</button>
+                    <button type="button" class="booking-filter" data-filter="reserved">Reservadas</button>
+                    <button type="button" class="booking-filter" data-filter="free">Disponibles</button>
+                  </div>
                 </div>
 
                 <div id="bookingGrid" class="booking-grid" aria-live="polite"></div>
+              </div>
+            </section>
+
+            <!-- Sección Administración (Sólo rol Admin) -->
+            <section id="adminSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al menú principal
+                </button>
+              </div>
+
+              <div class="section-header">
+                <div>
+                  <p class="eyebrow">Gestión Central</p>
+                  <h3>Panel de Administración y Guardia</h3>
+                </div>
+              </div>
+
+              <div class="stats-grid" id="adminStatsGrid">
+                <div class="stat-card glass-card accent-green">
+                  <div class="stat-icon">👥</div>
+                  <div>
+                    <strong id="statTotalUsers">0</strong>
+                    <p>Vecinos activos</p>
+                  </div>
+                </div>
+                <div class="stat-card glass-card accent-gold">
+                  <div class="stat-icon">⏳</div>
+                  <div>
+                    <strong id="statPendingUsers">0</strong>
+                    <p>Solicitudes pendientes</p>
+                  </div>
+                </div>
+                <div class="stat-card glass-card accent-blue">
+                  <div class="stat-icon">🚗</div>
+                  <div>
+                    <strong id="statTodayVisits">0</strong>
+                    <p>Visitas de hoy</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-panels-grid">
+                <!-- Panel de Solicitudes de Usuario -->
+                <div class="glass-card panel-block">
+                  <div class="panel-heading">
+                    <h4>Solicitudes de registro de vecinos</h4>
+                    <span class="badge soft" id="adminPendingStatusCount">0 pendientes</span>
+                  </div>
+                  <p class="panel-subtext">Aprobá o rechazá las cuentas solicitadas para habilitar el ingreso al sistema.</p>
+                  <div id="pendingUsersList" class="pending-users-list"></div>
+                </div>
+
+                <!-- Panel de Control de Visitas en Guardia -->
+                <div class="glass-card panel-block">
+                  <div class="panel-heading">
+                    <h4>Control de ingresos en guardia</h4>
+                    <button type="button" class="text-btn" id="refreshAdminVisitsBtn">Actualizar</button>
+                  </div>
+                  <p class="panel-subtext">Registrá cuando la visita arriba al pórtico principal para notificar al propietario.</p>
+                  <ul id="adminVisitsList" class="list-stack visit-list"></ul>
+                </div>
               </div>
             </section>
           </main>
@@ -257,6 +559,7 @@
       </section>
     </div>
 
+    <!-- Panel lateral de Notificaciones -->
     <aside id="notificationPanel" class="notification-panel glass-card" aria-label="Centro de alertas">
       <div class="panel-top">
         <div>
@@ -273,8 +576,92 @@
       <ul id="notificationList" class="notification-list"></ul>
     </aside>
 
+    <!-- Modal para publicar novedad (Admin) -->
+    <div id="createNewsModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <h4>Publicar nueva noticia</h4>
+          <button type="button" class="icon-btn" id="closeCreateNewsModal">✕</button>
+        </div>
+        <form id="createNewsForm" class="modal-form">
+          <label>
+            <span>Título</span>
+            <input type="text" name="newsTitle" required placeholder="Ej: Torneo de tenis de fin de semana" />
+          </label>
+          <div class="field-grid two-col">
+            <label>
+              <span>Categoría</span>
+              <input type="text" name="newsCategory" required placeholder="Ej: Deportes, Seguridad, Infraestructura" />
+            </label>
+            <label>
+              <span>URL de Imagen</span>
+              <input type="text" name="newsImage" placeholder="https://ejemplo.com/foto.jpg o ./descarga.jfif" />
+            </label>
+          </div>
+          <label>
+            <span>Descripción del comunicado</span>
+            <textarea name="newsDescription" rows="4" required placeholder="Detalles para los vecinos..."></textarea>
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="text-btn" id="cancelCreateNewsBtn">Cancelar</button>
+            <button type="submit" class="primary-btn">Publicar comunicado</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para visualización de Código QR de Visita -->
+    <div id="viewQrModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card qr-modal-card">
+        <div class="modal-header">
+          <h4>Pase de Acceso — Código QR</h4>
+          <button type="button" class="icon-btn" id="closeViewQrModal">✕</button>
+        </div>
+        <div class="qr-modal-body">
+          <div class="qr-message-banner">
+            “Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”
+          </div>
+          <div class="qr-box">
+            <img id="modalQrImage" src="" alt="Código QR de ingreso" />
+          </div>
+          <div class="guest-summary-table" id="modalQrDetails">
+            <div>
+              <small>Visitante:</small>
+              <strong id="modalQrVisitorName">--</strong>
+            </div>
+            <div>
+              <small>DNI:</small>
+              <strong id="modalQrVisitorDni">--</strong>
+            </div>
+            <div>
+              <small>Vehículo / Patente:</small>
+              <strong id="modalQrVisitorPlate">--</strong>
+            </div>
+            <div>
+              <small>Fecha y Horario:</small>
+              <strong id="modalQrDateTime">--</strong>
+            </div>
+            <div>
+              <small>Estado:</small>
+              <em class="visit-status confirmed" id="modalQrStatus">Confirmada</em>
+            </div>
+          </div>
+          <div class="modal-actions qr-modal-actions">
+            <a id="downloadModalQrBtn" download="pase-acceso-ranchodobles.png" href="" class="primary-btn" style="text-decoration: none; text-align: center;">
+              📥 Descargar QR
+            </a>
+            <button type="button" class="text-btn" id="shareModalQrWhatsAppBtn">
+              💬 Enviar por WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje flotante Toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/app.js"></script>
   </body>
 </html>
