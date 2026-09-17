@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Acreditación de Visita — Rancho Doble S</title>
+    <!-- Open Graph tags for WhatsApp and social preview cards -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="🎟️ Pase de Ingreso — Rancho Doble S" />
+    <meta property="og:description" content="Hacé click para autorizar tu visita y obtener tu código QR de acceso a la guardia." />
+    <meta property="og:image" content="./descarga.jfif" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -139,8 +144,18 @@
         </div>
       </header>
 
+      <!-- Mensaje cuando la invitación es inválida o expiró -->
+      <div id="invalidInviteBox" style="display: none; text-align: center; padding: 2rem 1.2rem; background: rgba(255, 99, 99, 0.1); border: 1px solid rgba(255, 99, 99, 0.3); border-radius: 16px; margin-top: 1rem;">
+        <p style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</p>
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">Invitación no válida o expirada</h3>
+        <p id="invalidInviteMessage" style="color: var(--muted); font-size: 0.95rem; line-height: 1.5;">
+          El enlace de invitación utilizado no es auténtico o superó el tiempo máximo de validez (48 horas).
+          Por favor, solicitá al propietario anfitrión que te comparta un nuevo enlace de acceso.
+        </p>
+      </div>
+
       <!-- Formulario de acreditación del invitado -->
-      <form id="guestRegisterForm" class="visit-form" novalidate>
+      <form id="guestRegisterForm" class="visit-form" novalidate style="display: none;">
         <div class="field-grid two-col">
           <label>
             <span>Apellido</span>
@@ -231,7 +246,7 @@
             📥 Descargar imagen del Código QR
           </a>
           <button type="button" class="text-btn" id="shareQrWhatsAppBtn">
-            💬 Compartir este pase por WhatsApp
+            💬 Compartir los datos del pase por WhatsApp
           </button>
         </div>
       </div>
@@ -239,11 +254,19 @@
 
     <script>
       const urlParams = new URLSearchParams(window.location.search);
-      const hostId = urlParams.get('host') || '2';
-      const hostName = urlParams.get('name') || 'Propietario Rancho Doble S';
+      const inviteParam = urlParams.get('c') || urlParams.get('code') || urlParams.get('token');
 
       const hostNameText = document.getElementById('hostNameText');
-      if (hostNameText) hostNameText.textContent = decodeURIComponent(hostName);
+      const hostBadge = document.getElementById('hostBadge');
+      const guestForm = document.getElementById('guestRegisterForm');
+      const guestPassContainer = document.getElementById('guestPassContainer');
+      const submitGuestBtn = document.getElementById('submitGuestBtn');
+      const guestFormError = document.getElementById('guestFormError');
+      const invalidInviteBox = document.getElementById('invalidInviteBox');
+      const invalidInviteMessage = document.getElementById('invalidInviteMessage');
+      const qrPassImage = document.getElementById('qrPassImage');
+      const downloadQrBtn = document.getElementById('downloadQrBtn');
+      const shareQrWhatsAppBtn = document.getElementById('shareQrWhatsAppBtn');
 
       const guestDate = document.getElementById('guestDate');
       const guestTime = document.getElementById('guestTime');
@@ -256,15 +279,45 @@
         guestTime.value = `${hours}:${minutes}`;
       }
 
-      const guestForm = document.getElementById('guestRegisterForm');
-      const guestPassContainer = document.getElementById('guestPassContainer');
-      const submitGuestBtn = document.getElementById('submitGuestBtn');
-      const guestFormError = document.getElementById('guestFormError');
-      const qrPassImage = document.getElementById('qrPassImage');
-      const downloadQrBtn = document.getElementById('downloadQrBtn');
-      const shareQrWhatsAppBtn = document.getElementById('shareQrWhatsAppBtn');
-
       let currentPassData = null;
+      let verifiedHostName = '';
+
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const apiBase = (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') ? `/${parts[0]}` : '';
+
+      async function verifyInvitation() {
+        if (!inviteParam) {
+          showInvalidInvite('No se proporcionó un código o enlace de invitación oficial.');
+          return;
+        }
+
+        try {
+          const queryParam = urlParams.get('token') ? `token=${encodeURIComponent(inviteParam)}` : `code=${encodeURIComponent(inviteParam)}`;
+          const res = await fetch(`${apiBase}/api/visits/verify-invite?${queryParam}`);
+          const data = await res.json();
+          if (!res.ok || !data.valid) {
+            showInvalidInvite(data.error || 'La invitación es inválida o ha expirado.');
+            return;
+          }
+
+          verifiedHostName = data.hostName;
+          if (hostNameText) hostNameText.textContent = verifiedHostName;
+          if (guestForm) guestForm.style.display = 'grid';
+        } catch (err) {
+          showInvalidInvite('No se pudo verificar la invitación con el servidor. Comprobá tu conexión.');
+        }
+      }
+
+      function showInvalidInvite(message) {
+        if (guestForm) guestForm.style.display = 'none';
+        if (hostBadge) hostBadge.style.display = 'none';
+        if (invalidInviteBox) {
+          invalidInviteBox.style.display = 'block';
+          if (invalidInviteMessage) invalidInviteMessage.textContent = message;
+        }
+      }
+
+      verifyInvitation();
 
       guestForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -287,14 +340,12 @@
         submitGuestBtn.textContent = 'Generando código QR...';
 
         try {
-          const parts = window.location.pathname.split('/').filter(Boolean);
-          const apiBase = (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') ? `/${parts[0]}` : '';
           const res = await fetch(`${apiBase}/api/visits/guest-register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              hostId,
-              residentName: decodeURIComponent(hostName),
+              code: inviteParam,
+              token: inviteParam,
               apellido,
               nombre,
               dni,
@@ -322,7 +373,7 @@
           document.getElementById('passVisitorName').textContent = `${nombre} ${apellido}`;
           document.getElementById('passVisitorDni').textContent = dni;
           document.getElementById('passVisitorPlate').textContent = vehiclePlate || 'Sin vehículo';
-          document.getElementById('passHostName').textContent = decodeURIComponent(hostName);
+          document.getElementById('passHostName').textContent = data.visit.residentName || verifiedHostName;
           document.getElementById('passDateTime').textContent = `${date} a las ${time} hs`;
 
           const emailNotice = document.getElementById('emailSentNotification');
@@ -344,7 +395,7 @@
 
       shareQrWhatsAppBtn.addEventListener('click', () => {
         if (!currentPassData) return;
-        const msg = `*Rancho Doble S — Pase de Ingreso*\n\n“Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”\n\nVisitante: ${currentPassData.visit.visitorName}\nDNI: ${currentPassData.visit.visitorDni}\nPatente: ${currentPassData.visit.vehiclePlate}\nFecha: ${currentPassData.visit.date} (${currentPassData.visit.time} hs)\n\nPodés abrir tu pase digital aquí:\n${window.location.href}`;
+        const msg = `*Rancho Doble S — Pase de Ingreso*\n\n“Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”\n\nVisitante: ${currentPassData.visit.visitorName}\nDNI: ${currentPassData.visit.visitorDni}\nPatente: ${currentPassData.visit.vehiclePlate}\nDestino: ${currentPassData.visit.residentName}\nFecha: ${currentPassData.visit.date} (${currentPassData.visit.time} hs)\nEstado: AUTORIZADO`;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
       });
     </script>

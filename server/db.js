@@ -27,6 +27,9 @@ db.exec(`
     passwordHash TEXT NOT NULL,
     role TEXT DEFAULT 'user',
     approved INTEGER DEFAULT 0,
+    username TEXT,
+    lote TEXT,
+    manzana TEXT,
     createdAt TEXT NOT NULL
   );
 
@@ -37,6 +40,8 @@ db.exec(`
     userId INTEGER NOT NULL,
     userName TEXT NOT NULL,
     userEmail TEXT NOT NULL,
+    isBlocked INTEGER DEFAULT 0,
+    blockReason TEXT,
     createdAt TEXT NOT NULL,
     UNIQUE(date, slot)
   );
@@ -76,6 +81,13 @@ db.exec(`
     createdAt TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS notification_reads (
+    notificationId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    readAt TEXT NOT NULL,
+    PRIMARY KEY (notificationId, userId)
+  );
+
   CREATE TABLE IF NOT EXISTS expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER NOT NULL,
@@ -86,12 +98,41 @@ db.exec(`
     concept TEXT,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    hostId INTEGER NOT NULL,
+    hostName TEXT NOT NULL,
+    expiresAt TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+  );
 `);
 
 // Migrations for existing databases
 try { db.exec("ALTER TABLE visits ADD COLUMN vehiclePlate TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN guestEmail TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN qrCode TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE visits ADD COLUMN entryAt TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE visits ADD COLUMN exitAt TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE expenses ADD COLUMN paymentReference TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE expenses ADD COLUMN paidAt TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN username TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN lote TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN manzana TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE bookings ADD COLUMN isBlocked INTEGER DEFAULT 0;"); } catch (e) {}
+try { db.exec("ALTER TABLE bookings ADD COLUMN blockReason TEXT;"); } catch (e) {}
+
+// Populate default username / lotes for existing seed users if empty
+try {
+  const admin = db.prepare('SELECT id, username FROM users WHERE id = 1').get();
+  if (admin && (!admin.username || admin.username !== 'SuperAdmin')) {
+    const adminPass = bcrypt.hashSync('AdminGTC123', 10);
+    db.prepare("UPDATE users SET username = 'SuperAdmin', passwordHash = ? WHERE id = 1").run(adminPass);
+  }
+  db.prepare("UPDATE users SET lote = '9', manzana = '2', username = 'L9M2' WHERE id = 2 AND (username IS NULL OR username = '')").run();
+  db.prepare("UPDATE users SET lote = '14', manzana = '1', username = 'L14M1' WHERE id = 3 AND (username IS NULL OR username = '')").run();
+} catch (e) {}
 
 function seedDatabase() {
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM users');
@@ -102,19 +143,19 @@ function seedDatabase() {
     const now = new Date().toISOString();
 
     const insertUser = db.prepare(`
-      INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, passwordHash, role, approved, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Hashing passwords securely
     const saltRounds = 10;
-    const adminHash = bcrypt.hashSync('admin123', saltRounds);
+    const adminHash = bcrypt.hashSync('AdminGTC123', saltRounds);
     const userHash = bcrypt.hashSync('123456', saltRounds);
 
-    insertUser.run('Administrador', 'Admin', 'DNI', '00000000', '1100000000', 'admin@ranchodobles.com', adminHash, 'admin', 1, now);
-    insertUser.run('Sánchez', 'Lucía', 'DNI', '30123456', '1123456789', 'lucia@ranchodobles.com', userHash, 'user', 1, now);
-    insertUser.run('García', 'Nicolás', 'DNI', '40222333', '1166677788', 'nicolas@gmail.com', userHash, 'user', 1, now);
-    insertUser.run('Gómez', 'Roberto', 'DNI', '35999888', '1144445555', 'roberto@gmail.com', userHash, 'user', 0, now);
+    insertUser.run('Administrador', 'Admin', 'DNI', '00000000', '1100000000', 'admin@ranchodobles.com', 'SuperAdmin', null, null, adminHash, 'admin', 1, now);
+    insertUser.run('Sánchez', 'Lucía', 'DNI', '30123456', '1123456789', 'lucia@ranchodobles.com', 'L9M2', '9', '2', userHash, 'user', 1, now);
+    insertUser.run('García', 'Nicolás', 'DNI', '40222333', '1166677788', 'nicolas@gmail.com', 'L14M1', '14', '1', userHash, 'user', 1, now);
+    insertUser.run('Gómez', 'Roberto', 'DNI', '35999888', '1144445555', 'roberto@gmail.com', 'L20M4', '20', '4', userHash, 'user', 0, now);
 
     // Initial news
     const insertNews = db.prepare(`

@@ -17,10 +17,13 @@ router.get('/', authenticateToken, (req, res) => {
     const date = req.query.date || today;
 
     const bookings = db.prepare(`
-      SELECT id, date, slot, userId, userName, userEmail, createdAt
-      FROM bookings
-      WHERE date = ?
-      ORDER BY slot ASC
+      SELECT b.id, b.date, b.slot, b.userId, b.userName, b.userEmail, b.createdAt,
+             COALESCE(b.isBlocked, 0) AS isBlocked, b.blockReason,
+             u.lote, u.manzana, u.telefono, u.username
+      FROM bookings b
+      LEFT JOIN users u ON b.userId = u.id
+      WHERE b.date = ?
+      ORDER BY b.slot ASC
     `).all(date);
 
     res.json({
@@ -51,6 +54,14 @@ router.post('/', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'No se pueden realizar reservas en fechas pasadas.' });
     }
 
+    // Horizon limit: reservations allowed up to 7 days in advance for residents
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 7);
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+    if (date > maxDateStr && req.user.role !== 'admin') {
+      return res.status(400).json({ error: 'Las reservas solo están habilitadas con hasta 7 días de anticipación.' });
+    }
+
     // If date is today, verify slot has not expired
     if (date === today) {
       const now = new Date();
@@ -62,10 +73,28 @@ router.post('/', authenticateToken, (req, res) => {
       }
     }
 
-    // Check if slot is taken
-    const existing = db.prepare('SELECT id FROM bookings WHERE date = ? AND slot = ?').get(date, slot);
+    // Check if slot is taken or blocked
+    const existing = db.prepare('SELECT id, isBlocked, blockReason FROM bookings WHERE date = ? AND slot = ?').get(date, slot);
     if (existing) {
+      if (existing.isBlocked) {
+        return res.status(400).json({ error: `Este horario está bloqueado por administración (${existing.blockReason || 'Mantenimiento'}).` });
+      }
       return res.status(400).json({ error: 'Este horario ya está reservado.' });
+    }
+
+    // Quota limits for non-admin residents
+    if (req.user.role !== 'admin') {
+      // 1. Max 1 reservation per day
+      const dailyCount = db.prepare('SELECT COUNT(*) as count FROM bookings WHERE userId = ? AND date = ?').get(req.user.id, date).count;
+      if (dailyCount >= 1) {
+        return res.status(400).json({ error: 'Ya tenés un turno reservado para este día. El límite es de 1 reserva diaria por vecino.' });
+      }
+
+      // 2. Max 3 active/upcoming reservations in total
+      const upcomingCount = db.prepare('SELECT COUNT(*) as count FROM bookings WHERE userId = ? AND date >= ?').get(req.user.id, today).count;
+      if (upcomingCount >= 3) {
+        return res.status(400).json({ error: 'Has alcanzado el límite máximo de 3 reservas activas. Debés esperar a que se cumpla o cancelar una para reservar otro turno.' });
+      }
     }
 
     const now = new Date().toISOString();
@@ -114,6 +143,91 @@ router.post('/', authenticateToken, (req, res) => {
   }
 });
 
+// POST /api/bookings/admin/block
+router.post('/admin/block', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores pueden bloquear horarios.' });
+    }
+
+    const { date, slot, allDay, reason, details } = req.body;
+    if (!date) {
+      return res.status(400).json({ error: 'La fecha es requerida.' });
+    }
+
+    const fullReason = [reason, details].filter(Boolean).join(' - ') || 'Mantenimiento de cancha';
+    const slotsToBlock = allDay ? validSlots : [slot];
+
+    if (!allDay && (!slot || !validSlots.includes(slot))) {
+      return res.status(400).json({ error: 'Horario no válido.' });
+    }
+
+    const now = new Date().toISOString();
+    let affectedCount = 0;
+
+    for (const s of slotsToBlock) {
+      const existing = db.prepare('SELECT id, userId, userName, isBlocked FROM bookings WHERE date = ? AND slot = ?').get(date, s);
+      if (existing) {
+        if (existing.userId !== req.user.id && !existing.isBlocked) {
+          db.prepare(`
+            INSERT INTO notifications (userId, title, text, read, createdAt)
+            VALUES (?, ?, ?, 0, ?)
+          `).run(
+            existing.userId,
+            'Turno de tenis suspendido',
+            `Tu reserva para el ${date} (${s}) fue suspendida por la administración. Motivo: ${fullReason}.`,
+            now
+          );
+          affectedCount++;
+        }
+        db.prepare(`
+          UPDATE bookings
+          SET isBlocked = 1, blockReason = ?, userId = ?, userName = 'Administración (Bloqueado)', userEmail = ?, createdAt = ?
+          WHERE id = ?
+        `).run(fullReason, req.user.id, req.user.email, now, existing.id);
+      } else {
+        db.prepare(`
+          INSERT INTO bookings (date, slot, userId, userName, userEmail, isBlocked, blockReason, createdAt)
+          VALUES (?, ?, ?, 'Administración (Bloqueado)', ?, 1, ?, ?)
+        `).run(date, s, req.user.id, req.user.email, fullReason, now);
+      }
+    }
+
+    res.json({
+      message: allDay
+        ? `Se bloquearon todos los turnos del día ${date} (${fullReason}).`
+        : `Turno ${slot} del día ${date} bloqueado con éxito (${fullReason}).`,
+      affectedCount
+    });
+  } catch (error) {
+    console.error('[Admin Block Court Error]', error);
+    res.status(500).json({ error: 'Error al bloquear horarios de cancha.' });
+  }
+});
+
+// POST /api/bookings/admin/unblock-day
+router.post('/admin/unblock-day', authenticateToken, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores pueden desbloquear horarios.' });
+    }
+
+    const { date } = req.body;
+    if (!date) {
+      return res.status(400).json({ error: 'La fecha es requerida.' });
+    }
+
+    const result = db.prepare('DELETE FROM bookings WHERE date = ? AND isBlocked = 1').run(date);
+
+    res.json({
+      message: `Se desbloquearon ${result.changes} turnos del día ${date}.`
+    });
+  } catch (error) {
+    console.error('[Admin Unblock Day Error]', error);
+    res.status(500).json({ error: 'Error al desbloquear horarios.' });
+  }
+});
+
 // DELETE /api/bookings/:id
 router.delete('/:id', authenticateToken, (req, res) => {
   try {
@@ -133,8 +247,10 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     db.prepare('DELETE FROM bookings WHERE id = ?').run(bookingId);
 
-    // Notify user if cancelled by admin
-    if (isAdmin && !isOwner) {
+    // Notify user if cancelled by admin and was not already blocked
+    if (isAdmin && !isOwner && !booking.isBlocked) {
+      const customReason = req.body?.reason || req.query?.reason || '';
+      const reasonText = customReason ? ` Motivo: ${customReason}.` : '';
       const now = new Date().toISOString();
       db.prepare(`
         INSERT INTO notifications (userId, title, text, read, createdAt)
@@ -142,7 +258,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
       `).run(
         booking.userId,
         'Reserva cancelada por administración',
-        `Tu reserva para el ${booking.date} (${booking.slot}) fue cancelada por la administración.`,
+        `Tu reserva para el ${booking.date} (${booking.slot}) fue cancelada por la administración.${reasonText}`,
         now
       );
     }

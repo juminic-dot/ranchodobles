@@ -1,31 +1,160 @@
 const express = require('express');
 const router = express.Router();
 const QRCode = require('qrcode');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const os = require('os');
 const db = require('../db');
-const { authenticateToken } = require('../middleware');
+const { authenticateToken, JWT_SECRET } = require('../middleware');
 
-// Public endpoint for guest self-registration from Gmail / WhatsApp invite
+function getLocalIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+// GET /api/visits/invite-token
+// Authenticated endpoint: allows a resident to generate a short, clean, secure invitation code (valid for 48 hours)
+router.get('/invite-token', authenticateToken, (req, res) => {
+  try {
+    const hostFullName = `${req.user.nombre} ${req.user.apellido}`.trim();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+    // 6-character alphanumeric short code, e.g. "8F2B1A"
+    const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    db.prepare(`
+      INSERT INTO invites (code, hostId, hostName, expiresAt, createdAt)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(code, req.user.id, hostFullName, expiresAt, now.toISOString());
+
+    const hostHeader = req.get('host') || 'localhost:3000';
+    const isLocal = hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1');
+    const localIp = getLocalIp();
+    const port = process.env.PORT || 3000;
+    const resolvedHost = isLocal ? `${localIp}:${port}` : hostHeader;
+    const protocol = req.protocol || 'http';
+
+    res.json({
+      code,
+      expiresInHours: 48,
+      baseUrl: `${protocol}://${resolvedHost}`
+    });
+  } catch (error) {
+    console.error('[Create Invite Code Error]', error);
+    res.status(500).json({ error: 'Error al generar código de invitación.' });
+  }
+});
+
+// GET /api/visits/verify-invite?code=... OR ?c=... OR ?token=...
+// Public endpoint: validates that an invitation link is authentic, unexpired, and belongs to an active resident
+router.get('/verify-invite', (req, res) => {
+  try {
+    const code = req.query.code || req.query.c;
+    const token = req.query.token;
+
+    let hostId = null;
+
+    if (code) {
+      const cleanCode = String(code).trim().toUpperCase();
+      const invite = db.prepare('SELECT * FROM invites WHERE code = ?').get(cleanCode);
+      if (!invite) {
+        return res.status(400).json({ valid: false, error: 'El código de invitación no es válido o ha expirado.' });
+      }
+
+      if (new Date(invite.expiresAt) < new Date()) {
+        return res.status(400).json({ valid: false, error: 'La invitación ha expirado (validez máxima de 48 horas).' });
+      }
+
+      hostId = invite.hostId;
+    } else if (token) {
+      let decoded;
+      try {
+        decoded = jwt.verify(token, JWT_SECRET);
+      } catch (err) {
+        return res.status(400).json({ valid: false, error: 'La invitación ha expirado o no es válida.' });
+      }
+
+      if (decoded.type !== 'guest-invite' || !decoded.hostId) {
+        return res.status(400).json({ valid: false, error: 'Tipo de invitación no válido.' });
+      }
+      hostId = decoded.hostId;
+    } else {
+      return res.status(400).json({ valid: false, error: 'Código o enlace de invitación no proporcionado.' });
+    }
+
+    const host = db.prepare('SELECT id, nombre, apellido, approved FROM users WHERE id = ?').get(hostId);
+    if (!host || !host.approved) {
+      return res.status(404).json({ valid: false, error: 'El anfitrión no fue encontrado o su cuenta está inactiva.' });
+    }
+
+    res.json({
+      valid: true,
+      hostId: host.id,
+      hostName: `${host.nombre} ${host.apellido}`.trim()
+    });
+  } catch (error) {
+    console.error('[Verify Invite Error]', error);
+    res.status(500).json({ valid: false, error: 'Error al verificar la invitación.' });
+  }
+});
+
+// POST /api/visits/guest-register
+// Public endpoint for guest self-registration: REQUIRES a valid invitation code or token
 router.post('/guest-register', async (req, res) => {
   try {
-    const { hostId, residentName, apellido, nombre, dni, vehiclePlate, guestEmail, date, time } = req.body;
+    const { code, c, token, apellido, nombre, dni, vehiclePlate, guestEmail, date, time } = req.body;
+    const inviteCode = code || c;
+
+    let hostId = null;
+
+    if (inviteCode) {
+      const cleanCode = String(inviteCode).trim().toUpperCase();
+      const invite = db.prepare('SELECT * FROM invites WHERE code = ?').get(cleanCode);
+      if (!invite) {
+        return res.status(401).json({ error: 'El código de invitación no es válido.' });
+      }
+
+      if (new Date(invite.expiresAt) < new Date()) {
+        return res.status(401).json({ error: 'El enlace de invitación ha superado el tiempo de validez de 48 horas.' });
+      }
+
+      hostId = invite.hostId;
+    } else if (token) {
+      let decoded;
+      try {
+        decoded = jwt.verify(token, JWT_SECRET);
+      } catch (err) {
+        return res.status(401).json({ error: 'El enlace de invitación ha expirado o es inválido.' });
+      }
+
+      if (decoded.type !== 'guest-invite' || !decoded.hostId) {
+        return res.status(400).json({ error: 'Credencial de invitación no válida.' });
+      }
+
+      hostId = decoded.hostId;
+    } else {
+      return res.status(401).json({ error: 'Invitación no válida. Solicitá al residente que te reenvíe el enlace oficial.' });
+    }
+
+    // Always fetch the host from database to ensure up-to-date active resident status
+    const host = db.prepare('SELECT id, nombre, apellido, approved FROM users WHERE id = ?').get(hostId);
+    if (!host || !host.approved) {
+      return res.status(403).json({ error: 'El residente que emitió la invitación ya no se encuentra habilitado.' });
+    }
 
     if (!apellido || !nombre || !dni) {
       return res.status(400).json({ error: 'Apellido, nombre y DNI son obligatorios.' });
     }
 
-    let host = null;
-    if (hostId) {
-      host = db.prepare('SELECT id, nombre, apellido, email FROM users WHERE id = ?').get(Number(hostId));
-    }
-    if (!host) {
-      host = db.prepare('SELECT id, nombre, apellido, email FROM users WHERE approved = 1 ORDER BY id ASC LIMIT 1').get();
-    }
-    if (!host) {
-      return res.status(404).json({ error: 'El anfitrión o propietario no fue encontrado.' });
-    }
-
     const now = new Date().toISOString();
-    const hostFullName = residentName || `${host.nombre} ${host.apellido}`;
+    const hostFullName = `${host.nombre} ${host.apellido}`.trim();
     const visitorFullName = `${nombre.trim()} ${apellido.trim()}`;
     const cleanDni = String(dni).trim();
     const cleanPlate = vehiclePlate && String(vehiclePlate).trim() ? String(vehiclePlate).trim().toUpperCase() : 'Sin vehículo';
@@ -107,7 +236,7 @@ router.get('/', authenticateToken, (req, res) => {
     const { date, all } = req.query;
 
     let query = `
-      SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, createdAt
+      SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
       FROM visits
     `;
     const params = [];
@@ -210,13 +339,96 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/visits/scan-lookup
+// Allows guard to look up a visit by QR string, pass code, DNI, or plate
+router.post('/scan-lookup', authenticateToken, (req, res) => {
+  try {
+    const { code, query: rawQuery } = req.body;
+    const input = String(code || rawQuery || '').trim();
+
+    if (!input) {
+      return res.status(400).json({ found: false, error: 'Código o texto de búsqueda vacío.' });
+    }
+
+    let visit = null;
+
+    // Check if input is standard RDS-PASS payload:
+    // e.g. "RDS-PASS|VISITANTE:...|DNI:12345678|PATENTE:...|DESTINO:...|FECHA:2026-09-16"
+    if (input.includes('RDS-PASS')) {
+      const dniMatch = input.match(/DNI:([^|]+)/i);
+      const dateMatch = input.match(/FECHA:([^|]+)/i);
+
+      if (dniMatch && dniMatch[1]) {
+        const dni = dniMatch[1].trim();
+        const date = dateMatch ? dateMatch[1].trim() : null;
+
+        if (date) {
+          visit = db.prepare(`
+            SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
+            FROM visits
+            WHERE visitorDni = ? AND date = ?
+            ORDER BY id DESC LIMIT 1
+          `).get(dni, date);
+        }
+
+        if (!visit) {
+          visit = db.prepare(`
+            SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
+            FROM visits
+            WHERE visitorDni = ?
+            ORDER BY date DESC, id DESC LIMIT 1
+          `).get(dni);
+        }
+      }
+    }
+
+    // If not found yet, check by invite code if passed:
+    if (!visit && input.length <= 10) {
+      const invite = db.prepare('SELECT * FROM invites WHERE UPPER(code) = ?').get(input.toUpperCase());
+      if (invite) {
+        visit = db.prepare(`
+          SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
+          FROM visits
+          WHERE userId = ?
+          ORDER BY id DESC LIMIT 1
+        `).get(invite.hostId);
+      }
+    }
+
+    // If not found yet, check by exact DNI or exact vehicle plate or visitor name:
+    if (!visit) {
+      visit = db.prepare(`
+        SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
+        FROM visits
+        WHERE visitorDni = ? OR UPPER(vehiclePlate) = ? OR LOWER(visitorName) LIKE ?
+        ORDER BY date DESC, id DESC LIMIT 1
+      `).get(input, input.toUpperCase(), `%${input.toLowerCase()}%`);
+    }
+
+    if (!visit) {
+      return res.status(404).json({
+        found: false,
+        error: 'No se encontró ninguna visita registrada con los datos proporcionados.'
+      });
+    }
+
+    res.json({
+      found: true,
+      visit
+    });
+  } catch (error) {
+    console.error('[Scan Lookup Error]', error);
+    res.status(500).json({ found: false, error: 'Error al buscar pase de visita.' });
+  }
+});
+
 // PATCH /api/visits/:id/status
 router.patch('/:id/status', authenticateToken, (req, res) => {
   try {
     const visitId = Number(req.params.id);
     const { status } = req.body;
 
-    const allowedStatuses = ['Pendiente', 'Confirmada', 'Ingresado', 'Cancelado'];
+    const allowedStatuses = ['Pendiente', 'Confirmada', 'Ingresado', 'Egresado', 'Cancelado'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ error: 'Estado no válido.' });
     }
@@ -233,23 +445,43 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
       return res.status(403).json({ error: 'No tenés permisos para actualizar esta visita.' });
     }
 
-    db.prepare('UPDATE visits SET status = ? WHERE id = ?').run(status, visitId);
+    const now = new Date().toISOString();
 
-    // If marked as Ingresado by security/admin, notify resident
-    if (status === 'Ingresado' && !isOwner) {
-      const now = new Date().toISOString();
-      db.prepare(`
-        INSERT INTO notifications (userId, title, text, read, createdAt)
-        VALUES (?, ?, ?, 0, ?)
-      `).run(
-        visit.userId,
-        'Visita ingresada',
-        `${visit.visitorName} (DNI ${visit.visitorDni}, Patente ${visit.vehiclePlate || 'S/P'}) acaba de ingresar por la guardia.`,
-        now
-      );
+    if (status === 'Ingresado') {
+      db.prepare('UPDATE visits SET status = ?, entryAt = ? WHERE id = ?').run(status, now, visitId);
+
+      // If marked as Ingresado by security/admin, notify resident
+      if (!isOwner) {
+        db.prepare(`
+          INSERT INTO notifications (userId, title, text, read, createdAt)
+          VALUES (?, ?, ?, 0, ?)
+        `).run(
+          visit.userId,
+          'Visita ingresada al predio',
+          `${visit.visitorName} (DNI ${visit.visitorDni}, Patente ${visit.vehiclePlate || 'Sin vehículo'}) acaba de ingresar por la guardia.`,
+          now
+        );
+      }
+    } else if (status === 'Egresado') {
+      db.prepare('UPDATE visits SET status = ?, exitAt = ? WHERE id = ?').run(status, now, visitId);
+
+      // If marked as Egresado by security/admin, notify resident
+      if (!isOwner) {
+        db.prepare(`
+          INSERT INTO notifications (userId, title, text, read, createdAt)
+          VALUES (?, ?, ?, 0, ?)
+        `).run(
+          visit.userId,
+          'Visita egresada del predio',
+          `${visit.visitorName} (Patente ${visit.vehiclePlate || 'Sin vehículo'}) ha salido del predio por la guardia.`,
+          now
+        );
+      }
+    } else {
+      db.prepare('UPDATE visits SET status = ? WHERE id = ?').run(status, visitId);
     }
 
-    res.json({ message: `Estado actualizado a ${status}.` });
+    res.json({ message: `Estado actualizado a "${status}".`, status, visitId });
   } catch (error) {
     console.error('[Update Visit Status Error]', error);
     res.status(500).json({ error: 'Error al actualizar estado de visita.' });

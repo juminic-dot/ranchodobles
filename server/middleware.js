@@ -43,8 +43,34 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+const rateLimit = require('express-rate-limit');
+
+// Rate limiting for authentication routes: prevents brute force attacks
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: 10, // Max 10 failed login attempts per IP
+  skipSuccessfulRequests: true, // Don't count successful logins against limit
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Demasiados intentos fallidos de inicio de sesión. Por favor, intentá nuevamente en 15 minutos.'
+  }
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour window
+  max: 10, // Max 10 account registration attempts per IP per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Se ha alcanzado el límite de solicitudes de registro desde esta conexión. Intentá más tarde.'
+  }
+});
+
 module.exports = {
   JWT_SECRET,
   authenticateToken,
-  requireAdmin
+  requireAdmin,
+  loginLimiter,
+  registerLimiter
 };

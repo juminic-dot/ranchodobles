@@ -22,9 +22,49 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname)));
-app.use('/ranchos', express.static(path.join(__dirname)));
+// Defense-in-depth: block any access to sensitive files or internal directories
+app.use((req, res, next) => {
+  const reqPath = decodeURI(req.path).toLowerCase();
+  if (
+    reqPath.includes('/.') ||
+    reqPath.startsWith('/data') ||
+    reqPath.startsWith('/ranchos/data') ||
+    reqPath.startsWith('/server') ||
+    reqPath.startsWith('/ranchos/server') ||
+    reqPath.includes('package.json') ||
+    reqPath.includes('package-lock.json') ||
+    reqPath.includes('node_modules')
+  ) {
+    return res.status(403).json({ error: 'Acceso denegado.' });
+  }
+  next();
+});
+
+// Serve static frontend assets safely (only assets folder, no root exposure)
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/ranchos/assets', express.static(path.join(__dirname, 'assets')));
+
+// Serve specific public assets
+app.get(['/descarga.jfif', '/ranchos/descarga.jfif'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'descarga.jfif'));
+});
+
+// Guest invite page
+app.get(['/invitacion.html', '/ranchos/invitacion.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'invitacion.html'));
+});
+
+// Short invite link redirect: /i/:code -> /invitacion.html?c=:code
+app.get(['/i/:code', '/ranchos/i/:code'], (req, res) => {
+  const code = encodeURIComponent(req.params.code);
+  const prefix = req.path.startsWith('/ranchos') ? '/ranchos' : '';
+  res.redirect(`${prefix}/invitacion.html?c=${code}`);
+});
+
+// Home / Main portal entrypoint
+app.get(['/', '/ranchos', '/index.html', '/ranchos/index.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // API routes
 const registerApi = (prefix = '') => {
@@ -51,9 +91,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// SPA fallback: send index.html
+// SPA fallback: send index.html only for HTML GET navigation requests
 app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  if (req.method === 'GET' && req.accepts('html')) {
+    return res.sendFile(path.join(__dirname, 'index.html'));
+  }
+  res.status(404).json({ error: 'Recurso no encontrado.' });
 });
 
 // Global error handler

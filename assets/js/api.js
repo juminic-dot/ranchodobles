@@ -87,6 +87,18 @@ const API = {
     },
     me() {
       return API.request('/api/auth/me');
+    },
+    updateProfile(profileData) {
+      return API.request('/api/auth/profile', {
+        method: 'PUT',
+        body: profileData
+      });
+    },
+    changePassword(passData) {
+      return API.request('/api/auth/change-password', {
+        method: 'PUT',
+        body: passData
+      });
     }
   },
 
@@ -102,9 +114,22 @@ const API = {
         body: { date, slot }
       });
     },
-    cancel(id) {
+    cancel(id, reason) {
       return API.request(`/api/bookings/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        body: reason ? { reason } : undefined
+      });
+    },
+    blockCourt(data) {
+      return API.request('/api/bookings/admin/block', {
+        method: 'POST',
+        body: data
+      });
+    },
+    unblockDay(date) {
+      return API.request('/api/bookings/admin/unblock-day', {
+        method: 'POST',
+        body: { date }
       });
     }
   },
@@ -130,6 +155,18 @@ const API = {
     delete(id) {
       return API.request(`/api/visits/${id}`, {
         method: 'DELETE'
+      });
+    },
+    getInviteToken() {
+      return API.request('/api/visits/invite-token');
+    },
+    verifyInvite(token) {
+      return API.request(`/api/visits/verify-invite?token=${encodeURIComponent(token)}`);
+    },
+    scanLookup(data) {
+      return API.request('/api/visits/scan-lookup', {
+        method: 'POST',
+        body: data
       });
     }
   },
@@ -161,6 +198,20 @@ const API = {
       return API.request('/api/notifications/read-all', {
         method: 'PATCH'
       });
+    },
+    getAdminBroadcasts() {
+      return API.request('/api/notifications/admin/broadcasts');
+    },
+    broadcast(data) {
+      return API.request('/api/notifications/broadcast', {
+        method: 'POST',
+        body: data
+      });
+    },
+    deleteBroadcast(id) {
+      return API.request(`/api/notifications/admin/${id}`, {
+        method: 'DELETE'
+      });
     }
   },
 
@@ -169,18 +220,48 @@ const API = {
     get() {
       return API.request('/api/expenses');
     },
-    pay(id) {
+    getAdminAll() {
+      return API.request('/api/expenses/admin/all');
+    },
+    pay(id, reference) {
       return API.request(`/api/expenses/${id}/pay`, {
-        method: 'POST'
+        method: 'POST',
+        body: { reference }
+      });
+    },
+    updateStatus(id, status) {
+      return API.request(`/api/expenses/${id}/status`, {
+        method: 'PATCH',
+        body: { status }
+      });
+    },
+    emit(data) {
+      return API.request('/api/expenses/admin/emit', {
+        method: 'POST',
+        body: data
+      });
+    },
+    deleteAdmin(id) {
+      return API.request(`/api/expenses/admin/${id}`, {
+        method: 'DELETE'
       });
     }
   },
 
   // Admin
   admin: {
-    getUsers(status) {
-      const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    getUsers(status, search) {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (search) params.append('search', search);
+      const query = params.toString() ? `?${params.toString()}` : '';
       return API.request(`/api/admin/users${query}`);
+    },
+    createUser(userData) {
+      return API.request('/api/admin/users', {
+        method: 'POST',
+        body: userData
+      });
     },
     approveUser(id) {
       return API.request(`/api/admin/users/${id}/approve`, {
