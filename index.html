@@ -14,6 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link rel="icon" type="image/png" href="assets/img/logo.png" />
+    <link rel="apple-touch-icon" href="assets/img/logo.png" />
     <link rel="stylesheet" href="assets/css/styles.css" />
   </head>
   <body>
@@ -22,8 +24,8 @@
       <section class="screen auth-screen active" id="authScreen" aria-live="polite">
         <div class="auth-shell">
           <div class="brand-panel glass-card">
-            <div class="brand-mark">RDS</div>
-            <p class="eyebrow">Portal</p>
+            <img src="assets/img/logo.png" alt="Barrio Privado Rancho Doble S" class="brand-logo-hero" />
+            <p class="eyebrow">Barrio Privado</p>
             <h1>Rancho Doble S</h1>
             <p class="brand-copy">
               Portal digital para novedades, reservas y servicios del predio.
@@ -130,9 +132,9 @@
       <section class="screen app-screen" id="dashboardScreen" aria-live="polite">
         <header class="topbar glass-card">
           <div class="topbar-brand">
-            <div class="brand-mini">RDS</div>
+            <img src="assets/img/logo.png" alt="Rancho Doble S" class="brand-mini-logo" />
             <div>
-              <p class="eyebrow">Portal</p>
+              <p class="eyebrow">Barrio Privado</p>
               <h2>Rancho Doble S</h2>
             </div>
           </div>
@@ -806,8 +808,12 @@
     <!-- Modal para visualización de Código QR de Visita -->
     <div id="viewQrModal" class="modal-overlay" style="display: none;">
       <div class="modal-card glass-card qr-modal-card">
-        <div class="modal-header">
-          <h4>Pase de Acceso — Código QR</h4>
+        <div class="modal-header" style="display: flex; align-items: center; gap: 0.75rem;">
+          <img src="assets/img/logo.png" alt="Rancho Doble S" style="width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.25); background: #fff; flex-shrink: 0;" />
+          <div style="flex: 1;">
+            <p style="margin: 0; font-size: 0.68rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Barrio Privado Rancho Doble S</p>
+            <h4 style="margin: 0; font-size: 1.05rem;">Pase de Acceso — Código QR</h4>
+          </div>
           <button type="button" class="icon-btn" id="closeViewQrModal">✕</button>
         </div>
         <div class="qr-modal-body">
@@ -1144,9 +1150,10 @@
     <!-- Modal de Mi Perfil y Cambio de Contraseña -->
     <div id="profileModal" class="modal-overlay" style="display: none;">
       <div class="modal-card glass-card" style="max-width: 540px; width: 95%; max-height: 90vh; overflow-y: auto;">
-        <div class="modal-header">
-          <div>
-            <h4>👤 Mi Perfil y Cuenta</h4>
+        <div class="modal-header" style="display: flex; align-items: center; gap: 0.75rem;">
+          <img src="assets/img/logo.png" alt="Rancho Doble S" style="width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.25); background: #fff; flex-shrink: 0;" />
+          <div style="flex: 1;">
+            <h4 style="margin: 0;">👤 Mi Perfil y Cuenta</h4>
             <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
               Gestioná tus datos de contacto y la seguridad de tu acceso.
             </p>

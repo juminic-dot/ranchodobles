@@ -104,3 +104,47 @@
    🟡 Media                                               │ Migrar bcrypt a métodos asíncronos y añadir limitador de tasa de peticiones.              │ Evita caídas por saturación / DoS
    🟡 Media                                               │ Modificar el flujo de expensas: estado "Pendiente de verificación" y aprobación de admin. │ Integridad financiera
    🟢 Baja                                                │ Corregir el enlace de WhatsApp en invitacion.html e integrar History API en el frontend.  │ Experiencia de usuario
+
+
+   ### 🔍 Diagnóstico del Panel de Administración Actual
+
+  1. Expensas (Emisión Inexistente):
+      • Actualmente: El admin puede ver los comprobantes informados y hacer clic en "Acreditar Pago" o "Desestimar".
+      • Falta crítica: No existe forma de emitir nuevos periodos. Las expensas actuales solo existen porque vinieron en el seed inicial. El administrador no tiene un botón ni formulario para generar la liquidación del mes (ej: Octubre 2026 - $150.000) para todos los propietarios.
+  2. Control de Guardia en Visitas (Falta de Búsqueda Rápida):
+      • Actualmente: Muestra las últimas visitas y permite pulsar "Marcar Ingreso".
+      • Falta operativa: Cuando un vehículo llega a la barrera de entrada, el guardia no puede ponerse a scrollear una lista larga: necesita un buscador en tiempo real por Patente o por DNI, y preferentemente poder registrar tanto el Ingreso como el Egreso (para saber qué visitas continúan dentro del barrio).
+      En este punto haria que se pueda leer el QR del visitante desde el panel administrador. (ver como implementar)
+  3. Padrón de Vecinos (Solo muestra los pendientes):
+      • Actualmente: El panel solo muestra las solicitudes pendientes para aprobar o rechazar. Una vez que el vecino es aprobado, desaparece de la vista del admin.
+      • Falta: Un listado/padrón de "Vecinos Activos" donde el administrador pueda ver a todos los residentes habilitados, sus teléfonos, correos, lotes/manzanas y dar de baja o promover a administrador si fuera necesario. Tambien crear usuarios.
+  4. Supervisión de Reservas de Canchas:
+      • Actualmente: Los vecinos reservan turnos en la cancha de tenis, pero la administración no tiene una vista consolidada para saber quién juega hoy ni la facultad de bloquear turnos por mantenimiento, eventos o lluvia.
+  5. Avisos y Alertas Masivas Inmediatas:
+      • Actualmente: Se pueden publicar novedades con foto.
+      • Falta: Un emisor de Alerta General que inserte una notificación directa en la campanita 🔔 de todos los vecinos (ej: "Corte de suministro de agua por reparación de 14 a 17 hs").
+  6. Alineación con las Reglas Oficiales (Proyecto Rancho Doble S - Reglas.docx):
+      • El documento del proyecto estipula la cuenta preconfigurada:
+          • Usuario: SuperAdmin
+          • Contraseña: AdminGTC123
+      • El identificador oficial de los propietarios debe ser su Lote + Manzana (ej: L9M2).
+
+  ──────
+  ### 🛠️ Plan de Trabajo Propuesto para el Panel Administrador
+
+  Te propongo estructurarlo en estas prioridades:
+
+              Prioridad            │ Módulo Administrador           │ Funcionalidad a Incorporar
+  ─────────────────────────────────┼────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+               Paso 1              │ Gestión y Emisión de Expensas  │ Formulario modal para emitir expensas del mes (masivas a todos los vecinos o individuales), con monto, concepto y fecha de vencimiento.
+               Paso 2              │ Puesto de Guardia (Buscador)   │ Barra de búsqueda instantánea por Patente/DNI/Nombre en el panel de visitas y opción de marcar Egreso.
+               Paso 3              │ Padrón de Vecinos Activos      │ Vista completa de residentes habilitados, buscador, lote/manzana y opciones de gestión de cuenta.
+               Paso 4              │ Control de Canchas             │ Grilla de reservas del día en el panel admin y botón de bloqueo por mantenimiento.
+               Paso 5              │ Alertas Push Comunitarias      │ Envío de notificaciones directas a la campanita de todos los vecinos.
+               Paso 6              │ Credenciales y Lote/Manzana    │ Integrar acceso SuperAdmin / AdminGTC123 y soporte para lote/manzana (L9M2).
+  ──────
+
+  ## Lo que anotamos con los chicos de discord
+  * No tiene invalidación de token (si cambias contraseña, invalidas el token)
+  * Quitar super admin del textbox
+  

@@ -117,6 +117,35 @@ img {
   letter-spacing: 0.08em;
 }
 
+.brand-logo-hero {
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 25px rgba(105, 210, 166, 0.25);
+  background: #fff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.brand-logo-hero:hover {
+  transform: scale(1.04);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 30px rgba(105, 210, 166, 0.35);
+}
+
+.brand-mini-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  background: #fff;
+  flex-shrink: 0;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--primary);
