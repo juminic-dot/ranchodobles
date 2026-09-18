@@ -128,10 +128,10 @@ router.post('/users', async (req, res) => {
 
     const newUserId = Number(result.lastInsertRowid);
 
-    // Initial welcome notification
+    // Initial welcome notification (personal)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       newUserId,
       '¡Bienvenido a Rancho Doble S!',
@@ -291,11 +291,11 @@ router.patch('/users/:id/approve', (req, res) => {
       WHERE id = ?
     `).run(newLote, newManzana, newUsername, userId);
 
-    // Notify user
+    // Notify user (personal)
     const now = new Date().toISOString();
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       userId,
       '¡Cuenta aprobada!',

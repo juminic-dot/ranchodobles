@@ -134,8 +134,8 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
 
       // Notify resident
       db.prepare(`
-        INSERT INTO notifications (userId, title, text, read, createdAt)
-        VALUES (?, ?, ?, 0, ?)
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (?, 'user', ?, ?, 0, ?)
       `).run(
         expense.userId,
         'Pago de expensas acreditado',
@@ -165,10 +165,10 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
       expenseId
     );
 
-    // Notify resident
+    // Notify resident (personal)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       req.user.id,
       'Aviso de pago de expensas',
@@ -176,12 +176,11 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
       now
     );
 
-    // Notify admin
+    // Notify admin (exclusively for administrators)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'admin', ?, ?, 0, ?)
     `).run(
-      null,
       'Nuevo aviso de pago de expensas',
       `${req.user.nombre} ${req.user.apellido} informó el pago de expensas del periodo ${expense.period}${cleanRef ? ` (${cleanRef})` : ''}${savedReceiptPath ? ' con comprobante digital adjunto' : ''}.`,
       now
@@ -265,8 +264,8 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
     // Notify resident of the decision
     if (status === 'Pagado') {
       db.prepare(`
-        INSERT INTO notifications (userId, title, text, read, createdAt)
-        VALUES (?, ?, ?, 0, ?)
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (?, 'user', ?, ?, 0, ?)
       `).run(
         expense.userId,
         '¡Pago de expensas confirmado!',
@@ -275,8 +274,8 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
       );
     } else if (status === 'Pendiente') {
       db.prepare(`
-        INSERT INTO notifications (userId, title, text, read, createdAt)
-        VALUES (?, ?, ?, 0, ?)
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (?, 'user', ?, ?, 0, ?)
       `).run(
         expense.userId,
         'Aviso de expensas observado',
@@ -350,8 +349,8 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       VALUES (?, ?, ?, ?, 'Pendiente', ?, ?)
     `);
     const notifStmt = db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `);
 
     let createdCount = 0;

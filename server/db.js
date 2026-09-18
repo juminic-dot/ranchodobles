@@ -75,6 +75,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userId INTEGER,
+    targetRole TEXT DEFAULT 'user',
     title TEXT NOT NULL,
     text TEXT NOT NULL,
     read INTEGER DEFAULT 0,
@@ -134,6 +135,30 @@ try { db.exec("ALTER TABLE users ADD COLUMN lote TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN manzana TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN isBlocked INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN blockReason TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE notifications ADD COLUMN targetRole TEXT DEFAULT 'user';"); } catch (e) {}
+
+// Retroactively classify existing notifications
+try {
+  db.exec(`
+    UPDATE notifications
+    SET targetRole = 'admin'
+    WHERE (title LIKE '%aviso de pago%'
+       OR title LIKE '%solicitud%'
+       OR title LIKE '%liquidaci%'
+       OR title LIKE '%nuevo registro%')
+      AND (targetRole IS NULL OR targetRole = 'user');
+  `);
+  db.exec(`
+    UPDATE notifications
+    SET targetRole = 'all'
+    WHERE userId IS NULL AND (targetRole IS NULL OR targetRole != 'admin');
+  `);
+  db.exec(`
+    UPDATE notifications
+    SET targetRole = 'user'
+    WHERE userId IS NOT NULL AND (targetRole IS NULL OR targetRole = '');
+  `);
+} catch (e) {}
 
 const receiptsDir = path.join(dataDir, 'receipts');
 if (!fs.existsSync(receiptsDir)) {

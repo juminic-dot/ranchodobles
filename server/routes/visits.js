@@ -192,8 +192,8 @@ router.post('/guest-register', async (req, res) => {
 
     // Notify resident (host)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       host.id,
       'Nueva visita acreditada',
@@ -306,8 +306,8 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Create notification
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       req.user.id,
       'Aviso de ingreso registrado',
@@ -450,11 +450,11 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
     if (status === 'Ingresado') {
       db.prepare('UPDATE visits SET status = ?, entryAt = ? WHERE id = ?').run(status, now, visitId);
 
-      // If marked as Ingresado by security/admin, notify resident
+      // If marked as Ingresado by security/admin, notify resident (personal host only)
       if (!isOwner) {
         db.prepare(`
-          INSERT INTO notifications (userId, title, text, read, createdAt)
-          VALUES (?, ?, ?, 0, ?)
+          INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+          VALUES (?, 'user', ?, ?, 0, ?)
         `).run(
           visit.userId,
           'Visita ingresada al predio',
@@ -465,11 +465,11 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
     } else if (status === 'Egresado') {
       db.prepare('UPDATE visits SET status = ?, exitAt = ? WHERE id = ?').run(status, now, visitId);
 
-      // If marked as Egresado by security/admin, notify resident
+      // If marked as Egresado by security/admin, notify resident (personal host only)
       if (!isOwner) {
         db.prepare(`
-          INSERT INTO notifications (userId, title, text, read, createdAt)
-          VALUES (?, ?, ?, 0, ?)
+          INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+          VALUES (?, 'user', ?, ?, 0, ?)
         `).run(
           visit.userId,
           'Visita egresada del predio',

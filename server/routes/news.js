@@ -46,12 +46,11 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       now
     );
 
-    // Broadcast notification to all residents
+    // Broadcast notification to all residents (community)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'all', ?, ?, 0, ?)
     `).run(
-      null,
       'Nueva noticia del predio',
       title.trim(),
       now

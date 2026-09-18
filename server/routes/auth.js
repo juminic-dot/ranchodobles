@@ -78,13 +78,12 @@ router.post('/register', registerLimiter, async (req, res) => {
       now
     );
 
-    // Notify administrators of pending registration
+    // Notify administrators of pending registration (Admin-only)
     const notifStmt = db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'admin', ?, ?, 0, ?)
     `);
     notifStmt.run(
-      null, // general admin notification
       'Nueva solicitud de acceso',
       `${nombre} ${apellido} solicitó acceso para Lote ${cleanLote}, Manzana ${cleanManzana} (Usuario: ${formattedUsername}).`,
       now

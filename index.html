@@ -730,9 +730,17 @@
       <div class="panel-top">
         <div>
           <p class="eyebrow">Centro de alertas</p>
-          <h3>Notificaciones</h3>
+          <h3 id="notificationPanelTitle">Notificaciones</h3>
         </div>
         <button type="button" id="closeNotifications" class="icon-btn" aria-label="Cerrar panel">✕</button>
+      </div>
+
+      <!-- Filtro de Notificaciones por Ámbito (Exclusivo Administrador) -->
+      <div id="notificationRoleFilterBar" style="display: none; padding: 0.45rem 0.85rem; gap: 0.35rem; flex-wrap: wrap; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.15);">
+        <button type="button" class="btn-inline-action active notif-role-filter" data-role-filter="all">Todas</button>
+        <button type="button" class="btn-inline-action notif-role-filter" data-role-filter="admin">🛡️ Gestión Admin</button>
+        <button type="button" class="btn-inline-action notif-role-filter" data-role-filter="community">📢 Comunidad</button>
+        <button type="button" class="btn-inline-action notif-role-filter" data-role-filter="user">👤 Personal</button>
       </div>
 
       <div class="notification-toolbar">

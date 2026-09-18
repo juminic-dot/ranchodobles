@@ -148,15 +148,14 @@
   * No tiene invalidación de token (si cambias contraseña, invalidas el token) ok
   * Quitar super admin del textbox ok
   * Revizar el tema pago de expensas que se pueda subir foto del comprobante. ok
-  * Acomodar el responsive para celulares
-  * Una vez que un vecino se registra, volver al inicio de sesion, dar el mensaje que administracion acreditara la cuenta en breve.
-  * quitar los puntos verdes del inicio de sesion, quedara el logo y portal digital para novedades y servicios del predio.
+  * Acomodar el responsive para celulares ok
+  * Una vez que un vecino se registra, volver al inicio de sesion, dar el mensaje que administracion acreditara la cuenta en breve. ok
+  * quitar los puntos verdes del inicio de sesion, quedara el logo y portal digital para novedades y servicios del predio. ok
 
-  * un boton para padron de vecinos activos y solicitud de registro de vecinos
-  * un boton de control de guardia (ingresos y egresos)
-  * un boton de gestion y acreditacion de expensas
-  * un boton para supervicion y control de canchas
-  * un boton para avisos y alertas masivas inmediatas
-  * Al registrarse un nuevo vecino, al administrador le debe permitir agregar el identificador de lote manzana para que el vecino pueda ingresar a la app
+  * un boton para padron de vecinos activos y solicitud de registro de vecinos ok
+  * un boton de control de guardia (ingresos y egresos)  ok
+  * un boton de gestion y acreditacion de expensas ok
+  * un boton para supervicion y control de canchas ok
+  * un boton para avisos y alertas masivas inmediatas ok
+  * Al registrarse un nuevo vecino, al administrador le debe permitir agregar el identificador de lote manzana y tambien modificar los datos del vecino, pero nunca modificar o visualizar su contraseña. ok
   * las novedades para administrador no deben poder verlas los vecinos, el vecino solo debe ver notificaciones masivas, y sus propias notificaciones de sus acciones en la app, no debe ver por ejemplo que otro vecino pago expensas, que llego una visita para otro vecino, ni nada de eso.
-  

@@ -114,16 +114,28 @@ router.post('/', authenticateToken, (req, res) => {
       now
     );
 
-    // Create notification
+    // Notify resident (personal)
     db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       req.user.id,
       'Reserva confirmada',
       `Tu turno de tenis para el ${date} a las ${slot} fue confirmado.`,
       now
     );
+
+    // Notify administration (admin-only operational notice)
+    if (req.user.role !== 'admin') {
+      db.prepare(`
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (NULL, 'admin', ?, ?, 0, ?)
+      `).run(
+        'Nueva reserva de cancha de tenis',
+        `${fullName} reservó la cancha para el ${date} a las ${slot} hs.`,
+        now
+      );
+    }
 
     res.status(201).json({
       message: 'Turno reservado con éxito.',
@@ -170,8 +182,8 @@ router.post('/admin/block', authenticateToken, (req, res) => {
       if (existing) {
         if (existing.userId !== req.user.id && !existing.isBlocked) {
           db.prepare(`
-            INSERT INTO notifications (userId, title, text, read, createdAt)
-            VALUES (?, ?, ?, 0, ?)
+            INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+            VALUES (?, 'user', ?, ?, 0, ?)
           `).run(
             existing.userId,
             'Turno de tenis suspendido',
@@ -253,8 +265,8 @@ router.delete('/:id', authenticateToken, (req, res) => {
       const reasonText = customReason ? ` Motivo: ${customReason}.` : '';
       const now = new Date().toISOString();
       db.prepare(`
-        INSERT INTO notifications (userId, title, text, read, createdAt)
-        VALUES (?, ?, ?, 0, ?)
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (?, 'user', ?, ?, 0, ?)
       `).run(
         booking.userId,
         'Reserva cancelada por administración',

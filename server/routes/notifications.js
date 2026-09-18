@@ -4,21 +4,52 @@ const db = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
 
 // GET /api/notifications
+// Retrieves notifications filtered strictly by user role and ownership
 router.get('/', authenticateToken, (req, res) => {
   try {
-    const notifications = db.prepare(`
-      SELECT n.id, n.userId, n.title, n.text, n.createdAt,
-             CASE
-               WHEN n.userId = ? THEN n.read
-               ELSE CASE WHEN nr.notificationId IS NOT NULL THEN 1 ELSE 0 END
-             END AS read
-      FROM notifications n
-      LEFT JOIN notification_reads nr
-        ON n.id = nr.notificationId AND nr.userId = ?
-      WHERE n.userId = ? OR n.userId IS NULL
-      ORDER BY n.createdAt DESC
-      LIMIT 50
-    `).all(req.user.id, req.user.id, req.user.id);
+    const isAdmin = req.user.role === 'admin';
+    let notifications;
+
+    if (isAdmin) {
+      // Admin sees:
+      // 1. Personal notifications for their own account
+      // 2. Operational admin events (targetRole = 'admin')
+      // 3. Community broadcasts (targetRole = 'all')
+      notifications = db.prepare(`
+        SELECT n.id, n.userId, COALESCE(n.targetRole, 'user') AS targetRole, n.title, n.text, n.createdAt,
+               CASE
+                 WHEN n.userId = ? THEN n.read
+                 ELSE CASE WHEN nr.notificationId IS NOT NULL THEN 1 ELSE 0 END
+               END AS read
+        FROM notifications n
+        LEFT JOIN notification_reads nr
+          ON n.id = nr.notificationId AND nr.userId = ?
+        WHERE (n.userId = ?)
+           OR (n.targetRole = 'admin')
+           OR (n.targetRole = 'all')
+        ORDER BY n.createdAt DESC
+        LIMIT 60
+      `).all(req.user.id, req.user.id, req.user.id);
+    } else {
+      // Resident sees strictly:
+      // 1. Their own personal notifications (n.userId = req.user.id)
+      // 2. General community broadcasts (targetRole = 'all')
+      // ZERO leakage of any other neighbor's payments, bookings, visits, or admin notices!
+      notifications = db.prepare(`
+        SELECT n.id, n.userId, COALESCE(n.targetRole, 'user') AS targetRole, n.title, n.text, n.createdAt,
+               CASE
+                 WHEN n.userId = ? THEN n.read
+                 ELSE CASE WHEN nr.notificationId IS NOT NULL THEN 1 ELSE 0 END
+               END AS read
+        FROM notifications n
+        LEFT JOIN notification_reads nr
+          ON n.id = nr.notificationId AND nr.userId = ?
+        WHERE (n.userId = ? AND (n.targetRole = 'user' OR n.targetRole IS NULL))
+           OR (n.targetRole = 'all')
+        ORDER BY n.createdAt DESC
+        LIMIT 60
+      `).all(req.user.id, req.user.id, req.user.id);
+    }
 
     res.json(notifications);
   } catch (error) {
@@ -33,7 +64,7 @@ router.get('/admin/broadcasts', authenticateToken, requireAdmin, (req, res) => {
     const broadcasts = db.prepare(`
       SELECT id, title, text, createdAt
       FROM notifications
-      WHERE userId IS NULL
+      WHERE targetRole = 'all'
       ORDER BY createdAt DESC
       LIMIT 50
     `).all();
@@ -54,8 +85,8 @@ router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
 
     const now = new Date().toISOString();
     const result = db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (NULL, ?, ?, 0, ?)
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'all', ?, ?, 0, ?)
     `).run(title.trim(), text.trim(), now);
 
     res.status(201).json({
@@ -77,7 +108,7 @@ router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
 router.delete('/admin/:id', authenticateToken, requireAdmin, (req, res) => {
   try {
     const alertId = Number(req.params.id);
-    const alert = db.prepare('SELECT id, title FROM notifications WHERE id = ? AND userId IS NULL').get(alertId);
+    const alert = db.prepare('SELECT id, title FROM notifications WHERE id = ? AND targetRole = "all"').get(alertId);
 
     if (!alert) {
       return res.status(404).json({ error: 'Alerta no encontrada o no es un aviso general.' });
@@ -97,6 +128,7 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, (req, res) => {
 router.patch('/read-all', authenticateToken, (req, res) => {
   try {
     const now = new Date().toISOString();
+    const isAdmin = req.user.role === 'admin';
 
     // 1. Mark user's personal notifications as read
     db.prepare(`
@@ -105,13 +137,22 @@ router.patch('/read-all', authenticateToken, (req, res) => {
       WHERE userId = ?
     `).run(req.user.id);
 
-    // 2. Mark general broadcast notifications as read ONLY for this specific user
-    db.prepare(`
-      INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
-      SELECT id, ?, ?
-      FROM notifications
-      WHERE userId IS NULL
-    `).run(req.user.id, now);
+    // 2. Mark shared notifications as read for this specific user
+    if (isAdmin) {
+      db.prepare(`
+        INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
+        SELECT id, ?, ?
+        FROM notifications
+        WHERE targetRole IN ('all', 'admin')
+      `).run(req.user.id, now);
+    } else {
+      db.prepare(`
+        INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
+        SELECT id, ?, ?
+        FROM notifications
+        WHERE targetRole = 'all'
+      `).run(req.user.id, now);
+    }
 
     res.json({ message: 'Todas las notificaciones fueron marcadas como leídas.' });
   } catch (error) {
@@ -124,17 +165,18 @@ router.patch('/read-all', authenticateToken, (req, res) => {
 router.patch('/:id/read', authenticateToken, (req, res) => {
   try {
     const notifId = Number(req.params.id);
-    const notif = db.prepare('SELECT id, userId FROM notifications WHERE id = ?').get(notifId);
+    const notif = db.prepare('SELECT id, userId, targetRole FROM notifications WHERE id = ?').get(notifId);
 
     if (!notif) {
       return res.status(404).json({ error: 'Notificación no encontrada.' });
     }
 
     const now = new Date().toISOString();
+    const isAdmin = req.user.role === 'admin';
 
     if (notif.userId === req.user.id) {
       db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(notifId);
-    } else if (notif.userId === null) {
+    } else if (notif.targetRole === 'all' || (isAdmin && notif.targetRole === 'admin')) {
       db.prepare(`
         INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
         VALUES (?, ?, ?)

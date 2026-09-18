@@ -46,7 +46,8 @@ const state = {
   selectedReceiptFile: null,
   activeViewingExpense: null,
   activeAdminTab: 'vecinos',
-  activeVecinosSubtab: 'activos'
+  activeVecinosSubtab: 'activos',
+  notificationRoleFilter: 'all'
 };
 
 // DOM Elements
@@ -74,6 +75,7 @@ const notificationBadge = document.getElementById('notificationBadge');
 const notificationsToggle = document.getElementById('notificationsToggle');
 const closeNotifications = document.getElementById('closeNotifications');
 const markAllRead = document.getElementById('markAllRead');
+const notificationRoleFilterBar = document.getElementById('notificationRoleFilterBar');
 const toast = document.getElementById('toast');
 
 // Bookings DOM
@@ -578,30 +580,68 @@ async function loadNotifications() {
 
 function renderNotifications() {
   if (!notificationList) return;
-  const unreadCount = state.notifications.filter((n) => !n.read).length;
+  const isAdmin = state.authenticatedUser?.role === 'admin';
+
+  // Toggle role filter bar visibility for admin
+  if (notificationRoleFilterBar) {
+    notificationRoleFilterBar.style.display = isAdmin ? 'flex' : 'none';
+  }
+
+  const allNotifications = state.notifications || [];
+  const unreadCount = allNotifications.filter((n) => !n.read).length;
 
   if (notificationBadge) {
     notificationBadge.textContent = unreadCount;
     notificationBadge.style.display = unreadCount > 0 ? 'inline-flex' : 'none';
   }
 
-  if (state.notifications.length === 0) {
+  // Filter notifications if active filter is applied (admin only)
+  let displayed = allNotifications;
+  if (isAdmin && state.notificationRoleFilter && state.notificationRoleFilter !== 'all') {
+    if (state.notificationRoleFilter === 'admin') {
+      displayed = displayed.filter((n) => n.targetRole === 'admin');
+    } else if (state.notificationRoleFilter === 'community') {
+      displayed = displayed.filter((n) => n.targetRole === 'all');
+    } else if (state.notificationRoleFilter === 'user') {
+      displayed = displayed.filter((n) => n.targetRole === 'user' || !n.targetRole);
+    }
+  }
+
+  if (displayed.length === 0) {
+    const emptyMsg = (isAdmin && state.notificationRoleFilter !== 'all')
+      ? 'No hay avisos en esta categoría.'
+      : 'No tenés notificaciones pendientes.';
     notificationList.innerHTML = `
       <li class="notification-item">
-        <p>No tenés notificaciones pendientes.</p>
+        <p>${emptyMsg}</p>
       </li>
     `;
     return;
   }
 
-  notificationList.innerHTML = state.notifications
+  notificationList.innerHTML = displayed
     .map((notification) => {
-      const dateStr = notification.createdAt ? new Date(notification.createdAt).toLocaleDateString() : '';
+      const dateStr = notification.createdAt ? new Date(notification.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '';
+
+      let badgeHtml = '';
+      if (notification.targetRole === 'admin') {
+        badgeHtml = `<span class="badge soft mini" style="background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); font-size: 0.72rem; margin-left: 0.4rem;">🛡️ Gestión Admin</span>`;
+      } else if (notification.targetRole === 'all') {
+        badgeHtml = `<span class="badge soft mini" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4); font-size: 0.72rem; margin-left: 0.4rem;">📢 Comunidad</span>`;
+      } else if (isAdmin) {
+        badgeHtml = `<span class="badge soft mini" style="background: rgba(138, 206, 255, 0.15); color: var(--secondary); border: 1px solid rgba(138, 206, 255, 0.3); font-size: 0.72rem; margin-left: 0.4rem;">👤 Personal</span>`;
+      }
+
       return `
-        <li class="notification-item ${notification.read ? '' : 'unread'}">
-          <strong>${escapeHTML(notification.title)}</strong>
-          <small>${escapeHTML(dateStr)}</small>
-          <p>${escapeHTML(notification.text)}</p>
+        <li class="notification-item ${notification.read ? '' : 'unread'}" data-id="${notification.id}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap;">
+            <div>
+              <strong style="color: #fff;">${escapeHTML(notification.title)}</strong>
+              ${badgeHtml}
+            </div>
+            <small style="color: var(--muted);">${escapeHTML(dateStr)}</small>
+          </div>
+          <p style="margin: 0.3rem 0 0 0; line-height: 1.4;">${escapeHTML(notification.text)}</p>
         </li>
       `;
     })
@@ -3442,6 +3482,17 @@ function attachEventListeners() {
   if (closeNotifications) closeNotifications.addEventListener('click', () => toggleNotificationsPanel(false));
   if (notificationBackdrop) notificationBackdrop.addEventListener('click', () => toggleNotificationsPanel(false));
   if (markAllRead) markAllRead.addEventListener('click', handleMarkAllNotificationsRead);
+
+  // Notification role filters (Admin only)
+  document.querySelectorAll('.notif-role-filter').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.notificationRoleFilter = btn.dataset.roleFilter;
+      document.querySelectorAll('.notif-role-filter').forEach((b) => {
+        b.classList.toggle('active', b.dataset.roleFilter === state.notificationRoleFilter);
+      });
+      renderNotifications();
+    });
+  });
 
   // Admin news creation modal
   function openCreateNews() {
