@@ -28,6 +28,7 @@
     "express-rate-limit": "^8.7.0",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.10",
     "qrcode": "^1.5.4"
   }
 }

@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
+const { sendPasswordResetEmail } = require('../mailer');
 
 // Apply auth and admin check to all admin routes
 router.use(authenticateToken, requireAdmin);
@@ -157,17 +159,137 @@ router.post('/users', async (req, res) => {
   }
 });
 
+// PUT /api/admin/users/:id (Admin edits neighbor details, NEVER password)
+router.put('/users/:id', (req, res) => {
+  try {
+    const targetUserId = Number(req.params.id);
+    const {
+      nombre,
+      apellido,
+      tipoDocumento,
+      numeroDocumento,
+      telefono,
+      email,
+      lote,
+      manzana,
+      role
+    } = req.body;
+
+    const existingUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Vecino no encontrado.' });
+    }
+
+    if (!nombre || !apellido || !numeroDocumento || !telefono || !email) {
+      return res.status(400).json({ error: 'Nombre, apellido, documento, teléfono y email son obligatorios.' });
+    }
+
+    const emailNormalized = email.trim().toLowerCase();
+    const emailDuplicate = db.prepare('SELECT id FROM users WHERE LOWER(email) = ? AND id != ?').get(emailNormalized, targetUserId);
+    if (emailDuplicate) {
+      return res.status(400).json({ error: 'Ya existe otro vecino registrado con este correo electrónico.' });
+    }
+
+    const dniDuplicate = db.prepare('SELECT id FROM users WHERE numeroDocumento = ? AND id != ?').get(numeroDocumento.trim(), targetUserId);
+    if (dniDuplicate) {
+      return res.status(400).json({ error: 'Ya existe otro vecino registrado con este número de documento.' });
+    }
+
+    // Format username if lote and manzana provided
+    const cleanLote = lote ? lote.toString().trim().replace(/\D/g, '') : '';
+    const cleanManzana = manzana ? manzana.toString().trim().replace(/\D/g, '') : '';
+    let newUsername = existingUser.username;
+
+    if (cleanLote && cleanManzana) {
+      newUsername = `L${cleanLote}M${cleanManzana}`;
+      const usernameDuplicate = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(newUsername.toLowerCase(), targetUserId);
+      if (usernameDuplicate) {
+        return res.status(400).json({ error: `El identificador de usuario '${newUsername}' ya está en uso por otro lote.` });
+      }
+    }
+
+    const newRole = (role === 'admin' || role === 'user') ? role : existingUser.role;
+
+    // Security guarantee: NEVER update or query password / passwordHash
+    db.prepare(`
+      UPDATE users
+      SET nombre = ?,
+          apellido = ?,
+          tipoDocumento = ?,
+          numeroDocumento = ?,
+          telefono = ?,
+          email = ?,
+          lote = ?,
+          manzana = ?,
+          username = ?,
+          role = ?
+      WHERE id = ?
+    `).run(
+      nombre.trim(),
+      apellido.trim(),
+      tipoDocumento ? tipoDocumento.trim() : (existingUser.tipoDocumento || 'DNI'),
+      numeroDocumento.trim(),
+      telefono.trim(),
+      emailNormalized,
+      cleanLote || existingUser.lote,
+      cleanManzana || existingUser.manzana,
+      newUsername,
+      newRole,
+      targetUserId
+    );
+
+    const updatedUser = db.prepare(`
+      SELECT id, apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, role, approved, createdAt
+      FROM users WHERE id = ?
+    `).get(targetUserId);
+
+    res.json({
+      message: `Datos del vecino ${updatedUser.nombre} ${updatedUser.apellido} (${updatedUser.username || ''}) actualizados correctamente.`,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('[Admin Update Neighbor Error]', error);
+    res.status(500).json({ error: 'Error al actualizar los datos del vecino.' });
+  }
+});
+
 // PATCH /api/admin/users/:id/approve
 router.patch('/users/:id/approve', (req, res) => {
   try {
     const userId = Number(req.params.id);
-    const user = db.prepare('SELECT id, nombre, apellido, email FROM users WHERE id = ?').get(userId);
+    const { lote, manzana } = req.body || {};
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
     }
 
-    db.prepare('UPDATE users SET approved = 1 WHERE id = ?').run(userId);
+    let newLote = user.lote;
+    let newManzana = user.manzana;
+    let newUsername = user.username;
+
+    if (lote && manzana) {
+      const cleanL = lote.toString().trim().replace(/\D/g, '');
+      const cleanM = manzana.toString().trim().replace(/\D/g, '');
+      if (cleanL && cleanM) {
+        newLote = cleanL;
+        newManzana = cleanM;
+        newUsername = `L${cleanL}M${cleanM}`;
+        const dup = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(newUsername.toLowerCase(), userId);
+        if (dup) {
+          return res.status(400).json({ error: `El usuario '${newUsername}' ya está ocupado por otro lote.` });
+        }
+      }
+    }
+
+    db.prepare(`
+      UPDATE users
+      SET approved = 1,
+          lote = ?,
+          manzana = ?,
+          username = ?
+      WHERE id = ?
+    `).run(newLote, newManzana, newUsername, userId);
 
     // Notify user
     const now = new Date().toISOString();
@@ -177,11 +299,11 @@ router.patch('/users/:id/approve', (req, res) => {
     `).run(
       userId,
       '¡Cuenta aprobada!',
-      'Tu cuenta ha sido aprobada por la administración. Ya podés utilizar todos los servicios del portal.',
+      `Tu cuenta ha sido aprobada por la administración. Tu usuario de acceso es ${newUsername || user.username}. Ya podés ingresar al portal.`,
       now
     );
 
-    res.json({ message: `Usuario ${user.nombre} ${user.apellido} aprobado con éxito.` });
+    res.json({ message: `Usuario ${user.nombre} ${user.apellido} (${newUsername || user.username || ''}) aprobado con éxito.` });
   } catch (error) {
     console.error('[Admin Approve Error]', error);
     res.status(500).json({ error: 'Error al aprobar usuario.' });
@@ -258,6 +380,69 @@ router.get('/stats', (req, res) => {
   } catch (error) {
     console.error('[Admin Stats Error]', error);
     res.status(500).json({ error: 'Error al obtener métricas.' });
+  }
+});
+
+// POST /api/admin/users/:id/reset-token (Admin-assisted password reset link)
+router.post('/users/:id/reset-token', async (req, res) => {
+  try {
+    const targetUserId = Number(req.params.id);
+    const user = db.prepare(`
+      SELECT id, nombre, apellido, email, username, approved
+      FROM users WHERE id = ?
+    `).get(targetUserId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Vecino no encontrado.' });
+    }
+
+    // Invalidate any previous unused tokens
+    db.prepare('UPDATE password_resets SET used = 1 WHERE userId = ? AND used = 0').run(targetUserId);
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString(); // 60 minutes
+    const nowISO = now.toISOString();
+
+    db.prepare(`
+      INSERT INTO password_resets (userId, token, expiresAt, used, createdAt)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(targetUserId, token, expiresAt, nowISO);
+
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${host}`;
+    const resetLink = `${baseUrl}/#restablecer-clave?token=${token}`;
+
+    let emailSent = false;
+    if (req.body.sendEmail) {
+      const emailResult = await sendPasswordResetEmail({
+        to: user.email,
+        name: `${user.nombre} ${user.apellido}`,
+        resetLink,
+        expiresMinutes: 60
+      });
+      emailSent = emailResult.sent;
+    }
+
+    res.json({
+      message: emailSent
+        ? `Enlace de restablecimiento generado y enviado por correo a ${user.email}.`
+        : 'Enlace de restablecimiento generado con éxito.',
+      resetLink,
+      expiresAt,
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        email: user.email,
+        username: user.username
+      },
+      emailSent
+    });
+  } catch (error) {
+    console.error('[Admin Generate Reset Token Error]', error);
+    res.status(500).json({ error: 'Error al generar enlace de restablecimiento.' });
   }
 });
 

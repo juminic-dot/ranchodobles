@@ -42,7 +42,11 @@ const state = {
   adminCourtDate: '',
   adminCourtBookings: [],
   adminBroadcasts: [],
-  adminStats: null
+  adminStats: null,
+  selectedReceiptFile: null,
+  activeViewingExpense: null,
+  activeAdminTab: 'vecinos',
+  activeVecinosSubtab: 'activos'
 };
 
 // DOM Elements
@@ -53,6 +57,10 @@ const authForms = document.querySelectorAll('.auth-form');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const registerStatus = document.getElementById('registerStatus');
+const registerLote = document.getElementById('registerLote');
+const registerManzana = document.getElementById('registerManzana');
+const registerUsernamePreview = document.getElementById('registerUsernamePreview');
+const registerUsernamePreviewText = document.getElementById('registerUsernamePreviewText');
 const userFullName = document.getElementById('userFullName');
 const userInitials = document.getElementById('userInitials');
 const userRoleBadge = document.getElementById('userRoleBadge');
@@ -104,6 +112,8 @@ const refreshAdminVisitsBtn = document.getElementById('refreshAdminVisitsBtn');
 const statTotalUsers = document.getElementById('statTotalUsers');
 const statPendingUsers = document.getElementById('statPendingUsers');
 const statTodayVisits = document.getElementById('statTodayVisits');
+const adminNavPendingBadge = document.getElementById('adminNavPendingBadge');
+const adminNavGuardBadge = document.getElementById('adminNavGuardBadge');
 
 // Guard & QR Scanner DOM
 const adminGuardInsideBadge = document.getElementById('adminGuardInsideBadge');
@@ -124,6 +134,44 @@ const scannedVisitorDetails = document.getElementById('scannedVisitorDetails');
 const scannedResidentName = document.getElementById('scannedResidentName');
 const scannedVisitStatusBadge = document.getElementById('scannedVisitStatusBadge');
 const scannedVisitActions = document.getElementById('scannedVisitActions');
+
+// Resident Pay Expense Modal DOM
+const payExpenseModal = document.getElementById('payExpenseModal');
+const closePayExpenseModal = document.getElementById('closePayExpenseModal');
+const cancelPayExpenseBtn = document.getElementById('cancelPayExpenseBtn');
+const payExpenseForm = document.getElementById('payExpenseForm');
+const payExpenseId = document.getElementById('payExpenseId');
+const payExpenseModalPeriod = document.getElementById('payExpenseModalPeriod');
+const payExpenseModalAmount = document.getElementById('payExpenseModalAmount');
+const payExpenseModalConcept = document.getElementById('payExpenseModalConcept');
+const receiptDropzone = document.getElementById('receiptDropzone');
+const payExpenseFileInput = document.getElementById('payExpenseFileInput');
+const dropzoneEmpty = document.getElementById('dropzoneEmpty');
+const dropzonePreview = document.getElementById('dropzonePreview');
+const previewThumbnail = document.getElementById('previewThumbnail');
+const previewFileName = document.getElementById('previewFileName');
+const previewFileSize = document.getElementById('previewFileSize');
+const removeReceiptFileBtn = document.getElementById('removeReceiptFileBtn');
+const payExpenseReference = document.getElementById('payExpenseReference');
+const submitPayExpenseBtn = document.getElementById('submitPayExpenseBtn');
+const viewCurrentReceiptBtn = document.getElementById('viewCurrentReceiptBtn');
+
+// View Receipt Modal DOM
+const viewReceiptModal = document.getElementById('viewReceiptModal');
+const closeViewReceiptModal = document.getElementById('closeViewReceiptModal');
+const closeViewReceiptBtn = document.getElementById('closeViewReceiptBtn');
+const viewReceiptModalTitle = document.getElementById('viewReceiptModalTitle');
+const viewReceiptModalSubtitle = document.getElementById('viewReceiptModalSubtitle');
+const receiptOwnerName = document.getElementById('receiptOwnerName');
+const receiptPeriodAmount = document.getElementById('receiptPeriodAmount');
+const receiptReferenceCode = document.getElementById('receiptReferenceCode');
+const receiptPaidDate = document.getElementById('receiptPaidDate');
+const receiptStatusBadge = document.getElementById('receiptStatusBadge');
+const receiptViewerContainer = document.getElementById('receiptViewerContainer');
+const downloadReceiptBtn = document.getElementById('downloadReceiptBtn');
+const openReceiptExternalBtn = document.getElementById('openReceiptExternalBtn');
+const receiptAdminApproveBtn = document.getElementById('receiptAdminApproveBtn');
+const receiptAdminRejectBtn = document.getElementById('receiptAdminRejectBtn');
 
 // Emit Expense Modal DOM
 const openEmitExpenseModalBtn = document.getElementById('openEmitExpenseModalBtn');
@@ -161,6 +209,58 @@ const newUserDocNum = document.getElementById('newUserDocNum');
 const newUserPhone = document.getElementById('newUserPhone');
 const newUserEmail = document.getElementById('newUserEmail');
 const newUserPassword = document.getElementById('newUserPassword');
+
+// Edit User Modal DOM (Admin)
+const editUserModal = document.getElementById('editUserModal');
+const editUserForm = document.getElementById('editUserForm');
+const editUserId = document.getElementById('editUserId');
+const editUserNombre = document.getElementById('editUserNombre');
+const editUserApellido = document.getElementById('editUserApellido');
+const editUserTipoDoc = document.getElementById('editUserTipoDoc');
+const editUserNumDoc = document.getElementById('editUserNumDoc');
+const editUserLote = document.getElementById('editUserLote');
+const editUserManzana = document.getElementById('editUserManzana');
+const editUserUsernamePreview = document.getElementById('editUserUsernamePreview');
+const editUserTelefono = document.getElementById('editUserTelefono');
+const editUserEmail = document.getElementById('editUserEmail');
+const closeEditUserModal = document.getElementById('closeEditUserModal');
+const cancelEditUserBtn = document.getElementById('cancelEditUserBtn');
+const submitEditUserBtn = document.getElementById('submitEditUserBtn');
+const editUserGenerateResetLinkBtn = document.getElementById('editUserGenerateResetLinkBtn');
+
+// Forgot Password Modal DOM (Resident / Self-service)
+const openForgotPasswordBtn = document.getElementById('openForgotPasswordBtn');
+const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+const forgotPasswordIdentifier = document.getElementById('forgotPasswordIdentifier');
+const forgotPasswordStatus = document.getElementById('forgotPasswordStatus');
+const closeForgotPasswordModal = document.getElementById('closeForgotPasswordModal');
+const cancelForgotPasswordBtn = document.getElementById('cancelForgotPasswordBtn');
+const submitForgotPasswordBtn = document.getElementById('submitForgotPasswordBtn');
+
+// Reset Password Modal DOM (with Token)
+const resetPasswordModal = document.getElementById('resetPasswordModal');
+const resetPasswordForm = document.getElementById('resetPasswordForm');
+const resetPasswordToken = document.getElementById('resetPasswordToken');
+const resetPasswordSubtitle = document.getElementById('resetPasswordSubtitle');
+const resetNewPassword = document.getElementById('resetNewPassword');
+const resetConfirmPassword = document.getElementById('resetConfirmPassword');
+const resetPasswordStatus = document.getElementById('resetPasswordStatus');
+const closeResetPasswordModal = document.getElementById('closeResetPasswordModal');
+const cancelResetPasswordBtn = document.getElementById('cancelResetPasswordBtn');
+const submitResetPasswordBtn = document.getElementById('submitResetPasswordBtn');
+
+// Admin Reset Link Modal DOM (Admin-Assisted)
+const adminResetLinkModal = document.getElementById('adminResetLinkModal');
+const closeAdminResetLinkModal = document.getElementById('closeAdminResetLinkModal');
+const dismissAdminResetLinkBtn = document.getElementById('dismissAdminResetLinkBtn');
+const adminResetTargetName = document.getElementById('adminResetTargetName');
+const adminResetTargetUser = document.getElementById('adminResetTargetUser');
+const adminResetTargetEmail = document.getElementById('adminResetTargetEmail');
+const adminResetLinkInput = document.getElementById('adminResetLinkInput');
+const copyAdminResetLinkBtn = document.getElementById('copyAdminResetLinkBtn');
+const shareAdminResetWhatsAppBtn = document.getElementById('shareAdminResetWhatsAppBtn');
+const sendAdminResetEmailBtn = document.getElementById('sendAdminResetEmailBtn');
 
 // Admin Court Management DOM
 const adminCourtsPanel = document.getElementById('adminCourtsPanel');
@@ -227,14 +327,14 @@ const profileNewPassword = document.getElementById('profileNewPassword');
 const profileConfirmNewPassword = document.getElementById('profileConfirmNewPassword');
 const submitChangePasswordBtn = document.getElementById('submitChangePasswordBtn');
 
-function showToast(message) {
+function showToast(message, duration = 2600) {
   if (!toast) return;
   toast.textContent = message;
   toast.classList.add('show');
   window.clearTimeout(showToast.timeoutId);
   showToast.timeoutId = window.setTimeout(() => {
     toast.classList.remove('show');
-  }, 2600);
+  }, duration);
 }
 
 function setAuthView(view) {
@@ -297,7 +397,11 @@ function setDashboardView(view, pushHistory = true) {
   if (view === 'news') loadNews();
   if (view === 'visits') loadUserVisits();
   if (view === 'booking') loadBookings();
-  if (view === 'admin' && state.authenticatedUser?.role === 'admin') loadAdminData();
+  if (view === 'admin' && state.authenticatedUser?.role === 'admin') {
+    setAdminTab(state.activeAdminTab || 'vecinos');
+    setVecinosSubtab(state.activeVecinosSubtab || 'activos');
+    loadAdminData();
+  }
   if (view === 'home' && state.authenticatedUser?.role === 'admin') loadAdminData();
 }
 
@@ -918,13 +1022,22 @@ function renderExpenses() {
         payExpenseBtn.style.display = 'inline-block';
         payExpenseBtn.textContent = 'Informar Pago';
         payExpenseBtn.disabled = false;
-        payExpenseBtn.onclick = () => handlePayExpense(latest.id);
+        payExpenseBtn.onclick = () => openPayExpenseModal(latest.id);
       } else if (isInReview) {
         payExpenseBtn.style.display = 'inline-block';
         payExpenseBtn.textContent = '⏳ Pago en revisión';
         payExpenseBtn.disabled = true;
       } else {
         payExpenseBtn.style.display = 'none';
+      }
+    }
+
+    if (viewCurrentReceiptBtn) {
+      if (latest.receiptPath) {
+        viewCurrentReceiptBtn.style.display = 'inline-flex';
+        viewCurrentReceiptBtn.onclick = () => openViewReceiptModal(latest);
+      } else {
+        viewCurrentReceiptBtn.style.display = 'none';
       }
     }
   }
@@ -948,7 +1061,12 @@ function renderExpenses() {
                 <strong>${escapeHTML(item.period)} — $ ${Number(item.amount).toLocaleString('es-AR')}</strong>
                 <small>${escapeHTML(item.concept || 'Expensas ordinarias')} · Vencimiento: ${escapeHTML(item.dueDate)}</small>
               </div>
-              <div class="visit-actions">
+              <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                ${item.receiptPath ? `
+                  <button type="button" class="btn-inline-action view-receipt-btn view-resident-receipt-btn" data-id="${item.id}" title="Ver comprobante de pago digital">
+                    <span>📎</span> Ver Comprobante
+                  </button>
+                ` : ''}
                 ${item.status === 'Pendiente' ? `
                   <button type="button" class="btn-inline-action success pay-item-btn" data-id="${item.id}">Informar Pago</button>
                 ` : item.status === 'En revisión' ? `
@@ -959,7 +1077,7 @@ function renderExpenses() {
               </div>
             </div>
             <div class="visit-meta">
-              <span>${item.paymentReference ? `Ref: ${escapeHTML(item.paymentReference)}` : 'Registrado'}</span>
+              <span>${item.paymentReference ? `Ref: ${escapeHTML(item.paymentReference)}` : (item.receiptPath ? 'Comprobante adjunto' : 'Registrado')}${item.paidAt ? ` · ${new Date(item.paidAt).toLocaleDateString()}` : ''}</span>
               <em class="visit-status ${item.status === 'Pagado' ? 'confirmed' : (item.status === 'En revisión' ? 'neutral' : 'pending')}">${escapeHTML(item.status)}</em>
             </div>
           </li>
@@ -967,22 +1085,318 @@ function renderExpenses() {
         .join('');
 
       expensesList.querySelectorAll('.pay-item-btn').forEach((btn) => {
-        btn.addEventListener('click', () => handlePayExpense(btn.dataset.id));
+        btn.addEventListener('click', () => openPayExpenseModal(btn.dataset.id));
+      });
+
+      expensesList.querySelectorAll('.view-resident-receipt-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const item = (state.expenses || []).find((e) => String(e.id) === String(btn.dataset.id));
+          if (item) openViewReceiptModal(item);
+        });
       });
     }
   }
 }
 
-async function handlePayExpense(expenseId) {
-  const reference = prompt('Por favor ingresá el número de comprobante o referencia de transferencia:', '');
-  if (reference === null) return; // cancelado por usuario
+// ----------------- COMPROBANTE DIGITAL: SUBIDA Y VISUALIZACIÓN ----------------- //
+
+function setupReceiptDropzone() {
+  if (!receiptDropzone || !payExpenseFileInput) return;
+
+  const handleFiles = (files) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+
+    // File validation: up to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('El archivo supera el tamaño máximo permitido de 10 MB.');
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+    const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
+    if (!validTypes.includes(file.type.toLowerCase()) && !isPdfExt) {
+      showToast('Formato no permitido. Por favor seleccioná una imagen (JPG, PNG, WEBP) o un archivo PDF.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      state.selectedReceiptFile = {
+        file,
+        dataUrl,
+        name: file.name,
+        type: file.type || (isPdfExt ? 'application/pdf' : 'image/jpeg'),
+        size: file.size
+      };
+      renderReceiptPreview();
+    };
+    reader.onerror = () => {
+      showToast('Error al procesar el archivo seleccionado.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  receiptDropzone.addEventListener('click', (e) => {
+    if (e.target.closest('#removeReceiptFileBtn')) return;
+    payExpenseFileInput.click();
+  });
+
+  payExpenseFileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+  });
+
+  receiptDropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    receiptDropzone.classList.add('dragover');
+  });
+
+  receiptDropzone.addEventListener('dragleave', () => {
+    receiptDropzone.classList.remove('dragover');
+  });
+
+  receiptDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    receiptDropzone.classList.remove('dragover');
+    if (e.dataTransfer && e.dataTransfer.files) {
+      handleFiles(e.dataTransfer.files);
+    }
+  });
+
+  if (removeReceiptFileBtn) {
+    removeReceiptFileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearReceiptFile();
+    });
+  }
+}
+
+function clearReceiptFile() {
+  state.selectedReceiptFile = null;
+  if (payExpenseFileInput) payExpenseFileInput.value = '';
+  if (dropzoneEmpty) dropzoneEmpty.style.display = 'block';
+  if (dropzonePreview) dropzonePreview.style.display = 'none';
+  if (previewThumbnail) previewThumbnail.innerHTML = '';
+}
+
+function renderReceiptPreview() {
+  if (!state.selectedReceiptFile) {
+    clearReceiptFile();
+    return;
+  }
+
+  const { name, size, type, dataUrl } = state.selectedReceiptFile;
+  const isPdf = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+
+  if (dropzoneEmpty) dropzoneEmpty.style.display = 'none';
+  if (dropzonePreview) dropzonePreview.style.display = 'flex';
+  if (previewFileName) previewFileName.textContent = name;
+  if (previewFileSize) {
+    const kb = (size / 1024).toFixed(1);
+    const mb = (size / (1024 * 1024)).toFixed(2);
+    previewFileSize.textContent = size > 1024 * 1024 ? `${mb} MB` : `${kb} KB`;
+  }
+
+  if (previewThumbnail) {
+    if (isPdf) {
+      previewThumbnail.innerHTML = '<span style="font-size: 1.5rem;">📄</span>';
+    } else {
+      previewThumbnail.innerHTML = `<img src="${dataUrl}" alt="Preview comprobante" />`;
+    }
+  }
+}
+
+function openPayExpenseModal(expenseId) {
+  if (!payExpenseModal) return;
+  const idNum = Number(expenseId);
+  const expense = (state.expenses || []).find((e) => e.id === idNum) || state.expenses?.[0];
+
+  if (!expense) {
+    showToast('Liquidación de expensas no encontrada.');
+    return;
+  }
+
+  if (payExpenseId) payExpenseId.value = expense.id;
+  if (payExpenseModalPeriod) payExpenseModalPeriod.textContent = expense.period;
+  if (payExpenseModalAmount) payExpenseModalAmount.textContent = `$ ${Number(expense.amount).toLocaleString('es-AR')}`;
+  if (payExpenseModalConcept) payExpenseModalConcept.textContent = expense.concept || 'Expensas ordinarias';
+  if (payExpenseReference) payExpenseReference.value = '';
+
+  clearReceiptFile();
+
+  if (submitPayExpenseBtn) {
+    submitPayExpenseBtn.disabled = false;
+    submitPayExpenseBtn.textContent = 'Enviar Comprobante';
+  }
+
+  payExpenseModal.style.display = 'grid';
+  document.body.classList.add('modal-open');
+  window.history.pushState({ modal: 'payExpense', view: state.activeDashboardView }, '', '#informar-pago');
+}
+
+function closePayExpenseModalFn(fromPopState = false) {
+  if (!payExpenseModal) return;
+  payExpenseModal.style.display = 'none';
+  document.body.classList.remove('modal-open');
+  clearReceiptFile();
+  if (!fromPopState && window.history.state?.modal === 'payExpense') {
+    window.history.back();
+  }
+}
+
+async function handlePayExpenseSubmit(e) {
+  e.preventDefault();
+  const expenseId = Number(payExpenseId?.value);
+  if (!expenseId) {
+    showToast('Identificador de expensa inválido.');
+    return;
+  }
+
+  const reference = String(payExpenseReference?.value || '').trim();
+  const fileData = state.selectedReceiptFile;
+
+  if (!fileData && !reference) {
+    showToast('Por favor adjuntá el comprobante digital o indicá el número de transferencia.');
+    return;
+  }
+
   try {
-    const res = await API.expenses.pay(expenseId, reference.trim());
-    showToast(res.message || 'Pago informado. En revisión por la administración.');
+    if (submitPayExpenseBtn) {
+      submitPayExpenseBtn.disabled = true;
+      submitPayExpenseBtn.textContent = 'Enviando comprobante...';
+    }
+
+    const payload = {
+      reference: reference || (fileData ? 'Comprobante digital adjunto' : 'Informado por portal'),
+      receiptData: fileData?.dataUrl || null,
+      receiptName: fileData?.name || null,
+      receiptMime: fileData?.type || null
+    };
+
+    const res = await API.expenses.pay(expenseId, payload);
+    showToast(res.message || 'Comprobante enviado con éxito. La administración revisará tu pago.');
+    closePayExpenseModalFn(false);
     loadExpenses();
     loadNotifications();
   } catch (err) {
-    showToast(err.message);
+    showToast(err.message || 'Error al enviar comprobante.');
+  } finally {
+    if (submitPayExpenseBtn) {
+      submitPayExpenseBtn.disabled = false;
+      submitPayExpenseBtn.textContent = 'Enviar Comprobante';
+    }
+  }
+}
+
+function openViewReceiptModal(expense) {
+  if (!viewReceiptModal || !expense) return;
+  state.activeViewingExpense = expense;
+
+  const isAdmin = state.authenticatedUser?.role === 'admin';
+  const ownerFullName = expense.nombre
+    ? `${expense.nombre} ${expense.apellido}`
+    : `${state.authenticatedUser?.nombre || ''} ${state.authenticatedUser?.apellido || ''}`.trim() || 'Propietario';
+
+  const docText = expense.numeroDocumento ? `(DNI ${expense.numeroDocumento})` : '';
+  const unitText = expense.lote ? ` · Lote ${expense.lote} Mz ${expense.manzana || '-'}` : '';
+
+  if (viewReceiptModalTitle) {
+    viewReceiptModalTitle.textContent = `Comprobante de Pago — ${expense.period}`;
+  }
+  if (viewReceiptModalSubtitle) {
+    viewReceiptModalSubtitle.textContent = `${ownerFullName} ${docText} ${unitText}`;
+  }
+  if (receiptOwnerName) {
+    receiptOwnerName.textContent = `${ownerFullName} ${docText} ${unitText}`;
+  }
+  if (receiptPeriodAmount) {
+    receiptPeriodAmount.textContent = `${expense.period} — $ ${Number(expense.amount).toLocaleString('es-AR')}`;
+  }
+  if (receiptReferenceCode) {
+    receiptReferenceCode.textContent = expense.paymentReference || 'Sin referencia registrada';
+  }
+  if (receiptPaidDate) {
+    if (expense.paidAt) {
+      const d = new Date(expense.paidAt);
+      receiptPaidDate.textContent = `${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs`;
+    } else {
+      receiptPaidDate.textContent = 'Pendiente de acreditación';
+    }
+  }
+  if (receiptStatusBadge) {
+    receiptStatusBadge.textContent = expense.status;
+    const isPaid = expense.status === 'Pagado';
+    const isInReview = expense.status === 'En revisión';
+    receiptStatusBadge.className = `visit-status ${isPaid ? 'confirmed' : (isInReview ? 'neutral' : 'pending')}`;
+  }
+
+  // Setup viewer container
+  if (receiptViewerContainer) {
+    if (expense.receiptPath) {
+      const receiptUrl = API.expenses.getReceiptUrl(expense.id);
+      const isPdf = (expense.receiptMime && expense.receiptMime.includes('pdf')) ||
+                    (expense.receiptName && expense.receiptName.toLowerCase().endsWith('.pdf'));
+
+      if (isPdf) {
+        receiptViewerContainer.innerHTML = `
+          <iframe class="receipt-viewer-pdf" src="${receiptUrl}" title="Comprobante en formato PDF"></iframe>
+        `;
+      } else {
+        receiptViewerContainer.innerHTML = `
+          <img class="receipt-viewer-img" src="${receiptUrl}" alt="Comprobante digital" id="activeReceiptImg" title="Hacé clic para ampliar o reducir" />
+        `;
+        const img = receiptViewerContainer.querySelector('#activeReceiptImg');
+        if (img) {
+          img.addEventListener('click', () => {
+            img.classList.toggle('zoomed');
+          });
+        }
+      }
+
+      if (downloadReceiptBtn) {
+        downloadReceiptBtn.style.display = 'inline-flex';
+        downloadReceiptBtn.href = API.expenses.getReceiptUrl(expense.id, true);
+        downloadReceiptBtn.setAttribute('download', expense.receiptName || `comprobante-${expense.period}.pdf`);
+      }
+      if (openReceiptExternalBtn) {
+        openReceiptExternalBtn.style.display = 'inline-flex';
+        openReceiptExternalBtn.href = receiptUrl;
+      }
+    } else {
+      receiptViewerContainer.innerHTML = `
+        <div class="receipt-empty-state">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📄</div>
+          <strong style="color: #fff; font-size: 1rem; display: block;">No se adjuntó archivo digital</strong>
+          <p style="margin: 0.3rem 0; font-size: 0.85rem; color: var(--muted);">El pago fue informado únicamente con la referencia bancaria: <strong>${escapeHTML(expense.paymentReference || 'Transferencia')}</strong>.</p>
+        </div>
+      `;
+      if (downloadReceiptBtn) downloadReceiptBtn.style.display = 'none';
+      if (openReceiptExternalBtn) openReceiptExternalBtn.style.display = 'none';
+    }
+  }
+
+  // Admin In-Modal Actions
+  if (receiptAdminApproveBtn) {
+    receiptAdminApproveBtn.style.display = (isAdmin && expense.status !== 'Pagado') ? 'inline-block' : 'none';
+  }
+  if (receiptAdminRejectBtn) {
+    receiptAdminRejectBtn.style.display = (isAdmin && expense.status === 'En revisión') ? 'inline-block' : 'none';
+  }
+
+  viewReceiptModal.style.display = 'grid';
+  document.body.classList.add('modal-open');
+  window.history.pushState({ modal: 'viewReceipt', view: state.activeDashboardView }, '', '#ver-comprobante');
+}
+
+function closeViewReceiptModalFn(fromPopState = false) {
+  if (!viewReceiptModal) return;
+  viewReceiptModal.style.display = 'none';
+  document.body.classList.remove('modal-open');
+  if (receiptViewerContainer) receiptViewerContainer.innerHTML = '';
+  state.activeViewingExpense = null;
+  if (!fromPopState && window.history.state?.modal === 'viewReceipt') {
+    window.history.back();
   }
 }
 
@@ -1190,13 +1604,50 @@ async function loadAdminData() {
   }
 }
 
+function setAdminTab(tabName) {
+  if (!tabName) return;
+  state.activeAdminTab = tabName;
+  document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.adminTab === tabName);
+  });
+  const tabMap = {
+    vecinos: 'adminTabVecinos',
+    guardia: 'adminTabGuardia',
+    expensas: 'adminTabExpensas',
+    canchas: 'adminTabCanchas',
+    alertas: 'adminTabAlertas'
+  };
+  document.querySelectorAll('.admin-tab-view').forEach((view) => {
+    view.classList.toggle('active', view.id === tabMap[tabName]);
+  });
+}
+
+function setVecinosSubtab(subtabName) {
+  if (!subtabName) return;
+  state.activeVecinosSubtab = subtabName;
+  document.querySelectorAll('.vecinos-subnav-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.vecinosSubtab === subtabName);
+  });
+  const subpanelMap = {
+    activos: 'adminActiveUsersSubpanel',
+    solicitudes: 'adminPendingUsersSubpanel'
+  };
+  document.querySelectorAll('.vecinos-subpanel').forEach((panel) => {
+    panel.classList.toggle('active', panel.id === subpanelMap[subtabName]);
+  });
+}
+
 function renderAdminPanel() {
+  // Synchronize active admin tab and subtab
+  setAdminTab(state.activeAdminTab || 'vecinos');
+  setVecinosSubtab(state.activeVecinosSubtab || 'activos');
+
   // Stats
   if (statTotalUsers) statTotalUsers.textContent = state.adminStats?.totalUsers ?? 0;
   if (statPendingUsers) statPendingUsers.textContent = state.adminStats?.pendingUsers ?? 0;
   if (statTodayVisits) statTodayVisits.textContent = state.adminStats?.todayVisits ?? 0;
 
-  // Pending count badge in home hub
+  // Pending count badge in home hub and admin navigation
   const pendingCount = state.pendingUsers.length;
   if (homeAdminPendingBadge) {
     homeAdminPendingBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
@@ -1204,6 +1655,10 @@ function renderAdminPanel() {
   }
   if (adminPendingStatusCount) {
     adminPendingStatusCount.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+  }
+  if (adminNavPendingBadge) {
+    adminNavPendingBadge.textContent = pendingCount;
+    adminNavPendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
   }
 
   // Active users roster
@@ -1251,9 +1706,23 @@ function renderAdminPanel() {
 
           let actionsHtml = '';
           if (isSelf) {
-            actionsHtml = `<span class="badge soft" style="font-size: 0.78rem; opacity: 0.85;">Tu sesión actual</span>`;
+            actionsHtml = `
+              <button type="button" class="btn-inline-action edit-active-user-btn" data-id="${user.id}" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                ✏️ Modificar datos
+              </button>
+              <button type="button" class="btn-inline-action reset-user-pass-btn" data-id="${user.id}" title="Generar enlace de restablecimiento de clave" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                🔑 Blanquear clave
+              </button>
+              <span class="badge soft" style="font-size: 0.78rem; opacity: 0.85;">Tu sesión actual</span>
+            `;
           } else {
             actionsHtml = `
+              <button type="button" class="btn-inline-action edit-active-user-btn" data-id="${user.id}" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                ✏️ Modificar datos
+              </button>
+              <button type="button" class="btn-inline-action reset-user-pass-btn" data-id="${user.id}" title="Generar enlace de restablecimiento de clave" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
+                🔑 Blanquear clave
+              </button>
               <button type="button" class="btn-inline-action toggle-user-role-btn" data-id="${user.id}" data-role="${user.role}" data-name="${escapeHTML(user.nombre)} ${escapeHTML(user.apellido)}" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
                 ${isAdmin ? 'Quitar Admin' : '⭐ Hacer Admin'}
               </button>
@@ -1290,6 +1759,21 @@ function renderAdminPanel() {
           `;
         })
         .join('');
+
+      // Event listeners for edit active user
+      activeUsersList.querySelectorAll('.edit-active-user-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const user = state.approvedUsers.find((u) => String(u.id) === String(btn.dataset.id));
+          if (user) openEditUserModal(user);
+        });
+      });
+
+      // Event listeners for reset active user password
+      activeUsersList.querySelectorAll('.reset-user-pass-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          openAdminResetModalForUser(btn.dataset.id);
+        });
+      });
 
       // Event listeners for role toggle
       activeUsersList.querySelectorAll('.toggle-user-role-btn').forEach((btn) => {
@@ -1342,23 +1826,53 @@ function renderAdminPanel() {
       `;
     } else {
       pendingUsersList.innerHTML = state.pendingUsers
-        .map((user) => `
-          <div class="pending-user-card">
-            <div class="pending-user-header">
-              <strong>${escapeHTML(user.nombre)} ${escapeHTML(user.apellido)}</strong>
-              <small>${escapeHTML(user.tipoDocumento)}: ${escapeHTML(user.numeroDocumento)}</small>
+        .map((user) => {
+          const lotInfo = (user.lote || user.manzana)
+            ? `<span class="badge soft" style="background: rgba(138, 206, 255, 0.15); color: var(--secondary); border: 1px solid rgba(138, 206, 255, 0.3);">Lote ${escapeHTML(user.lote || '-')} · Mz ${escapeHTML(user.manzana || '-')}</span>`
+            : '';
+          const userBadge = user.username
+            ? `<span class="badge soft" style="background: rgba(247, 199, 109, 0.15); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.3);">👤 ${escapeHTML(user.username)}</span>`
+            : '';
+
+          return `
+            <div class="pending-user-card">
+              <div class="pending-user-header">
+                <div>
+                  <strong>${escapeHTML(user.nombre)} ${escapeHTML(user.apellido)}</strong>
+                  <div style="margin-top: 0.25rem; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                    ${lotInfo}
+                    ${userBadge}
+                  </div>
+                </div>
+                <small>${escapeHTML(user.tipoDocumento)}: ${escapeHTML(user.numeroDocumento)}</small>
+              </div>
+              <div class="pending-user-details">
+                <span>📧 ${escapeHTML(user.email)}</span>
+                <span>📞 ${escapeHTML(user.telefono)}</span>
+              </div>
+              <div class="pending-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem;">
+                <button type="button" class="btn-inline-action edit-pending-user-btn" data-id="${user.id}">✏️ Modificar datos</button>
+                <button type="button" class="btn-inline-action reset-user-pass-btn" data-id="${user.id}" title="Generar enlace de restablecimiento de clave">🔑 Restablecer clave</button>
+                <button type="button" class="success-btn approve-user-btn" data-id="${user.id}">Aprobar acceso</button>
+                <button type="button" class="danger-btn reject-user-btn" data-id="${user.id}">Rechazar</button>
+              </div>
             </div>
-            <div class="pending-user-details">
-              <span>📧 ${escapeHTML(user.email)}</span>
-              <span>📞 ${escapeHTML(user.telefono)}</span>
-            </div>
-            <div class="pending-actions">
-              <button type="button" class="success-btn approve-user-btn" data-id="${user.id}">Aprobar acceso</button>
-              <button type="button" class="danger-btn reject-user-btn" data-id="${user.id}">Rechazar</button>
-            </div>
-          </div>
-        `)
+          `;
+        })
         .join('');
+
+      pendingUsersList.querySelectorAll('.edit-pending-user-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const user = state.pendingUsers.find((u) => String(u.id) === String(btn.dataset.id));
+          if (user) openEditUserModal(user);
+        });
+      });
+
+      pendingUsersList.querySelectorAll('.reset-user-pass-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          openAdminResetModalForUser(btn.dataset.id);
+        });
+      });
 
       pendingUsersList.querySelectorAll('.approve-user-btn').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -1395,6 +1909,10 @@ function renderAdminPanel() {
     const insideCount = visits.filter((v) => v.status === 'Ingresado').length;
     if (adminGuardInsideBadge) {
       adminGuardInsideBadge.textContent = `${insideCount} en predio`;
+    }
+    if (adminNavGuardBadge) {
+      adminNavGuardBadge.textContent = insideCount;
+      adminNavGuardBadge.style.display = insideCount > 0 ? 'inline-block' : 'none';
     }
 
     // Filter by tab
@@ -1518,13 +2036,18 @@ function renderAdminPanel() {
           <li class="visit-item">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
               <div>
-                <strong>${escapeHTML(exp.nombre)} ${escapeHTML(exp.apellido)} <small>(DNI ${escapeHTML(exp.numeroDocumento)})</small></strong>
+                <strong>${escapeHTML(exp.nombre)} ${escapeHTML(exp.apellido)} <small>(DNI ${escapeHTML(exp.numeroDocumento)}${exp.lote ? ` · Lote ${escapeHTML(exp.lote)} Mz ${escapeHTML(exp.manzana || '-')}` : ''})</small></strong>
                 <p style="margin: 0.2rem 0; font-size: 0.95rem;">
                   <strong>${escapeHTML(exp.period)}</strong> — $ ${Number(exp.amount).toLocaleString('es-AR')}
                 </p>
                 <small>${exp.concept ? `📌 ${escapeHTML(exp.concept)} · ` : ''}${exp.paymentReference ? `📄 Ref: <strong>${escapeHTML(exp.paymentReference)}</strong> · ` : ''}Vencimiento: ${escapeHTML(exp.dueDate)}</small>
               </div>
               <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                ${exp.receiptPath ? `
+                  <button type="button" class="btn-inline-action view-receipt-btn admin-view-receipt-btn" data-id="${exp.id}" title="Ver comprobante de pago digital">
+                    <span>📎</span> Ver Comprobante
+                  </button>
+                ` : ''}
                 ${exp.status !== 'Pagado' ? `
                   <button type="button" class="btn-inline-action success admin-approve-expense-btn" data-id="${exp.id}" title="Confirmar cobro">Acreditar Pago</button>
                 ` : `
@@ -1539,12 +2062,19 @@ function renderAdminPanel() {
               </div>
             </div>
             <div class="visit-meta" style="margin-top: 0.4rem;">
-              <span>${exp.paidAt ? `Fecha pago: ${new Date(exp.paidAt).toLocaleDateString()}` : 'Emitida'}</span>
+              <span>${exp.paidAt ? `Fecha pago: ${new Date(exp.paidAt).toLocaleDateString()}` : 'Emitida'}${exp.receiptPath ? ' · 📎 Comprobante adjunto' : ''}</span>
               <em class="visit-status ${exp.status === 'Pagado' ? 'confirmed' : (exp.status === 'En revisión' ? 'neutral' : 'pending')}">${escapeHTML(exp.status)}</em>
             </div>
           </li>
         `)
         .join('');
+
+      adminExpensesList.querySelectorAll('.admin-view-receipt-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const exp = (state.adminExpenses || []).find((e) => String(e.id) === String(btn.dataset.id));
+          if (exp) openViewReceiptModal(exp);
+        });
+      });
 
       adminExpensesList.querySelectorAll('.admin-approve-expense-btn').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -1984,6 +2514,338 @@ async function handleCreateUser(e) {
   }
 }
 
+// ----------------- EDIT USER MODAL (ADMIN) ----------------- //
+
+function openEditUserModal(user) {
+  if (!editUserModal || !user) return;
+  if (editUserForm) editUserForm.reset();
+
+  if (editUserId) editUserId.value = user.id || '';
+  if (editUserNombre) editUserNombre.value = user.nombre || '';
+  if (editUserApellido) editUserApellido.value = user.apellido || '';
+  if (editUserTipoDoc) editUserTipoDoc.value = user.tipoDocumento || 'DNI';
+  if (editUserNumDoc) editUserNumDoc.value = user.numeroDocumento || '';
+  if (editUserLote) editUserLote.value = user.lote || '';
+  if (editUserManzana) editUserManzana.value = user.manzana || '';
+  if (editUserTelefono) editUserTelefono.value = user.telefono || '';
+  if (editUserEmail) editUserEmail.value = user.email || '';
+
+  updateEditUserUsernamePreview();
+
+  editUserModal.style.display = 'grid';
+  window.history.pushState({ modal: 'editUser', view: state.activeDashboardView }, '', '#editar-vecino');
+}
+
+function closeEditUserModalFn(fromPopState = false) {
+  if (!editUserModal) return;
+  editUserModal.style.display = 'none';
+  if (!fromPopState && window.history.state?.modal === 'editUser') {
+    window.history.back();
+  }
+}
+
+function updateEditUserUsernamePreview() {
+  if (!editUserUsernamePreview) return;
+  const cleanL = (editUserLote?.value || '').trim().replace(/\D/g, '');
+  const cleanM = (editUserManzana?.value || '').trim().replace(/\D/g, '');
+  if (cleanL && cleanM) {
+    editUserUsernamePreview.textContent = `L${cleanL}M${cleanM}`;
+  } else {
+    editUserUsernamePreview.textContent = 'Indique lote y manzana';
+  }
+}
+
+async function handleEditUserSubmit(e) {
+  e.preventDefault();
+  if (!editUserForm) return;
+
+  const submitBtn = document.getElementById('submitEditUserBtn');
+  const userId = editUserId?.value;
+  if (!userId) return;
+
+  const nombre = (editUserNombre?.value || '').trim();
+  const apellido = (editUserApellido?.value || '').trim();
+  const tipoDocumento = editUserTipoDoc?.value || 'DNI';
+  const numeroDocumento = (editUserNumDoc?.value || '').trim();
+  const lote = (editUserLote?.value || '').trim();
+  const manzana = (editUserManzana?.value || '').trim();
+  const telefono = (editUserTelefono?.value || '').trim();
+  const email = (editUserEmail?.value || '').trim();
+
+  if (!nombre || !apellido || !numeroDocumento || !lote || !manzana || !telefono || !email) {
+    showToast('Por favor completá todos los campos requeridos (*).');
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
+  }
+
+  try {
+    const res = await API.admin.updateUser(userId, {
+      nombre,
+      apellido,
+      tipoDocumento,
+      numeroDocumento,
+      lote,
+      manzana,
+      telefono,
+      email
+    });
+
+    showToast(res.message || 'Datos del vecino actualizados con éxito.');
+    closeEditUserModalFn();
+    await loadAdminData();
+  } catch (err) {
+    showToast(err.message || 'Error al actualizar los datos del vecino.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar Cambios';
+    }
+  }
+}
+
+// ----------------- REGISTRATION USERNAME PREVIEW ----------------- //
+
+function updateRegisterUsernamePreview() {
+  if (!registerLote || !registerManzana || !registerUsernamePreview || !registerUsernamePreviewText) return;
+  const loteVal = (registerLote.value || '').trim().replace(/\D/g, '');
+  const manVal = (registerManzana.value || '').trim().replace(/\D/g, '');
+  if (loteVal && manVal) {
+    registerUsernamePreviewText.textContent = `L${loteVal}M${manVal}`;
+    registerUsernamePreview.style.display = 'block';
+  } else {
+    registerUsernamePreview.style.display = 'none';
+  }
+}
+
+// ----------------- PASSWORD RECOVERY (HYBRID SCHEME) ----------------- //
+
+function openForgotPasswordModal() {
+  if (!forgotPasswordModal) return;
+  if (forgotPasswordForm) forgotPasswordForm.reset();
+  if (forgotPasswordStatus) {
+    forgotPasswordStatus.style.display = 'none';
+    forgotPasswordStatus.textContent = '';
+  }
+  forgotPasswordModal.style.display = 'grid';
+  window.history.pushState({ modal: 'forgotPassword', view: state.activeDashboardView }, '', '#recuperar-clave');
+}
+
+function closeForgotPasswordModalFn(fromPopState = false) {
+  if (!forgotPasswordModal) return;
+  forgotPasswordModal.style.display = 'none';
+  if (!fromPopState && window.history.state?.modal === 'forgotPassword') {
+    window.history.back();
+  }
+}
+
+async function handleForgotPasswordSubmit(e) {
+  e.preventDefault();
+  if (!forgotPasswordForm) return;
+
+  const identifier = (forgotPasswordIdentifier?.value || '').trim();
+  if (!identifier) {
+    showToast('Ingresá tu usuario o correo electrónico.');
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitForgotPasswordBtn');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+  }
+
+  try {
+    const res = await API.auth.forgotPassword(identifier);
+    if (forgotPasswordStatus) {
+      forgotPasswordStatus.style.display = 'block';
+      forgotPasswordStatus.style.background = 'rgba(105, 210, 166, 0.12)';
+      forgotPasswordStatus.style.border = '1px solid rgba(105, 210, 166, 0.3)';
+      forgotPasswordStatus.style.color = '#a3e6cb';
+
+      let html = `<strong>¡Solicitud enviada!</strong><br>${escapeHTML(res.message)}`;
+      if (res.maskedEmail) {
+        html += `<br><span style="color: var(--gold); font-size: 0.8rem;">Enviado a: ${escapeHTML(res.maskedEmail)}</span>`;
+      }
+      if (res.resetLink && res.simulated) {
+        html += `<div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.15); font-size: 0.78rem;">
+          <a href="${res.resetLink}" style="color: var(--gold); font-weight: 600; text-decoration: underline;">👉 Abrir enlace seguro de recuperación</a>
+        </div>`;
+      }
+      forgotPasswordStatus.innerHTML = html;
+    }
+    showToast('Instrucciones enviadas con éxito.', 5000);
+  } catch (err) {
+    if (forgotPasswordStatus) {
+      forgotPasswordStatus.style.display = 'block';
+      forgotPasswordStatus.style.background = 'rgba(255, 107, 107, 0.12)';
+      forgotPasswordStatus.style.border = '1px solid rgba(255, 107, 107, 0.3)';
+      forgotPasswordStatus.style.color = '#ff9999';
+      forgotPasswordStatus.textContent = err.message || 'Error al procesar la solicitud.';
+    }
+    showToast(err.message || 'Error al procesar solicitud.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar Enlace';
+    }
+  }
+}
+
+async function checkUrlForResetToken() {
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+
+  let token = null;
+  if (hash.includes('token=')) {
+    const match = hash.match(/token=([a-f0-9]+)/i);
+    if (match) token = match[1];
+  } else if (search.includes('token=')) {
+    const params = new URLSearchParams(search);
+    token = params.get('token');
+  }
+
+  if (token && (hash.includes('restablecer-clave') || search.includes('token='))) {
+    await openResetPasswordModal(token);
+  }
+}
+
+async function openResetPasswordModal(token) {
+  if (!resetPasswordModal) return;
+  if (resetPasswordForm) resetPasswordForm.reset();
+  if (resetPasswordToken) resetPasswordToken.value = token;
+  if (resetPasswordStatus) {
+    resetPasswordStatus.style.display = 'none';
+    resetPasswordStatus.textContent = '';
+  }
+
+  try {
+    const verifyRes = await API.auth.verifyResetToken(token);
+    if (resetPasswordSubtitle && verifyRes.nombre) {
+      resetPasswordSubtitle.innerHTML = `Hola <strong>${escapeHTML(verifyRes.nombre)}</strong> (Usuario: <strong style="color: var(--gold);">${escapeHTML(verifyRes.username)}</strong>), elegí tu nueva contraseña de acceso:`;
+    }
+    resetPasswordModal.style.display = 'grid';
+  } catch (err) {
+    showToast(err.message || 'El enlace de recuperación es inválido o ha expirado.', 6000);
+    if (window.location.hash.includes('restablecer-clave')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }
+}
+
+function closeResetPasswordModalFn(fromPopState = false) {
+  if (!resetPasswordModal) return;
+  resetPasswordModal.style.display = 'none';
+  if (window.location.hash.includes('restablecer-clave')) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+}
+
+async function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  if (!resetPasswordForm) return;
+
+  const token = resetPasswordToken?.value;
+  const newPassword = (resetNewPassword?.value || '').trim();
+  const confirmPassword = (resetConfirmPassword?.value || '').trim();
+
+  if (!token) {
+    showToast('Token inválido.');
+    return;
+  }
+
+  if (!newPassword || !confirmPassword) {
+    showToast('Completá ambos campos de contraseña.');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast('Las contraseñas no coinciden.');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showToast('La contraseña debe tener al menos 6 caracteres.');
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitResetPasswordBtn');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Restableciendo...';
+  }
+
+  try {
+    const res = await API.auth.resetPassword(token, newPassword, confirmPassword);
+    showToast(res.message || 'Contraseña restablecida con éxito.', 6000);
+    closeResetPasswordModalFn();
+
+    // Redirigir al login y precargar el usuario
+    setAuthView('login');
+    const loginEmailInput = document.getElementById('loginEmail');
+    if (loginEmailInput && res.username) {
+      loginEmailInput.value = res.username;
+    }
+  } catch (err) {
+    if (resetPasswordStatus) {
+      resetPasswordStatus.style.display = 'block';
+      resetPasswordStatus.style.background = 'rgba(255, 107, 107, 0.12)';
+      resetPasswordStatus.style.border = '1px solid rgba(255, 107, 107, 0.3)';
+      resetPasswordStatus.style.color = '#ff9999';
+      resetPasswordStatus.textContent = err.message || 'Error al restablecer la contraseña.';
+    }
+    showToast(err.message || 'Error al restablecer contraseña.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Restablecer Contraseña';
+    }
+  }
+}
+
+// Admin-assisted password reset functions
+async function openAdminResetModalForUser(userId) {
+  if (!adminResetLinkModal) return;
+
+  const allUsers = [...(state.approvedUsers || []), ...(state.pendingUsers || [])];
+  const user = allUsers.find((u) => String(u.id) === String(userId));
+  if (!user) {
+    showToast('Vecino no encontrado.');
+    return;
+  }
+
+  try {
+    showToast('Generando enlace seguro...');
+    const res = await API.admin.generateResetToken(userId, false);
+
+    state.adminResetContext = {
+      userId,
+      name: `${user.nombre} ${user.apellido}`,
+      username: user.username || `Lote ${user.lote || ''}`,
+      email: user.email,
+      resetLink: res.resetLink
+    };
+
+    if (adminResetTargetName) adminResetTargetName.textContent = state.adminResetContext.name;
+    if (adminResetTargetUser) adminResetTargetUser.textContent = state.adminResetContext.username;
+    if (adminResetTargetEmail) adminResetTargetEmail.textContent = state.adminResetContext.email;
+    if (adminResetLinkInput) adminResetLinkInput.value = res.resetLink;
+
+    adminResetLinkModal.style.display = 'grid';
+  } catch (err) {
+    showToast(err.message || 'Error al generar enlace de restablecimiento.');
+  }
+}
+
+function closeAdminResetLinkModalFn(fromPopState = false) {
+  if (!adminResetLinkModal) return;
+  adminResetLinkModal.style.display = 'none';
+  state.adminResetContext = null;
+}
+
 // ----------------- ADMIN COURT SUPERVISION & BLOCKING ----------------- //
 
 function openBlockCourtModal(targetSlot = null) {
@@ -2394,7 +3256,7 @@ async function handleLogin(event) {
   const password = String(formData.get('password') || '').trim();
 
   if (!email || !password) {
-    showToast('Por favor completá email y contraseña.');
+    showToast('Por favor completá usuario y contraseña.');
     return;
   }
 
@@ -2424,12 +3286,12 @@ async function handleRegister(event) {
   const values = Object.fromEntries(formData.entries());
 
   const requiredFields = [
-    'apellido', 'nombre', 'tipoDocumento', 'numeroDocumento', 'telefono', 'email', 'password', 'confirmPassword'
+    'apellido', 'nombre', 'tipoDocumento', 'numeroDocumento', 'lote', 'manzana', 'telefono', 'email', 'password', 'confirmPassword'
   ];
 
   const missing = requiredFields.find((f) => !String(values[f] || '').trim());
   if (missing) {
-    if (registerStatus) registerStatus.textContent = 'Completá todos los campos obligatorios.';
+    if (registerStatus) registerStatus.textContent = 'Completá todos los campos obligatorios, incluyendo lote y manzana.';
     return;
   }
 
@@ -2449,8 +3311,18 @@ async function handleRegister(event) {
   try {
     const res = await API.auth.register(values);
     registerForm.reset();
-    if (registerStatus) registerStatus.textContent = res.message || 'Solicitud enviada para revisión.';
-    showToast('Solicitud enviada con éxito.');
+    if (registerUsernamePreview) registerUsernamePreview.style.display = 'none';
+
+    // Regresar al inicio de sesión y precargar el usuario generado (ej: L2M9)
+    setAuthView('login');
+    const loginEmailInput = document.getElementById('loginEmail');
+    if (loginEmailInput && res.username) {
+      loginEmailInput.value = res.username;
+    }
+
+    const message = 'Registro exitoso. La administración acreditará tu cuenta en breve.';
+    showToast(message, 6000);
+    if (registerStatus) registerStatus.textContent = '';
   } catch (error) {
     if (registerStatus) registerStatus.textContent = error.message;
     showToast(error.message);
@@ -2502,6 +3374,8 @@ function attachEventListeners() {
 
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
+  if (registerLote) registerLote.addEventListener('input', updateRegisterUsernamePreview);
+  if (registerManzana) registerManzana.addEventListener('input', updateRegisterUsernamePreview);
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
   if (visitForm) visitForm.addEventListener('submit', handleVisitSubmit);
 
@@ -2621,6 +3495,64 @@ function attachEventListeners() {
     emitExpenseForm.addEventListener('submit', handleEmitExpense);
   }
 
+  // Pay Expense Modal (Resident)
+  setupReceiptDropzone();
+  if (closePayExpenseModal) {
+    closePayExpenseModal.addEventListener('click', () => closePayExpenseModalFn(false));
+  }
+  if (cancelPayExpenseBtn) {
+    cancelPayExpenseBtn.addEventListener('click', () => closePayExpenseModalFn(false));
+  }
+  if (payExpenseModal) {
+    payExpenseModal.addEventListener('click', (e) => {
+      if (e.target === payExpenseModal) closePayExpenseModalFn(false);
+    });
+  }
+  if (payExpenseForm) {
+    payExpenseForm.addEventListener('submit', handlePayExpenseSubmit);
+  }
+
+  // View Receipt Modal (Admin & Resident)
+  if (closeViewReceiptModal) {
+    closeViewReceiptModal.addEventListener('click', () => closeViewReceiptModalFn(false));
+  }
+  if (closeViewReceiptBtn) {
+    closeViewReceiptBtn.addEventListener('click', () => closeViewReceiptModalFn(false));
+  }
+  if (viewReceiptModal) {
+    viewReceiptModal.addEventListener('click', (e) => {
+      if (e.target === viewReceiptModal) closeViewReceiptModalFn(false);
+    });
+  }
+  if (receiptAdminApproveBtn) {
+    receiptAdminApproveBtn.addEventListener('click', async () => {
+      if (!state.activeViewingExpense) return;
+      if (!confirm(`¿Confirmar y acreditar el pago de expensas de ${state.activeViewingExpense.nombre || 'este vecino'}?`)) return;
+      try {
+        await API.expenses.updateStatus(state.activeViewingExpense.id, 'Pagado');
+        showToast('Pago acreditado con éxito. Propietario notificado.');
+        closeViewReceiptModalFn(false);
+        loadAdminData();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  }
+  if (receiptAdminRejectBtn) {
+    receiptAdminRejectBtn.addEventListener('click', async () => {
+      if (!state.activeViewingExpense) return;
+      if (!confirm('¿Desestimar este aviso de pago y devolverlo a estado Pendiente?')) return;
+      try {
+        await API.expenses.updateStatus(state.activeViewingExpense.id, 'Pendiente');
+        showToast('Aviso de pago desestimado. Vuelto a Pendiente.');
+        closeViewReceiptModalFn(false);
+        loadAdminData();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  }
+
   // Guard visit search and filters
   if (guardSearchInput) {
     guardSearchInput.addEventListener('input', (e) => {
@@ -2689,6 +3621,20 @@ function attachEventListeners() {
   if (copyInviteLinkWhatsappBtn) copyInviteLinkWhatsappBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkWhatsappBtn));
   if (toggleManualVisitFormBtn) toggleManualVisitFormBtn.addEventListener('click', toggleManualVisitForm);
 
+  // Admin module buttons navigation (no-scroll modular architecture)
+  document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setAdminTab(btn.dataset.adminTab);
+    });
+  });
+
+  // Vecinos subtabs (Activos vs Solicitudes de Registro)
+  document.querySelectorAll('.vecinos-subnav-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setVecinosSubtab(btn.dataset.vecinosSubtab);
+    });
+  });
+
   // Active neighbors search & refresh
   if (activeUsersSearchInput) {
     activeUsersSearchInput.addEventListener('input', (e) => {
@@ -2719,6 +3665,129 @@ function attachEventListeners() {
   }
   if (createUserForm) {
     createUserForm.addEventListener('submit', handleCreateUser);
+  }
+
+  // Edit User Modal Listeners (Admin)
+  if (closeEditUserModal) {
+    closeEditUserModal.addEventListener('click', () => closeEditUserModalFn(false));
+  }
+  if (cancelEditUserBtn) {
+    cancelEditUserBtn.addEventListener('click', () => closeEditUserModalFn(false));
+  }
+  if (editUserModal) {
+    editUserModal.addEventListener('click', (e) => {
+      if (e.target === editUserModal) closeEditUserModalFn(false);
+    });
+  }
+  if (editUserLote) {
+    editUserLote.addEventListener('input', updateEditUserUsernamePreview);
+  }
+  if (editUserManzana) {
+    editUserManzana.addEventListener('input', updateEditUserUsernamePreview);
+  }
+  if (editUserForm) {
+    editUserForm.addEventListener('submit', handleEditUserSubmit);
+  }
+  if (editUserGenerateResetLinkBtn) {
+    editUserGenerateResetLinkBtn.addEventListener('click', () => {
+      const userId = editUserId?.value;
+      if (userId) {
+        openAdminResetModalForUser(userId);
+      }
+    });
+  }
+
+  // Password Recovery Event Listeners (Self-service)
+  if (openForgotPasswordBtn) {
+    openForgotPasswordBtn.addEventListener('click', openForgotPasswordModal);
+  }
+  if (closeForgotPasswordModal) {
+    closeForgotPasswordModal.addEventListener('click', () => closeForgotPasswordModalFn(false));
+  }
+  if (cancelForgotPasswordBtn) {
+    cancelForgotPasswordBtn.addEventListener('click', () => closeForgotPasswordModalFn(false));
+  }
+  if (forgotPasswordModal) {
+    forgotPasswordModal.addEventListener('click', (e) => {
+      if (e.target === forgotPasswordModal) closeForgotPasswordModalFn(false);
+    });
+  }
+  if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener('submit', handleForgotPasswordSubmit);
+  }
+
+  // Reset Password (Token) Event Listeners
+  if (closeResetPasswordModal) {
+    closeResetPasswordModal.addEventListener('click', () => closeResetPasswordModalFn(false));
+  }
+  if (cancelResetPasswordBtn) {
+    cancelResetPasswordBtn.addEventListener('click', () => closeResetPasswordModalFn(false));
+  }
+  if (resetPasswordModal) {
+    resetPasswordModal.addEventListener('click', (e) => {
+      if (e.target === resetPasswordModal) closeResetPasswordModalFn(false);
+    });
+  }
+  if (resetPasswordForm) {
+    resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
+  }
+
+  // Admin Reset Link Event Listeners
+  if (closeAdminResetLinkModal) {
+    closeAdminResetLinkModal.addEventListener('click', () => closeAdminResetLinkModalFn(false));
+  }
+  if (dismissAdminResetLinkBtn) {
+    dismissAdminResetLinkBtn.addEventListener('click', () => closeAdminResetLinkModalFn(false));
+  }
+  if (adminResetLinkModal) {
+    adminResetLinkModal.addEventListener('click', (e) => {
+      if (e.target === adminResetLinkModal) closeAdminResetLinkModalFn(false);
+    });
+  }
+  if (copyAdminResetLinkBtn) {
+    copyAdminResetLinkBtn.addEventListener('click', async () => {
+      const link = adminResetLinkInput?.value;
+      if (!link) return;
+      try {
+        await navigator.clipboard.writeText(link);
+        const originalText = copyAdminResetLinkBtn.textContent;
+        copyAdminResetLinkBtn.textContent = '✅ ¡Copiado!';
+        setTimeout(() => {
+          copyAdminResetLinkBtn.textContent = originalText;
+        }, 2200);
+        showToast('Enlace copiado al portapapeles.');
+      } catch (e) {
+        if (adminResetLinkInput) {
+          adminResetLinkInput.select();
+          document.execCommand('copy');
+          showToast('Enlace copiado al portapapeles.');
+        }
+      }
+    });
+  }
+  if (shareAdminResetWhatsAppBtn) {
+    shareAdminResetWhatsAppBtn.addEventListener('click', () => {
+      if (!state.adminResetContext) return;
+      const { name, resetLink } = state.adminResetContext;
+      const text = `Hola ${name},\nTe comparto tu enlace seguro y oficial para restablecer tu contraseña en el portal de Rancho Doble S:\n\n${resetLink}\n\n(Este enlace es de uso único y tiene validez de 60 minutos).`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    });
+  }
+  if (sendAdminResetEmailBtn) {
+    sendAdminResetEmailBtn.addEventListener('click', async () => {
+      if (!state.adminResetContext?.userId) return;
+      try {
+        sendAdminResetEmailBtn.disabled = true;
+        sendAdminResetEmailBtn.textContent = 'Enviando...';
+        const res = await API.admin.generateResetToken(state.adminResetContext.userId, true);
+        showToast(res.message || 'Correo enviado al vecino con éxito.', 5000);
+      } catch (err) {
+        showToast(err.message || 'Error al enviar correo.');
+      } finally {
+        sendAdminResetEmailBtn.disabled = false;
+        sendAdminResetEmailBtn.textContent = '📧 Reenviar por Correo';
+      }
+    });
   }
 
   // Admin Court Supervision Listeners
@@ -2856,7 +3925,11 @@ function attachEventListeners() {
   }
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (viewQrModal && viewQrModal.style.display !== 'none') {
+      if (payExpenseModal && payExpenseModal.style.display !== 'none') {
+        closePayExpenseModalFn(false);
+      } else if (viewReceiptModal && viewReceiptModal.style.display !== 'none') {
+        closeViewReceiptModalFn(false);
+      } else if (viewQrModal && viewQrModal.style.display !== 'none') {
         hideQrPassModal(false);
       } else if (createNewsModal && createNewsModal.style.display !== 'none') {
         closeCreateNews(false);
@@ -2864,6 +3937,14 @@ function attachEventListeners() {
         closeEmitExpense(false);
       } else if (createUserModal && createUserModal.style.display !== 'none') {
         closeCreateUserModalFn(false);
+      } else if (editUserModal && editUserModal.style.display !== 'none') {
+        closeEditUserModalFn(false);
+      } else if (forgotPasswordModal && forgotPasswordModal.style.display !== 'none') {
+        closeForgotPasswordModalFn(false);
+      } else if (resetPasswordModal && resetPasswordModal.style.display !== 'none') {
+        closeResetPasswordModalFn(false);
+      } else if (adminResetLinkModal && adminResetLinkModal.style.display !== 'none') {
+        closeAdminResetLinkModalFn(false);
       } else if (blockCourtModal && blockCourtModal.style.display !== 'none') {
         closeBlockCourtModalFn(false);
       } else if (broadcastAlertModal && broadcastAlertModal.style.display !== 'none') {
@@ -2884,6 +3965,14 @@ function attachEventListeners() {
       toggleNotificationsPanel(false, false);
       return;
     }
+    if (payExpenseModal && payExpenseModal.style.display !== 'none') {
+      closePayExpenseModalFn(true);
+      return;
+    }
+    if (viewReceiptModal && viewReceiptModal.style.display !== 'none') {
+      closeViewReceiptModalFn(true);
+      return;
+    }
     if (viewQrModal && viewQrModal.style.display !== 'none') {
       hideQrPassModal(true);
       return;
@@ -2898,6 +3987,22 @@ function attachEventListeners() {
     }
     if (createUserModal && createUserModal.style.display !== 'none') {
       closeCreateUserModalFn(true);
+      return;
+    }
+    if (editUserModal && editUserModal.style.display !== 'none') {
+      closeEditUserModalFn(true);
+      return;
+    }
+    if (forgotPasswordModal && forgotPasswordModal.style.display !== 'none') {
+      closeForgotPasswordModalFn(true);
+      return;
+    }
+    if (resetPasswordModal && resetPasswordModal.style.display !== 'none') {
+      closeResetPasswordModalFn(true);
+      return;
+    }
+    if (adminResetLinkModal && adminResetLinkModal.style.display !== 'none') {
+      closeAdminResetLinkModalFn(true);
       return;
     }
     if (blockCourtModal && blockCourtModal.style.display !== 'none') {
@@ -2919,7 +4024,7 @@ function attachEventListeners() {
 
     if (dashboardScreen && dashboardScreen.classList.contains('active')) {
       let targetView = e.state?.view || (window.location.hash ? window.location.hash.replace('#', '') : 'home');
-      if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr', 'nuevo-vecino', 'bloquear-cancha', 'alerta-comunitaria', 'mi-perfil'].includes(targetView)) {
+      if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr', 'nuevo-vecino', 'editar-vecino', 'recuperar-clave', 'restablecer-clave', 'bloquear-cancha', 'alerta-comunitaria', 'mi-perfil', 'informar-pago', 'ver-comprobante'].includes(targetView)) {
         targetView = 'home';
       }
       setDashboardView(targetView, false);
@@ -2938,6 +4043,10 @@ async function initApp() {
   updateDateControls();
 
   if (visitDateField) visitDateField.value = getTodayISO();
+
+  // Check if opened via password reset link token in URL
+  await checkUrlForResetToken();
+  window.addEventListener('hashchange', checkUrlForResetToken);
 
   // Check persistent session with server
   const token = API.getToken();

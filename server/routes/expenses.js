@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -15,7 +17,7 @@ const bankInfo = {
 router.get('/', authenticateToken, (req, res) => {
   try {
     const expenses = db.prepare(`
-      SELECT id, userId, period, dueDate, amount, status, concept, paymentReference, paidAt, createdAt
+      SELECT id, userId, period, dueDate, amount, status, concept, paymentReference, paidAt, receiptPath, receiptName, receiptMime, createdAt
       FROM expenses
       WHERE userId = ?
       ORDER BY dueDate DESC, id DESC
@@ -37,7 +39,8 @@ router.get('/admin/all', authenticateToken, requireAdmin, (req, res) => {
     const allExpenses = db.prepare(`
       SELECT e.id, e.userId, e.period, e.dueDate, e.amount, e.status, e.concept,
              e.paymentReference, e.paidAt, e.createdAt,
-             u.nombre, u.apellido, u.email, u.numeroDocumento
+             e.receiptPath, e.receiptName, e.receiptMime,
+             u.nombre, u.apellido, u.email, u.numeroDocumento, u.lote, u.manzana
       FROM expenses e
       JOIN users u ON e.userId = u.id
       ORDER BY e.dueDate DESC, e.id DESC
@@ -50,11 +53,11 @@ router.get('/admin/all', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-// POST /api/expenses/:id/pay (Resident reports payment; sets status to 'En revisión', Admin can directly accredit)
+// POST /api/expenses/:id/pay (Resident reports payment with digital receipt; sets status to 'En revisión', Admin can directly accredit)
 router.post('/:id/pay', authenticateToken, (req, res) => {
   try {
     const expenseId = Number(req.params.id);
-    const { reference } = req.body || {};
+    const { reference, receiptData, receiptName, receiptMime } = req.body || {};
     const expense = db.prepare('SELECT * FROM expenses WHERE id = ?').get(expenseId);
 
     if (!expense) {
@@ -73,13 +76,61 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
     const now = new Date().toISOString();
     const cleanRef = reference && String(reference).trim() ? String(reference).trim() : null;
 
+    let savedReceiptPath = expense.receiptPath || null;
+    let savedReceiptName = expense.receiptName || null;
+    let savedReceiptMime = expense.receiptMime || null;
+
+    if (receiptData && typeof receiptData === 'string' && receiptData.includes(';base64,')) {
+      const parts = receiptData.split(';base64,');
+      const mimeMatch = parts[0].match(/^data:(.+)$/);
+      const mimeType = receiptMime || (mimeMatch ? mimeMatch[1] : 'application/octet-stream');
+      const base64Content = parts[1];
+      const buffer = Buffer.from(base64Content, 'base64');
+
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: 'El archivo del comprobante no puede superar los 10 MB.' });
+      }
+
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+      if (!allowedMimes.includes(mimeType.toLowerCase())) {
+        return res.status(400).json({ error: 'Formato no permitido. Solo se aceptan imágenes (JPG, PNG, WEBP) o documentos PDF.' });
+      }
+
+      const ext = path.extname(receiptName || '').toLowerCase() || (mimeType.includes('pdf') ? '.pdf' : '.jpg');
+      const safeFilename = `recibo_${expenseId}_${Date.now()}${ext}`;
+      const receiptsDir = path.join(__dirname, '..', '..', 'data', 'receipts');
+      if (!fs.existsSync(receiptsDir)) {
+        fs.mkdirSync(receiptsDir, { recursive: true });
+      }
+
+      const filePath = path.join(receiptsDir, safeFilename);
+      fs.writeFileSync(filePath, buffer);
+
+      // Clean up previous receipt file if replaced
+      if (expense.receiptPath && expense.receiptPath !== safeFilename) {
+        try {
+          const oldPath = path.join(receiptsDir, expense.receiptPath);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        } catch (e) {}
+      }
+
+      savedReceiptPath = safeFilename;
+      savedReceiptName = (receiptName && String(receiptName).slice(0, 100)) || safeFilename;
+      savedReceiptMime = mimeType;
+    }
+
     if (isAdmin) {
       // Admin directly accredits payment
       db.prepare(`
         UPDATE expenses
-        SET status = 'Pagado', paymentReference = COALESCE(?, paymentReference), paidAt = ?
+        SET status = 'Pagado',
+            paymentReference = COALESCE(?, paymentReference),
+            receiptPath = COALESCE(?, receiptPath),
+            receiptName = COALESCE(?, receiptName),
+            receiptMime = COALESCE(?, receiptMime),
+            paidAt = ?
         WHERE id = ?
-      `).run(cleanRef, now, expenseId);
+      `).run(cleanRef, savedReceiptPath, savedReceiptName, savedReceiptMime, now, expenseId);
 
       // Notify resident
       db.prepare(`
@@ -98,9 +149,21 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
     // Resident reports payment: changes status to 'En revisión'
     db.prepare(`
       UPDATE expenses
-      SET status = 'En revisión', paymentReference = ?, paidAt = ?
+      SET status = 'En revisión',
+          paymentReference = ?,
+          receiptPath = ?,
+          receiptName = ?,
+          receiptMime = ?,
+          paidAt = ?
       WHERE id = ?
-    `).run(cleanRef || 'Informado por portal', now, expenseId);
+    `).run(
+      cleanRef || (savedReceiptPath ? 'Comprobante digital adjunto' : 'Informado por portal'),
+      savedReceiptPath,
+      savedReceiptName,
+      savedReceiptMime,
+      now,
+      expenseId
+    );
 
     // Notify resident
     db.prepare(`
@@ -109,7 +172,7 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
     `).run(
       req.user.id,
       'Aviso de pago de expensas',
-      `Tu aviso de pago para el periodo ${expense.period} fue registrado y está en revisión por la administración.`,
+      `Tu aviso de pago para el periodo ${expense.period} fue registrado${savedReceiptPath ? ' con comprobante digital' : ''} y está en revisión por la administración.`,
       now
     );
 
@@ -120,17 +183,61 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
     `).run(
       null,
       'Nuevo aviso de pago de expensas',
-      `${req.user.nombre} ${req.user.apellido} informó el pago de expensas del periodo ${expense.period} (${cleanRef || 'Transferencia'}).`,
+      `${req.user.nombre} ${req.user.apellido} informó el pago de expensas del periodo ${expense.period}${cleanRef ? ` (${cleanRef})` : ''}${savedReceiptPath ? ' con comprobante digital adjunto' : ''}.`,
       now
     );
 
     res.json({
-      message: 'Aviso de pago enviado. Se encuentra en revisión por la administración.',
-      status: 'En revisión'
+      message: 'Aviso de pago y comprobante enviados. Se encuentra en revisión por la administración.',
+      status: 'En revisión',
+      receiptPath: savedReceiptPath,
+      receiptName: savedReceiptName
     });
   } catch (error) {
     console.error('[Pay Expense Error]', error);
     res.status(500).json({ error: 'Error al registrar aviso de pago.' });
+  }
+});
+
+// GET /api/expenses/:id/receipt (Serves receipt image or PDF with authentication)
+router.get('/:id/receipt', authenticateToken, (req, res) => {
+  try {
+    const expenseId = Number(req.params.id);
+    const expense = db.prepare('SELECT * FROM expenses WHERE id = ?').get(expenseId);
+
+    if (!expense) {
+      return res.status(404).json({ error: 'Liquidación de expensas no encontrada.' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (expense.userId !== req.user.id && !isAdmin) {
+      return res.status(403).json({ error: 'No tenés permisos para visualizar este comprobante.' });
+    }
+
+    if (!expense.receiptPath) {
+      return res.status(404).json({ error: 'No hay comprobante digital adjunto para esta liquidación.' });
+    }
+
+    const receiptsDir = path.join(__dirname, '..', '..', 'data', 'receipts');
+    const filePath = path.join(receiptsDir, expense.receiptPath);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'El archivo físico del comprobante no fue encontrado en el servidor.' });
+    }
+
+    const mime = expense.receiptMime || 'application/octet-stream';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+
+    const download = req.query.download === '1' || req.query.download === 'true';
+    const disposition = download ? 'attachment' : 'inline';
+    const filename = expense.receiptName || expense.receiptPath;
+
+    res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(filename)}"`);
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('[Get Receipt Error]', error);
+    res.status(500).json({ error: 'Error al obtener el comprobante de pago.' });
   }
 });
 
@@ -300,6 +407,16 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, (req, res) => {
 
     if (expense.status === 'Pagado') {
       return res.status(400).json({ error: 'No se puede eliminar una liquidación que ya fue acreditada como pagada.' });
+    }
+
+    if (expense.receiptPath) {
+      try {
+        const receiptsDir = path.join(__dirname, '..', '..', 'data', 'receipts');
+        const filePath = path.join(receiptsDir, expense.receiptPath);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.warn('[Delete Expense Receipt Warning]', e);
+      }
     }
 
     db.prepare('DELETE FROM expenses WHERE id = ?').run(expenseId);

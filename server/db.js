@@ -107,6 +107,15 @@ db.exec(`
     expiresAt TEXT NOT NULL,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expiresAt TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    createdAt TEXT NOT NULL
+  );
 `);
 
 // Migrations for existing databases
@@ -117,11 +126,19 @@ try { db.exec("ALTER TABLE visits ADD COLUMN entryAt TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN exitAt TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE expenses ADD COLUMN paymentReference TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE expenses ADD COLUMN paidAt TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE expenses ADD COLUMN receiptPath TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE expenses ADD COLUMN receiptName TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE expenses ADD COLUMN receiptMime TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN username TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN lote TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN manzana TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN isBlocked INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN blockReason TEXT;"); } catch (e) {}
+
+const receiptsDir = path.join(dataDir, 'receipts');
+if (!fs.existsSync(receiptsDir)) {
+  fs.mkdirSync(receiptsDir, { recursive: true });
+}
 
 // Populate default username / lotes for existing seed users if empty
 try {

@@ -26,14 +26,8 @@
           <div class="brand-panel glass-card">
             <img src="assets/img/logo.png" alt="Logo" class="brand-logo-hero" />
             <p class="brand-copy">
-              Portal digital para novedades, reservas y servicios del predio.
+              Portal digital para novedades y servicios del predio.
             </p>
-            <ul class="brand-features">
-              <li>Novedades del predio</li>
-              <li>Reservas de tenis</li>
-              <li>Control de visitas y accesos</li>
-              <li>Notificaciones del barrio</li>
-            </ul>
           </div>
 
           <div class="auth-panel glass-card">
@@ -53,14 +47,20 @@
               </div>
 
               <label>
-                <span>Usuario, Email o DNI</span>
-                <input type="text" name="email" id="loginEmail" placeholder="Usuario, Email o DNI" required autocomplete="username" />
+                <span>Usuario</span>
+                <input type="text" name="email" id="loginEmail" placeholder="Ingrese su usuario" required autocomplete="username" />
               </label>
 
               <label>
                 <span>Contraseña</span>
                 <input type="password" name="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
               </label>
+
+              <div style="display: flex; justify-content: flex-end; margin: -0.35rem 0 0.85rem 0;">
+                <button type="button" class="text-btn" id="openForgotPasswordBtn" style="font-size: 0.82rem; color: var(--gold); padding: 0; background: none; border: none; cursor: pointer; text-decoration: underline;">
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
 
               <button type="submit" class="primary-btn" id="loginSubmitBtn">Ingresar</button>
             </form>
@@ -96,6 +96,20 @@
                   <span>Número de documento</span>
                   <input type="text" name="numeroDocumento" required />
                 </label>
+              </div>
+
+              <div class="field-grid two-col">
+                <label>
+                  <span>Lote (Número) *</span>
+                  <input type="number" name="lote" id="registerLote" min="1" required placeholder="Ej: 2" />
+                </label>
+                <label>
+                  <span>Manzana (Número) *</span>
+                  <input type="number" name="manzana" id="registerManzana" min="1" required placeholder="Ej: 9" />
+                </label>
+              </div>
+              <div id="registerUsernamePreview" style="margin: -0.3rem 0 0.5rem 0; padding: 0.5rem 0.75rem; border-radius: 8px; background: rgba(247, 199, 109, 0.12); border: 1px solid rgba(247, 199, 109, 0.3); font-size: 0.85rem; color: var(--gold); display: none;">
+                👤 Tu usuario para ingresar a la app será: <strong id="registerUsernamePreviewText">L2M9</strong>
               </div>
 
               <div class="field-grid two-col">
@@ -280,8 +294,9 @@
                     <span id="expenseCurrentConcept">📄 <strong>Concepto:</strong> Expensas ordinarias + mantenimiento general</span>
                   </div>
 
-                  <div class="expense-action-row" id="expenseActionRow">
+                  <div class="expense-action-row" id="expenseActionRow" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                     <button type="button" class="primary-btn small-btn" id="payExpenseBtn">Informar Pago</button>
+                    <button type="button" class="btn-inline-action view-receipt-btn" id="viewCurrentReceiptBtn" style="display: none; padding: 0.5rem 1rem; font-size: 0.85rem;">📎 Ver Comprobante Enviado</button>
                   </div>
 
                   <div class="bank-details-box">
@@ -519,169 +534,186 @@
                 </div>
               </div>
 
-              <div class="stats-grid" id="adminStatsGrid">
-                <div class="stat-card glass-card accent-green">
-                  <div class="stat-icon">👥</div>
-                  <div>
-                    <strong id="statTotalUsers">0</strong>
-                    <p>Vecinos activos</p>
-                  </div>
-                </div>
-                <div class="stat-card glass-card accent-gold">
-                  <div class="stat-icon">⏳</div>
-                  <div>
-                    <strong id="statPendingUsers">0</strong>
-                    <p>Solicitudes pendientes</p>
-                  </div>
-                </div>
-                <div class="stat-card glass-card accent-blue">
-                  <div class="stat-icon">🚗</div>
-                  <div>
-                    <strong id="statTodayVisits">0</strong>
-                    <p>Visitas de hoy</p>
-                  </div>
-                </div>
+              <!-- Botones de Navegación del Panel de Administración (Sin Scroll Masivo) -->
+              <div class="admin-nav-buttons" role="tablist" aria-label="Módulos de administración">
+                <button type="button" class="admin-nav-btn active" data-admin-tab="vecinos">
+                  👥 Padrón de Vecinos
+                  <span class="badge soft mini" id="adminNavPendingBadge" style="display: none; background: rgba(247, 199, 109, 0.25); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4); margin-left: 0.3rem;">0</span>
+                </button>
+                <button type="button" class="admin-nav-btn" data-admin-tab="guardia">
+                  🛡️ Control de Guardia
+                  <span class="badge soft mini" id="adminNavGuardBadge" style="display: none; background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); margin-left: 0.3rem;">0</span>
+                </button>
+                <button type="button" class="admin-nav-btn" data-admin-tab="expensas">
+                  💳 Gestión de Expensas
+                </button>
+                <button type="button" class="admin-nav-btn" data-admin-tab="canchas">
+                  🎾 Control de Canchas
+                </button>
+                <button type="button" class="admin-nav-btn" data-admin-tab="alertas">
+                  📢 Avisos y Alertas
+                </button>
               </div>
 
-              <div class="admin-panels-grid">
-                <!-- Panel de Padrón de Vecinos Activos -->
-                <div class="glass-card panel-block" style="grid-column: 1 / -1;">
-                  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                      <h4>Padrón de Vecinos Activos</h4>
-                      <span class="badge soft" id="adminActiveUsersCount">0 habilitados</span>
+              <!-- CONTENIDO MODULAR POR BOTONES -->
+              <div class="admin-views-container">
+                <!-- MÓDULO 1: Padrón de Vecinos (Vecinos Activos y Solicitudes de Registro) -->
+                <div class="admin-tab-view active" id="adminTabVecinos">
+                  <div class="glass-card panel-block">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <h4>👥 Padrón de Vecinos</h4>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="primary-btn" id="openCreateUserModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: var(--primary-deep); color: #fff; border: none; font-weight: 600;">
+                          ➕ Nuevo Vecino
+                        </button>
+                        <button type="button" class="text-btn" id="refreshActiveUsersBtn">Actualizar</button>
+                      </div>
                     </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                      <button type="button" class="primary-btn" id="openCreateUserModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: var(--primary-deep); color: #fff; border: none; font-weight: 600;">
-                        ➕ Nuevo Vecino
+
+                    <!-- Sub-botones: Vecinos Activos y Solicitudes de Registro -->
+                    <div class="vecinos-subnav" role="tablist" aria-label="Subsecciones del padrón">
+                      <button type="button" class="vecinos-subnav-btn active" data-vecinos-subtab="activos">
+                        👤 Vecinos Activos
+                        <span class="badge soft" id="adminActiveUsersCount">0 habilitados</span>
                       </button>
-                      <button type="button" class="text-btn" id="refreshActiveUsersBtn">Actualizar</button>
-                    </div>
-                  </div>
-                  <p class="panel-subtext">Directorio de propietarios habilitados con datos de contacto, lote/manzana, gestión de roles y bajas.</p>
-
-                  <!-- Buscador en tiempo real de vecinos -->
-                  <div style="margin: 0.75rem 0;">
-                    <input
-                      type="search"
-                      id="activeUsersSearchInput"
-                      placeholder="🔍 Buscar por Nombre, Apellido, Lote (ej: L9M2), DNI o Email..."
-                      style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
-                      autocomplete="off"
-                    />
-                  </div>
-
-                  <div id="activeUsersList" class="list-stack active-users-list" style="display: grid; gap: 0.65rem;"></div>
-                </div>
-
-                <!-- Panel de Solicitudes de Usuario -->
-                <div class="glass-card panel-block">
-                  <div class="panel-heading">
-                    <h4>Solicitudes de registro de vecinos</h4>
-                    <span class="badge soft" id="adminPendingStatusCount">0 pendientes</span>
-                  </div>
-                  <p class="panel-subtext">Aprobá o rechazá las cuentas solicitadas para habilitar el ingreso al sistema.</p>
-                  <div id="pendingUsersList" class="pending-users-list"></div>
-                </div>
-
-                <!-- Panel de Control de Visitas en Guardia -->
-                <div class="glass-card panel-block">
-                  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                      <h4>Control de guardia (Ingresos y Egresos)</h4>
-                      <span class="badge soft" id="adminGuardInsideBadge">0 en predio</span>
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                      <button type="button" class="primary-btn" id="openScanQrModalBtn" style="padding: 0.42rem 0.85rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
-                        📷 Escanear QR
+                      <button type="button" class="vecinos-subnav-btn" data-vecinos-subtab="solicitudes">
+                        ⏳ Solicitudes de Registro
+                        <span class="badge soft" id="adminPendingStatusCount">0 pendientes</span>
                       </button>
-                      <button type="button" class="text-btn" id="refreshAdminVisitsBtn">Actualizar</button>
+                    </div>
+
+                    <!-- Subpanel: Vecinos Activos -->
+                    <div class="vecinos-subpanel active" id="adminActiveUsersSubpanel">
+                      <p class="panel-subtext">Directorio de propietarios habilitados con datos de contacto, lote/manzana, gestión de roles y bajas.</p>
+                      <!-- Buscador en tiempo real de vecinos -->
+                      <div style="margin: 0.75rem 0;">
+                        <input
+                          type="search"
+                          id="activeUsersSearchInput"
+                          placeholder="🔍 Buscar por Nombre, Apellido, Lote (ej: L9M2), DNI o Email..."
+                          style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
+                          autocomplete="off"
+                        />
+                      </div>
+                      <div id="activeUsersList" class="list-stack active-users-list" style="display: grid; gap: 0.65rem;"></div>
+                    </div>
+
+                    <!-- Subpanel: Solicitudes de Registro -->
+                    <div class="vecinos-subpanel" id="adminPendingUsersSubpanel">
+                      <p class="panel-subtext">Aprobá o rechazá las cuentas solicitadas para habilitar el ingreso al sistema.</p>
+                      <div id="pendingUsersList" class="pending-users-list"></div>
                     </div>
                   </div>
-                  <p class="panel-subtext">Escaneá el código QR del pase o buscá por patente o DNI para registrar el ingreso o salida de visitantes.</p>
-
-                  <!-- Buscador en tiempo real y filtros -->
-                  <div class="guard-search-bar" style="margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <input
-                      type="search"
-                      id="guardSearchInput"
-                      placeholder="🔍 Buscar por Patente, DNI o Nombre..."
-                      style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
-                      autocomplete="off"
-                    />
-                    <div class="guard-filter-tabs" style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                      <button type="button" class="btn-inline-action active guard-filter-tab" data-filter="all">Todas</button>
-                      <button type="button" class="btn-inline-action guard-filter-tab" data-filter="inside">🟢 En predio</button>
-                      <button type="button" class="btn-inline-action guard-filter-tab" data-filter="expected">⏳ Esperadas</button>
-                      <button type="button" class="btn-inline-action guard-filter-tab" data-filter="exited">🚪 Egresadas</button>
-                    </div>
-                  </div>
-
-                  <ul id="adminVisitsList" class="list-stack visit-list"></ul>
                 </div>
 
-                <!-- Panel de Control y Acreditación de Expensas -->
-                <div class="glass-card panel-block" style="grid-column: 1 / -1;">
-                  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                      <h4>Gestión y Acreditación de Expensas</h4>
-                      <span class="badge soft" id="adminExpensesStatusBadge">Comprobantes</span>
+                <!-- MÓDULO 2: Control de Guardia -->
+                <div class="admin-tab-view" id="adminTabGuardia">
+                  <div class="glass-card panel-block">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                      <div>
+                        <h4>🛡️ Control de guardia (Ingresos y Egresos)</h4>
+                        <span class="badge soft" id="adminGuardInsideBadge">0 en predio</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="primary-btn" id="openScanQrModalBtn" style="padding: 0.42rem 0.85rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
+                          📷 Escanear QR
+                        </button>
+                        <button type="button" class="text-btn" id="refreshAdminVisitsBtn">Actualizar</button>
+                      </div>
                     </div>
-                    <button type="button" class="primary-btn" id="openEmitExpenseModalBtn" style="padding: 0.45rem 1rem; font-size: 0.85rem; width: auto;">
-                      ➕ Emitir Nueva Liquidación
-                    </button>
-                  </div>
-                  <p class="panel-subtext">Emití periodos para todos los propietarios o vecinos específicos, y verificá los avisos de transferencia informados.</p>
-                  <ul id="adminExpensesList" class="list-stack visit-list"></ul>
-                </div>
+                    <p class="panel-subtext">Escaneá el código QR del pase o buscá por patente o DNI para registrar el ingreso o salida de visitantes.</p>
 
-                <!-- Panel de Control y Supervisión de Canchas -->
-                <div class="glass-card panel-block" style="grid-column: 1 / -1;" id="adminCourtsPanel">
-                  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                      <h4>Supervisión y Control de Cancha de Tenis</h4>
-                      <span class="badge soft" id="adminCourtOccupiedBadge">0 ocupados</span>
-                      <span class="badge soft" id="adminCourtBlockedBadge" style="display: none; background: rgba(255, 122, 122, 0.15); color: var(--danger); border: 1px solid rgba(255, 122, 122, 0.3);">0 bloqueados</span>
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                      <button type="button" class="btn-inline-action active" id="adminCourtDateTodayBtn">Hoy</button>
-                      <button type="button" class="btn-inline-action" id="adminCourtDateTomorrowBtn">Mañana</button>
+                    <!-- Buscador en tiempo real y filtros -->
+                    <div class="guard-search-bar" style="margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
                       <input
-                        type="date"
-                        id="adminCourtDateInput"
-                        style="padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;"
+                        type="search"
+                        id="guardSearchInput"
+                        placeholder="🔍 Buscar por Patente, DNI o Nombre..."
+                        style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
+                        autocomplete="off"
                       />
-                      <button type="button" class="primary-btn" id="openBlockCourtModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: rgba(255, 122, 122, 0.25); color: #ff9e9e; border: 1px solid rgba(255, 122, 122, 0.4); font-weight: 600;">
-                        🚫 Bloquear Turnos
-                      </button>
-                      <button type="button" class="btn-inline-action" id="adminUnblockDayBtn" style="display: none; padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto;">
-                        Habilitar todo el día
-                      </button>
-                      <button type="button" class="text-btn" id="refreshAdminCourtsBtn">Actualizar</button>
+                      <div class="guard-filter-tabs" style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                        <button type="button" class="btn-inline-action active guard-filter-tab" data-filter="all">Todas</button>
+                        <button type="button" class="btn-inline-action guard-filter-tab" data-filter="inside">🟢 En predio</button>
+                        <button type="button" class="btn-inline-action guard-filter-tab" data-filter="expected">⏳ Esperadas</button>
+                        <button type="button" class="btn-inline-action guard-filter-tab" data-filter="exited">🚪 Egresadas</button>
+                      </div>
                     </div>
-                  </div>
-                  <p class="panel-subtext">Supervisá los turnos del día, quién juega y bloqueá horarios por mantenimiento, lluvia o torneos comunitarios.</p>
 
-                  <div id="adminCourtScheduleList" class="list-stack" style="display: grid; gap: 0.5rem; margin-top: 0.6rem;"></div>
+                    <ul id="adminVisitsList" class="list-stack visit-list"></ul>
+                  </div>
                 </div>
 
-                <!-- Panel de Alertas Comunitarias y Comunicados Urgentes -->
-                <div class="glass-card panel-block" style="grid-column: 1 / -1;" id="adminAlertsPanel">
-                  <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                      <h4>Avisos y Alertas Masivas Inmediatas</h4>
-                      <span class="badge soft" id="adminBroadcastAlertsCount">0 emitidas</span>
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                      <button type="button" class="primary-btn" id="openBroadcastAlertModalBtn" style="padding: 0.42rem 0.95rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
-                        🚨 Emitir Alerta General
+                <!-- MÓDULO 3: Gestión de Expensas -->
+                <div class="admin-tab-view" id="adminTabExpensas">
+                  <div class="glass-card panel-block">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <h4>💳 Gestión y Acreditación de Expensas</h4>
+                        <span class="badge soft" id="adminExpensesStatusBadge">Comprobantes</span>
+                      </div>
+                      <button type="button" class="primary-btn" id="openEmitExpenseModalBtn" style="padding: 0.45rem 1rem; font-size: 0.85rem; width: auto;">
+                        ➕ Emitir Nueva Liquidación
                       </button>
-                      <button type="button" class="text-btn" id="refreshAdminAlertsBtn">Actualizar</button>
                     </div>
+                    <p class="panel-subtext">Emití periodos para todos los propietarios o vecinos específicos, y verificá los avisos de transferencia informados.</p>
+                    <ul id="adminExpensesList" class="list-stack visit-list"></ul>
                   </div>
-                  <p class="panel-subtext">Emití avisos de emergencia, cortes de servicios o alertas urgentes directo a la campanita 🔔 de todos los vecinos habilitados.</p>
+                </div>
 
-                  <div id="adminBroadcastAlertsList" class="list-stack" style="display: grid; gap: 0.65rem; margin-top: 0.75rem;"></div>
+                <!-- MÓDULO 4: Control de Canchas -->
+                <div class="admin-tab-view" id="adminTabCanchas">
+                  <div class="glass-card panel-block" id="adminCourtsPanel">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <h4>🎾 Supervisión y Control de Cancha de Tenis</h4>
+                        <span class="badge soft" id="adminCourtOccupiedBadge">0 ocupados</span>
+                        <span class="badge soft" id="adminCourtBlockedBadge" style="display: none; background: rgba(255, 122, 122, 0.15); color: var(--danger); border: 1px solid rgba(255, 122, 122, 0.3);">0 bloqueados</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn-inline-action active" id="adminCourtDateTodayBtn">Hoy</button>
+                        <button type="button" class="btn-inline-action" id="adminCourtDateTomorrowBtn">Mañana</button>
+                        <input
+                          type="date"
+                          id="adminCourtDateInput"
+                          style="padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;"
+                        />
+                        <button type="button" class="primary-btn" id="openBlockCourtModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: rgba(255, 122, 122, 0.25); color: #ff9e9e; border: 1px solid rgba(255, 122, 122, 0.4); font-weight: 600;">
+                          🚫 Bloquear Turnos
+                        </button>
+                        <button type="button" class="btn-inline-action" id="adminUnblockDayBtn" style="display: none; padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto;">
+                          Habilitar todo el día
+                        </button>
+                        <button type="button" class="text-btn" id="refreshAdminCourtsBtn">Actualizar</button>
+                      </div>
+                    </div>
+                    <p class="panel-subtext">Supervisá los turnos del día, quién juega y bloqueá horarios por mantenimiento, lluvia o torneos comunitarios.</p>
+
+                    <div id="adminCourtScheduleList" class="list-stack" style="display: grid; gap: 0.5rem; margin-top: 0.6rem;"></div>
+                  </div>
+                </div>
+
+                <!-- MÓDULO 5: Avisos y Alertas -->
+                <div class="admin-tab-view" id="adminTabAlertas">
+                  <div class="glass-card panel-block" id="adminAlertsPanel">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <h4>📢 Avisos y Alertas Masivas Inmediatas</h4>
+                        <span class="badge soft" id="adminBroadcastAlertsCount">0 emitidas</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="primary-btn" id="openBroadcastAlertModalBtn" style="padding: 0.42rem 0.95rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
+                          🚨 Emitir Alerta General
+                        </button>
+                        <button type="button" class="text-btn" id="refreshAdminAlertsBtn">Actualizar</button>
+                      </div>
+                    </div>
+                    <p class="panel-subtext">Emití avisos de emergencia, cortes de servicios o alertas urgentes directo a la campanita 🔔 de todos los vecinos habilitados.</p>
+
+                    <div id="adminBroadcastAlertsList" class="list-stack" style="display: grid; gap: 0.65rem; margin-top: 0.75rem;"></div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -796,6 +828,146 @@
             <button type="submit" class="primary-btn" id="submitEmitExpenseBtn">Generar y Emitir</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal para Informar Pago de Expensas (Residente) -->
+    <div id="payExpenseModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">💳</span>
+            <div>
+              <h4 style="margin: 0; font-size: 1.1rem;">Informar Pago de Expensas</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);" id="payExpenseModalSubtitle">Subí tu comprobante de transferencia bancaria</p>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" id="closePayExpenseModal">✕</button>
+        </div>
+
+        <div class="expense-pay-summary" id="payExpenseSummaryBox" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+          <div>
+            <div style="font-size: 0.78rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Liquidación a informar</div>
+            <div style="font-size: 1rem; font-weight: 700; color: #fff;" id="payExpenseModalPeriod">--</div>
+            <small style="color: var(--muted);" id="payExpenseModalConcept">--</small>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.78rem; color: var(--muted); text-transform: uppercase; font-weight: 600;">Total a pagar</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: var(--gold);" id="payExpenseModalAmount">$ 0</div>
+          </div>
+        </div>
+
+        <form id="payExpenseForm" class="modal-form">
+          <input type="hidden" id="payExpenseId" />
+
+          <!-- Zona de Subida de Comprobante -->
+          <div class="file-upload-section">
+            <label style="display: block; margin-bottom: 0.4rem;">
+              <span style="font-weight: 600; font-size: 0.9rem;">Comprobante Digital <strong style="color: var(--gold);">(Foto, captura o PDF)</strong></span>
+            </label>
+            
+            <div class="file-dropzone" id="receiptDropzone">
+              <input type="file" id="payExpenseFileInput" accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf" style="display: none;" />
+              <div class="dropzone-content" id="dropzoneEmpty">
+                <div style="font-size: 2rem; margin-bottom: 0.3rem;">📄</div>
+                <strong style="display: block; font-size: 0.95rem; color: #fff;">Hacé clic o arrastrá el comprobante aquí</strong>
+                <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--muted);">Formatos aceptados: JPG, PNG, WEBP o PDF (hasta 10 MB)</p>
+              </div>
+              <div class="dropzone-preview" id="dropzonePreview" style="display: none;">
+                <div class="preview-file-info">
+                  <div class="preview-thumbnail" id="previewThumbnail"></div>
+                  <div class="preview-metadata">
+                    <strong id="previewFileName" style="display: block; font-size: 0.9rem; color: #fff; word-break: break-all;">archivo.png</strong>
+                    <span id="previewFileSize" style="font-size: 0.78rem; color: var(--muted);">0 KB</span>
+                  </div>
+                </div>
+                <button type="button" class="btn-inline-action danger" id="removeReceiptFileBtn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem;">✕ Quitar</button>
+              </div>
+            </div>
+          </div>
+
+          <label>
+            <span>Número de comprobante / Referencia bancaria (Opcional)</span>
+            <input type="text" id="payExpenseReference" placeholder="Ej: Transf. 9831093 o código de operación" />
+          </label>
+
+          <div style="background: rgba(235, 179, 58, 0.08); border: 1px solid rgba(235, 179, 58, 0.25); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #f5cf80;">
+            ℹ️ Recordá transferir al Alias <strong>RANCHO.DOBLE.S</strong> antes de enviar el comprobante. La administración validará la acreditación a la brevedad.
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="text-btn" id="cancelPayExpenseBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitPayExpenseBtn">Enviar Comprobante</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Visualización de Comprobante de Pago Digital (Admin y Residente) -->
+    <div id="viewReceiptModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card receipt-modal-card" style="width: min(720px, 100%);">
+        <div class="modal-header" style="align-items: flex-start;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.25rem;">📎</span>
+              <h4 style="margin: 0; font-size: 1.15rem;" id="viewReceiptModalTitle">Comprobante de Pago</h4>
+            </div>
+            <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--muted);" id="viewReceiptModalSubtitle">Detalle de la liquidación y comprobante adjunto</p>
+          </div>
+          <button type="button" class="icon-btn" id="closeViewReceiptModal">✕</button>
+        </div>
+
+        <div class="receipt-modal-body">
+          <!-- Metadata Bar -->
+          <div class="guest-summary-table" style="margin-bottom: 1rem;" id="viewReceiptDetailsGrid">
+            <div>
+              <small>Propietario:</small>
+              <strong id="receiptOwnerName">--</strong>
+            </div>
+            <div>
+              <small>Periodo y Monto:</small>
+              <strong id="receiptPeriodAmount">--</strong>
+            </div>
+            <div>
+              <small>Referencia:</small>
+              <strong id="receiptReferenceCode">--</strong>
+            </div>
+            <div>
+              <small>Fecha informado:</small>
+              <strong id="receiptPaidDate">--</strong>
+            </div>
+            <div>
+              <small>Estado:</small>
+              <em class="visit-status" id="receiptStatusBadge">--</em>
+            </div>
+          </div>
+
+          <!-- Document / Image Viewer -->
+          <div class="receipt-viewer-container" id="receiptViewerContainer">
+            <!-- Dynamically injected: Image, PDF iframe or message -->
+          </div>
+
+          <!-- Actions -->
+          <div class="modal-actions" style="margin-top: 1rem; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="receiptViewerDownloadGroup">
+              <a id="downloadReceiptBtn" href="#" class="primary-btn small-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" download>
+                📥 Descargar
+              </a>
+              <a id="openReceiptExternalBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-inline-action" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ↗ Abrir en pestaña nueva
+              </a>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;" id="receiptAdminActions">
+              <button type="button" class="btn-inline-action success" id="receiptAdminApproveBtn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700; display: none;">
+                ✅ Acreditar Pago
+              </button>
+              <button type="button" class="btn-inline-action danger" id="receiptAdminRejectBtn" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; display: none;">
+                Desestimar
+              </button>
+              <button type="button" class="text-btn" id="closeViewReceiptBtn">Cerrar</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1001,6 +1173,93 @@
             <button type="button" class="text-btn" id="cancelCreateUserBtn">Cancelar</button>
             <button type="submit" class="primary-btn" id="submitCreateUserBtn" style="background: var(--primary-deep); color: #fff; width: auto; padding: 0.55rem 1.4rem; font-weight: 600;">
               Crear y Habilitar Vecino
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Modificar Datos de Vecino (Admin) -->
+    <div id="editUserModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 580px; width: 95%;">
+        <div class="modal-header">
+          <div>
+            <h4>✏️ Modificar Datos del Vecino</h4>
+            <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+              Actualizá lote, manzana o datos de contacto. La contraseña no puede ser modificada ni visualizada.
+            </p>
+          </div>
+          <button type="button" class="icon-btn" id="closeEditUserModal">✕</button>
+        </div>
+        <form id="editUserForm" class="modal-form" style="margin-top: 0.75rem;">
+          <input type="hidden" id="editUserId" />
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Nombre *</span>
+              <input type="text" id="editUserNombre" required placeholder="Ej: Juan" />
+            </label>
+            <label>
+              <span>Apellido *</span>
+              <input type="text" id="editUserApellido" required placeholder="Ej: Pérez" />
+            </label>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Tipo de documento *</span>
+              <select id="editUserTipoDoc" required>
+                <option value="DNI" selected>DNI</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </label>
+            <label>
+              <span>Número de documento *</span>
+              <input type="text" id="editUserNumDoc" required placeholder="Sin puntos" />
+            </label>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Lote (Número) *</span>
+              <input type="number" id="editUserLote" min="1" required placeholder="Ej: 2" />
+            </label>
+            <label>
+              <span>Manzana (Número) *</span>
+              <input type="number" id="editUserManzana" min="1" required placeholder="Ej: 9" />
+            </label>
+          </div>
+
+          <div id="editUserUsernameBox" style="margin-top: -0.3rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: rgba(247, 199, 109, 0.12); border: 1px solid rgba(247, 199, 109, 0.3); font-size: 0.85rem; color: var(--gold);">
+            👤 Usuario de acceso para la app: <strong id="editUserUsernamePreview">L2M9</strong>
+          </div>
+
+          <div class="field-grid two-col">
+            <label>
+              <span>Teléfono / Móvil *</span>
+              <input type="tel" id="editUserTelefono" required placeholder="Ej: 11 4455-6677" />
+            </label>
+            <label>
+              <span>Correo electrónico *</span>
+              <input type="email" id="editUserEmail" required placeholder="ejemplo@correo.com" />
+            </label>
+          </div>
+
+          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #a3e6cb;">
+            🔒 <strong>Seguridad y Privacidad:</strong> La contraseña del propietario es personal e intransferible. La administración nunca puede visualizarla ni modificarla.
+          </div>
+
+          <div style="margin-top: 0.6rem; display: flex; justify-content: flex-start;">
+            <button type="button" class="btn-inline-action" id="editUserGenerateResetLinkBtn" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);">
+              🔑 Generar Enlace para Restablecer Clave
+            </button>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 1rem;">
+            <button type="button" class="text-btn" id="cancelEditUserBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitEditUserBtn" style="background: var(--primary-deep); color: #fff; width: auto; padding: 0.55rem 1.4rem; font-weight: 600;">
+              Guardar Cambios
             </button>
           </div>
         </form>
@@ -1247,6 +1506,121 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal para Solicitar Recuperación de Contraseña (Vecino) -->
+    <div id="forgotPasswordModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 480px; width: 95%;">
+        <div class="modal-header">
+          <div>
+            <h4>🔑 Recuperar Contraseña</h4>
+            <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+              Ingresá tu usuario (ej: L2M9) o correo registrado. Te enviaremos un enlace de recuperación seguro.
+            </p>
+          </div>
+          <button type="button" class="icon-btn" id="closeForgotPasswordModal">✕</button>
+        </div>
+        <form id="forgotPasswordForm" class="modal-form" style="margin-top: 0.75rem;">
+          <label>
+            <span>Usuario o Correo Electrónico</span>
+            <input type="text" id="forgotPasswordIdentifier" required placeholder="Ej: L2M9 o ejemplo@correo.com" autocomplete="username" />
+          </label>
+
+          <div id="forgotPasswordStatus" style="font-size: 0.85rem; margin-top: 0.35rem; display: none; padding: 0.6rem 0.8rem; border-radius: 8px;"></div>
+
+          <div class="modal-actions" style="margin-top: 1rem;">
+            <button type="button" class="text-btn" id="cancelForgotPasswordBtn">Volver al login</button>
+            <button type="submit" class="primary-btn" id="submitForgotPasswordBtn" style="background: var(--primary-deep); color: #fff; width: auto; padding: 0.55rem 1.3rem; font-weight: 600;">
+              Enviar Enlace
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Definir Nueva Contraseña (con Token Seguro) -->
+    <div id="resetPasswordModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 480px; width: 95%;">
+        <div class="modal-header">
+          <div>
+            <h4>🔒 Crear Nueva Contraseña</h4>
+            <p id="resetPasswordSubtitle" style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+              Ingresá tu nueva clave privada para acceder al portal.
+            </p>
+          </div>
+          <button type="button" class="icon-btn" id="closeResetPasswordModal">✕</button>
+        </div>
+        <form id="resetPasswordForm" class="modal-form" style="margin-top: 0.75rem;">
+          <input type="hidden" id="resetPasswordToken" />
+
+          <label>
+            <span>Nueva Contraseña (mínimo 6 caracteres)</span>
+            <input type="password" id="resetNewPassword" required minlength="6" placeholder="••••••••" autocomplete="new-password" />
+          </label>
+
+          <label>
+            <span>Confirmar Nueva Contraseña</span>
+            <input type="password" id="resetConfirmPassword" required minlength="6" placeholder="••••••••" autocomplete="new-password" />
+          </label>
+
+          <div id="resetPasswordStatus" style="font-size: 0.85rem; margin-top: 0.35rem; display: none; padding: 0.6rem 0.8rem; border-radius: 8px;"></div>
+
+          <div class="modal-actions" style="margin-top: 1rem;">
+            <button type="button" class="text-btn" id="cancelResetPasswordBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitResetPasswordBtn" style="background: var(--primary-deep); color: #fff; width: auto; padding: 0.55rem 1.3rem; font-weight: 600;">
+              Restablecer Contraseña
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Asistencia de Blanqueo / Enlace de Restablecimiento (Admin) -->
+    <div id="adminResetLinkModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 520px; width: 95%;">
+        <div class="modal-header">
+          <div>
+            <h4>🔑 Enlace de Restablecimiento para Vecino</h4>
+            <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
+              Facilitá este enlace seguro al propietario para que establezca su clave.
+            </p>
+          </div>
+          <button type="button" class="icon-btn" id="closeAdminResetLinkModal">✕</button>
+        </div>
+        <div class="modal-body" style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.9rem;">
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.75rem 0.9rem; font-size: 0.85rem;">
+            <div>Vecino: <strong id="adminResetTargetName" style="color: #fff;">-</strong> (<strong id="adminResetTargetUser" style="color: var(--gold);">-</strong>)</div>
+            <div style="color: var(--muted); margin-top: 0.2rem;">Email: <span id="adminResetTargetEmail">-</span></div>
+          </div>
+
+          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #a3e6cb;">
+            🔒 <strong>Privacidad estricta:</strong> La administración nunca elige ni ve la clave. El vecino debe ingresar al enlace para definir su contraseña.
+          </div>
+
+          <label>
+            <span style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.3rem;">Enlace seguro de uso único (validez 60 minutos):</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="adminResetLinkInput" readonly style="flex: 1; font-family: monospace; font-size: 0.82rem; background: rgba(0,0,0,0.3);" />
+              <button type="button" class="secondary-btn" id="copyAdminResetLinkBtn" style="padding: 0.4rem 0.8rem; font-size: 0.82rem; white-space: nowrap;">
+                📋 Copiar
+              </button>
+            </div>
+          </label>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.3rem;">
+            <button type="button" class="btn-inline-action" id="shareAdminResetWhatsAppBtn" style="flex: 1; min-width: 160px; padding: 0.6rem; justify-content: center; font-size: 0.85rem; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.35); color: #25d366;">
+              📲 Enviar por WhatsApp
+            </button>
+            <button type="button" class="btn-inline-action" id="sendAdminResetEmailBtn" style="flex: 1; min-width: 160px; padding: 0.6rem; justify-content: center; font-size: 0.85rem;">
+              📧 Reenviar por Correo
+            </button>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.5rem;">
+            <button type="button" class="text-btn" id="dismissAdminResetLinkBtn">Cerrar</button>
+          </div>
+        </div>
       </div>
     </div>
 

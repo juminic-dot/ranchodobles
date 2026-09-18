@@ -99,6 +99,24 @@ const API = {
         method: 'PUT',
         body: passData
       });
+    },
+    forgotPassword(identifier) {
+      return API.request('/api/auth/forgot-password', {
+        method: 'POST',
+        body: { identifier }
+      });
+    },
+    verifyResetToken(token) {
+      return API.request('/api/auth/verify-reset-token', {
+        method: 'POST',
+        body: { token }
+      });
+    },
+    resetPassword(token, newPassword, confirmPassword) {
+      return API.request('/api/auth/reset-password', {
+        method: 'POST',
+        body: { token, newPassword, confirmPassword }
+      });
     }
   },
 
@@ -223,11 +241,17 @@ const API = {
     getAdminAll() {
       return API.request('/api/expenses/admin/all');
     },
-    pay(id, reference) {
+    pay(id, payload) {
+      const body = typeof payload === 'object' && payload !== null ? payload : { reference: payload };
       return API.request(`/api/expenses/${id}/pay`, {
         method: 'POST',
-        body: { reference }
+        body
       });
+    },
+    getReceiptUrl(id, download = false) {
+      const token = API.getToken();
+      const query = token ? `?token=${encodeURIComponent(token)}${download ? '&download=1' : ''}` : (download ? '?download=1' : '');
+      return `${API_BASE}/api/expenses/${id}/receipt${query}`;
     },
     updateStatus(id, status) {
       return API.request(`/api/expenses/${id}/status`, {
@@ -263,9 +287,16 @@ const API = {
         body: userData
       });
     },
-    approveUser(id) {
+    updateUser(id, userData) {
+      return API.request(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        body: userData
+      });
+    },
+    approveUser(id, data) {
       return API.request(`/api/admin/users/${id}/approve`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        body: data || undefined
       });
     },
     deleteUser(id) {
@@ -277,6 +308,12 @@ const API = {
       return API.request(`/api/admin/users/${id}/role`, {
         method: 'PATCH',
         body: { role }
+      });
+    },
+    generateResetToken(id, sendEmail = false) {
+      return API.request(`/api/admin/users/${id}/reset-token`, {
+        method: 'POST',
+        body: { sendEmail }
       });
     },
     getStats() {

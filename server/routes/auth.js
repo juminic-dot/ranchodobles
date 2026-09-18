@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { JWT_SECRET, authenticateToken, loginLimiter, registerLimiter } = require('../middleware');
+const { sendPasswordResetEmail } = require('../mailer');
 
 // POST /api/auth/register
 router.post('/register', registerLimiter, async (req, res) => {
@@ -15,6 +17,8 @@ router.post('/register', registerLimiter, async (req, res) => {
       numeroDocumento,
       telefono,
       email,
+      lote,
+      manzana,
       password,
       confirmPassword
     } = req.body;
@@ -22,6 +26,14 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!apellido || !nombre || !tipoDocumento || !numeroDocumento || !telefono || !email || !password) {
       return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
     }
+
+    const cleanLote = String(lote || '').trim().replace(/\D/g, '') || String(lote || '').trim();
+    const cleanManzana = String(manzana || '').trim().replace(/\D/g, '') || String(manzana || '').trim();
+    if (!cleanLote || !cleanManzana) {
+      return res.status(400).json({ error: 'Debes ingresar el número de lote y número de manzana.' });
+    }
+
+    const formattedUsername = `L${cleanLote}M${cleanManzana}`;
 
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
@@ -32,9 +44,14 @@ router.post('/register', registerLimiter, async (req, res) => {
     }
 
     const emailNormalized = email.trim().toLowerCase();
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(emailNormalized);
-    if (existing) {
+    const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(emailNormalized);
+    if (existingEmail) {
       return res.status(400).json({ error: 'Ya existe un usuario con ese email registrado.' });
+    }
+
+    const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(formattedUsername.toLowerCase());
+    if (existingUsername) {
+      return res.status(400).json({ error: `Ya existe una cuenta registrada para el Lote ${cleanLote}, Manzana ${cleanManzana} (${formattedUsername}).` });
     }
 
     const saltRounds = 10;
@@ -42,8 +59,9 @@ router.post('/register', registerLimiter, async (req, res) => {
     const now = new Date().toISOString();
 
     const insertUser = db.prepare(`
-      INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, passwordHash, role, approved, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'user', 0, ?)
+      INSERT INTO users (
+        apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', 0, ?)
     `);
 
     const result = insertUser.run(
@@ -53,6 +71,9 @@ router.post('/register', registerLimiter, async (req, res) => {
       numeroDocumento.trim(),
       telefono.trim(),
       emailNormalized,
+      formattedUsername,
+      cleanLote,
+      cleanManzana,
       passwordHash,
       now
     );
@@ -65,12 +86,13 @@ router.post('/register', registerLimiter, async (req, res) => {
     notifStmt.run(
       null, // general admin notification
       'Nueva solicitud de acceso',
-      `${nombre} ${apellido} (${emailNormalized}) solicitó acceso al portal.`,
+      `${nombre} ${apellido} solicitó acceso para Lote ${cleanLote}, Manzana ${cleanManzana} (Usuario: ${formattedUsername}).`,
       now
     );
 
     res.status(201).json({
-      message: 'Solicitud de acceso enviada correctamente. Será revisada por la administración.',
+      message: 'Registro exitoso. La administración acreditará tu cuenta en breve.',
+      username: formattedUsername,
       userId: Number(result.lastInsertRowid)
     });
   } catch (error) {
@@ -84,19 +106,40 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Por favor complete email y contraseña.' });
+      return res.status(400).json({ error: 'Por favor complete usuario y contraseña.' });
     }
 
     const input = email.trim();
     const inputLower = input.toLowerCase();
-    // Allow login by email, username, or document number
-    const user = db.prepare(`
+
+    // Find user by exact formatted username (case-insensitive)
+    let user = db.prepare(`
       SELECT * FROM users
-      WHERE LOWER(email) = ? OR LOWER(COALESCE(username, '')) = ? OR numeroDocumento = ?
-    `).get(inputLower, inputLower, input);
+      WHERE LOWER(COALESCE(username, '')) = ?
+    `).get(inputLower);
+
+    // If not found by username, allow administrator to log in with admin email
+    if (!user) {
+      user = db.prepare(`
+        SELECT * FROM users
+        WHERE LOWER(email) = ? AND role = 'admin'
+      `).get(inputLower);
+    }
 
     if (!user) {
-      return res.status(401).json({ error: 'Credenciales inválidas.' });
+      // Check if a neighbor attempted to log in using their email or DNI
+      const neighborByEmailOrDni = db.prepare(`
+        SELECT username FROM users
+        WHERE (LOWER(email) = ? OR numeroDocumento = ?) AND role != 'admin'
+      `).get(inputLower, input);
+
+      if (neighborByEmailOrDni && neighborByEmailOrDni.username) {
+        return res.status(400).json({
+          error: `Para ingresar a la app debes usar tu usuario asignado (${neighborByEmailOrDni.username}). No se permite ingresar con email o DNI.`
+        });
+      }
+
+      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: L2M9).' });
     }
 
     const passwordMatch = await bcrypt.compare(password.trim(), user.passwordHash);
@@ -105,7 +148,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     if (!user.approved) {
-      return res.status(403).json({ error: 'Tu solicitud de acceso aún está pendiente de aprobación por la administración.' });
+      return res.status(403).json({ error: 'Tu solicitud de acceso aún está pendiente de aprobación. La administración acreditará tu cuenta en breve.' });
     }
 
     // Generate JWT
@@ -255,6 +298,169 @@ router.put('/change-password', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('[Change Password Error]', error);
     res.status(500).json({ error: 'Error interno al cambiar la contraseña.' });
+  }
+});
+
+// Helper for email masking
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return '';
+  const [name, domain] = email.split('@');
+  const maskedName = name.length <= 2 ? name[0] + '***' : name[0] + '***' + name[name.length - 1];
+  return `${maskedName}@${domain}`;
+}
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', loginLimiter, async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    if (!identifier || !String(identifier).trim()) {
+      return res.status(400).json({ error: 'Ingresá tu usuario o correo electrónico.' });
+    }
+
+    const cleanInput = String(identifier).trim().toLowerCase();
+
+    // Look for user by username or email
+    const user = db.prepare(`
+      SELECT id, nombre, apellido, email, username, approved
+      FROM users
+      WHERE LOWER(username) = ? OR LOWER(email) = ?
+    `).get(cleanInput, cleanInput);
+
+    // Generic friendly message to prevent email enumeration
+    const genericResponse = {
+      message: 'Si los datos corresponden a una cuenta registrada y activa, enviamos las instrucciones de recuperación a tu correo electrónico.'
+    };
+
+    if (!user || !user.approved) {
+      return res.json(genericResponse);
+    }
+
+    // Invalidate any previous unused tokens for this user
+    db.prepare('UPDATE password_resets SET used = 1 WHERE userId = ? AND used = 0').run(user.id);
+
+    // Generate secure 32-byte hex token
+    const token = crypto.randomBytes(32).toString('hex');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString(); // 60 minutes
+    const nowISO = now.toISOString();
+
+    db.prepare(`
+      INSERT INTO password_resets (userId, token, expiresAt, used, createdAt)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(user.id, token, expiresAt, nowISO);
+
+    // Construct reset link
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${host}`;
+    const resetLink = `${baseUrl}/#restablecer-clave?token=${token}`;
+
+    // Send email (via SMTP or dev simulation)
+    const emailResult = await sendPasswordResetEmail({
+      to: user.email,
+      name: `${user.nombre} ${user.apellido}`,
+      resetLink,
+      expiresMinutes: 60
+    });
+
+    res.json({
+      message: 'Enlace de recuperación generado y enviado con éxito.',
+      maskedEmail: maskEmail(user.email),
+      username: user.username,
+      resetLink: process.env.NODE_ENV !== 'production' ? resetLink : undefined,
+      simulated: emailResult.mode === 'simulated'
+    });
+  } catch (error) {
+    console.error('[Forgot Password Error]', error);
+    res.status(500).json({ error: 'Error interno al procesar la recuperación de contraseña.' });
+  }
+});
+
+// POST /api/auth/verify-reset-token
+router.post('/verify-reset-token', (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token || !String(token).trim()) {
+      return res.status(400).json({ error: 'Token no proporcionado.' });
+    }
+
+    const record = db.prepare(`
+      SELECT pr.*, u.username, u.nombre, u.apellido
+      FROM password_resets pr
+      JOIN users u ON u.id = pr.userId
+      WHERE pr.token = ?
+    `).get(String(token).trim());
+
+    if (!record || record.used === 1 || new Date(record.expiresAt) <= new Date()) {
+      return res.status(400).json({ error: 'El enlace de recuperación es inválido, ya fue utilizado o ha expirado.' });
+    }
+
+    res.json({
+      valid: true,
+      username: record.username,
+      nombre: record.nombre,
+      apellido: record.apellido
+    });
+  } catch (error) {
+    console.error('[Verify Token Error]', error);
+    res.status(500).json({ error: 'Error interno al verificar el enlace.' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', loginLimiter, async (req, res) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'Completá todos los campos requeridos.' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const record = db.prepare(`
+      SELECT pr.*, u.id as targetUserId, u.username, u.nombre, u.apellido
+      FROM password_resets pr
+      JOIN users u ON u.id = pr.userId
+      WHERE pr.token = ?
+    `).get(String(token).trim());
+
+    if (!record || record.used === 1 || new Date(record.expiresAt) <= new Date()) {
+      return res.status(400).json({ error: 'El enlace de recuperación es inválido, ya fue utilizado o ha expirado.' });
+    }
+
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword.trim(), saltRounds);
+
+    // Update user password and mark token as used
+    db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(passwordHash, record.targetUserId);
+    db.prepare('UPDATE password_resets SET used = 1 WHERE id = ?').run(record.id);
+
+    // Register security notification
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO notifications (userId, title, text, read, createdAt)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(
+      record.targetUserId,
+      'Contraseña restablecida',
+      'Tu contraseña ha sido restablecida exitosamente mediante el enlace seguro.',
+      now
+    );
+
+    res.json({
+      message: '¡Tu contraseña ha sido restablecida con éxito! Ya podés iniciar sesión.',
+      username: record.username
+    });
+  } catch (error) {
+    console.error('[Reset Password Error]', error);
+    res.status(500).json({ error: 'Error interno al restablecer la contraseña.' });
   }
 });
 
