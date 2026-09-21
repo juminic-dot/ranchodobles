@@ -953,7 +953,9 @@ body.notification-open {
   display: flex;
   flex-direction: column;
   transform: translateX(115%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+  visibility: hidden;
+  pointer-events: none;
   z-index: 40;
   border-radius: 26px 0 0 26px;
   background: linear-gradient(180deg, rgba(13, 21, 29, 0.98), rgba(7, 12, 18, 0.97));
@@ -965,6 +967,8 @@ body.notification-open {
 
 .notification-panel.open {
   transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .panel-top,
@@ -1162,7 +1166,9 @@ body.notification-open {
   }
 
   .topbar {
-    margin: 0.8rem 0.8rem 0;
+    width: calc(100% - 1.4rem) !important;
+    margin: 0.7rem auto 0 !important;
+    box-sizing: border-box !important;
   }
 
   .booking-grid {
@@ -3008,22 +3014,25 @@ body.notification-open {
 
   .guard-operator-status {
     width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     justify-content: space-between;
     padding-top: 0.65rem;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .guard-shift-change-topbar-btn {
-    flex: 1;
-    justify-content: center;
+    white-space: nowrap !important;
     padding: 0.55rem 0.9rem;
     font-size: 0.84rem;
   }
 
   .dashboard-layout {
-    width: 100% !important;
-    padding: 0.75rem 0.65rem 1.5rem !important;
-    max-width: 100vw !important;
+    width: calc(100% - 1.4rem) !important;
+    max-width: calc(100% - 1.4rem) !important;
+    margin: 0.65rem auto 1.5rem !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
   }
 
@@ -3036,22 +3045,39 @@ body.notification-open {
     box-sizing: border-box !important;
   }
 
+  .guard-operator-card,
+  .guard-buttons-grid,
+  .guard-action-card,
+  .panel-block,
+  #guardPlateSearchBlock,
+  #guardShiftLogBlock {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
   .guard-buttons-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+    display: grid !important;
+    grid-template-columns: 100% !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .guard-action-card {
+    display: flex !important;
+    flex-direction: column !important;
     padding: 1.05rem 1.15rem;
     gap: 0.45rem;
     border-radius: 16px;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .guard-card-icon {
@@ -3073,13 +3099,37 @@ body.notification-open {
     display: block;
   }
 
+  .panel-heading h4 {
+    word-break: break-word !important;
+    font-size: clamp(0.95rem, 3.8vw, 1.15rem) !important;
+  }
+
+  .guard-search-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .guard-search-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
   /* Filter tabs horizontal scroll */
   .guard-filter-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
     padding-bottom: 0.4rem;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    box-sizing: border-box !important;
   }
 
   .guard-filter-tabs::-webkit-scrollbar {
