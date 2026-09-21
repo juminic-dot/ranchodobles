@@ -47,6 +47,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireAdminOrGuard(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'guardia')) {
+    return res.status(403).json({ error: 'Acceso denegado: se requieren permisos de guardia o administrador.' });
+  }
+  next();
+}
+
 const rateLimit = require('express-rate-limit');
 
 // Rate limiting for authentication routes: prevents brute force attacks
@@ -75,6 +82,7 @@ module.exports = {
   JWT_SECRET,
   authenticateToken,
   requireAdmin,
+  requireAdminOrGuard,
   loginLimiter,
   registerLimiter
 };

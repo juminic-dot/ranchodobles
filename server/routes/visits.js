@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const os = require('os');
-const db = require('../db');
+const { db, logActivity } = require('../db');
 const { authenticateToken, JWT_SECRET } = require('../middleware');
 
 function getLocalIp() {
@@ -233,24 +233,42 @@ router.post('/guest-register', async (req, res) => {
 router.get('/', authenticateToken, (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
-    const { date, all } = req.query;
+    const isGuard = req.user.role === 'guardia';
+    const canSeeAll = isAdmin || isGuard;
+    const { date, all, search } = req.query;
 
     let query = `
       SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
       FROM visits
     `;
     const params = [];
+    const conditions = [];
 
-    if (!isAdmin || all !== 'true') {
-      if (!isAdmin) {
-        query += ' WHERE userId = ?';
+    if (!canSeeAll || (all !== 'true' && !isGuard)) {
+      if (!canSeeAll) {
+        conditions.push('userId = ?');
         params.push(req.user.id);
       }
     }
 
     if (date) {
-      query += (params.length ? ' AND' : ' WHERE') + ' date = ?';
+      conditions.push('date = ?');
       params.push(date);
+    }
+
+    if (search && search.trim()) {
+      const s = `%${search.trim().toLowerCase()}%`;
+      conditions.push(`(
+        LOWER(visitorName) LIKE ? OR
+        LOWER(visitorDni) LIKE ? OR
+        LOWER(COALESCE(vehiclePlate, '')) LIKE ? OR
+        LOWER(residentName) LIKE ?
+      )`);
+      params.push(s, s, s, s);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
     }
 
     query += ' ORDER BY date DESC, time DESC, id DESC';
@@ -406,10 +424,31 @@ router.post('/scan-lookup', authenticateToken, (req, res) => {
     }
 
     if (!visit) {
+      if (req.user.role === 'guardia') {
+        logActivity(
+          req.user.id,
+          `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+          req.user.role,
+          'BUSCAR_PASE_QR',
+          `Búsqueda/Escaneo de pase sin resultados para: "${input}"`,
+          req.ip || ''
+        );
+      }
       return res.status(404).json({
         found: false,
         error: 'No se encontró ninguna visita registrada con los datos proporcionados.'
       });
+    }
+
+    if (req.user.role === 'guardia') {
+      logActivity(
+        req.user.id,
+        `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+        req.user.role,
+        'BUSCAR_PASE_QR',
+        `Pase localizado: ${visit.visitorName} (Patente: ${visit.vehiclePlate || 'Sin vehículo'}, DNI: ${visit.visitorDni})`,
+        req.ip || ''
+      );
     }
 
     res.json({
@@ -440,8 +479,9 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
 
     const isOwner = visit.userId === req.user.id;
     const isAdmin = req.user.role === 'admin';
+    const isGuard = req.user.role === 'guardia';
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isAdmin && !isGuard) {
       return res.status(403).json({ error: 'No tenés permisos para actualizar esta visita.' });
     }
 
@@ -480,6 +520,16 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
     } else {
       db.prepare('UPDATE visits SET status = ? WHERE id = ?').run(status, visitId);
     }
+
+    // Log action in activity logs
+    logActivity(
+      req.user.id,
+      `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+      req.user.role,
+      status === 'Ingresado' ? 'CONFIRMAR_INGRESO' : (status === 'Egresado' ? 'CONFIRMAR_EGRESO' : 'ACTUALIZAR_ESTADO_VISITA'),
+      `Visitante: ${visit.visitorName} (Patente: ${visit.vehiclePlate || 'Sin vehículo'}, DNI: ${visit.visitorDni}) - Destino: ${visit.residentName} - Nuevo estado: ${status}`,
+      req.ip || ''
+    );
 
     res.json({ message: `Estado actualizado a "${status}".`, status, visitId });
   } catch (error) {

@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { db, logActivity } = require('../db');
 const { JWT_SECRET, authenticateToken, loginLimiter, registerLimiter } = require('../middleware');
 const { sendPasswordResetEmail } = require('../mailer');
 
@@ -34,6 +34,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     }
 
     const formattedUsername = `L${cleanLote}M${cleanManzana}`;
+
+    if (email.toLowerCase().includes('@guardia') || formattedUsername.toLowerCase().includes('guardia')) {
+      return res.status(403).json({ error: 'Las cuentas de guardia solo pueden ser creadas por la administración.' });
+    }
 
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
@@ -111,25 +115,26 @@ router.post('/login', loginLimiter, async (req, res) => {
     const input = email.trim();
     const inputLower = input.toLowerCase();
 
-    // Find user by exact formatted username (case-insensitive)
+    // Find user by exact formatted username or email (case-insensitive)
     let user = db.prepare(`
       SELECT * FROM users
       WHERE LOWER(COALESCE(username, '')) = ?
-    `).get(inputLower);
+         OR (LOWER(email) = ? AND (role = 'admin' OR role = 'guardia' OR email LIKE '%@guardia'))
+    `).get(inputLower, inputLower);
 
-    // If not found by username, allow administrator to log in with admin email
-    if (!user) {
+    // If not found and input does not contain @, try matching guard username with @guardia
+    if (!user && !inputLower.includes('@')) {
       user = db.prepare(`
         SELECT * FROM users
-        WHERE LOWER(email) = ? AND role = 'admin'
-      `).get(inputLower);
+        WHERE (LOWER(COALESCE(username, '')) = ? OR LOWER(email) = ?) AND role = 'guardia'
+      `).get(`${inputLower}@guardia`, `${inputLower}@guardia`);
     }
 
     if (!user) {
       // Check if a neighbor attempted to log in using their email or DNI
       const neighborByEmailOrDni = db.prepare(`
         SELECT username FROM users
-        WHERE (LOWER(email) = ? OR numeroDocumento = ?) AND role != 'admin'
+        WHERE (LOWER(email) = ? OR numeroDocumento = ?) AND role != 'admin' AND role != 'guardia'
       `).get(inputLower, input);
 
       if (neighborByEmailOrDni && neighborByEmailOrDni.username) {
@@ -138,7 +143,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         });
       }
 
-      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: L2M9).' });
+      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: L2M9 o usuario@guardia).' });
     }
 
     const passwordMatch = await bcrypt.compare(password.trim(), user.passwordHash);
@@ -166,6 +171,18 @@ router.post('/login', loginLimiter, async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Record login activity in audit logs
+    const actionName = user.role === 'guardia' ? 'LOGIN_GUARDIA' : (user.role === 'admin' ? 'LOGIN_ADMIN' : 'LOGIN');
+    const actionDetails = user.role === 'guardia' ? 'Inicio de turno en garita de control de guardia' : 'Inicio de sesión en el sistema';
+    logActivity(
+      user.id,
+      `${user.nombre} ${user.apellido} (${user.username || user.email})`,
+      user.role,
+      actionName,
+      actionDetails,
+      req.ip || ''
+    );
+
     res.json({
       message: 'Inicio de sesión exitoso.',
       token,
@@ -187,6 +204,26 @@ router.post('/login', loginLimiter, async (req, res) => {
   } catch (error) {
     console.error('[Login Error]', error);
     res.status(500).json({ error: 'Error interno al procesar el ingreso.' });
+  }
+});
+
+// POST /api/auth/logout
+router.post('/logout', authenticateToken, (req, res) => {
+  try {
+    const isGuard = req.user.role === 'guardia';
+    const action = isGuard ? 'CAMBIO_GUARDIA' : 'LOGOUT';
+    const details = isGuard ? 'Cierre de turno y cambio de guardia' : 'Cierre de sesión';
+    logActivity(
+      req.user.id,
+      `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+      req.user.role,
+      action,
+      details,
+      req.ip || ''
+    );
+    res.json({ message: 'Sesión finalizada correctamente.' });
+  } catch (err) {
+    res.json({ message: 'Sesión cerrada.' });
   }
 });
 

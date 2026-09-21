@@ -158,4 +158,14 @@
   * un boton para supervicion y control de canchas ok
   * un boton para avisos y alertas masivas inmediatas ok
   * Al registrarse un nuevo vecino, al administrador le debe permitir agregar el identificador de lote manzana y tambien modificar los datos del vecino, pero nunca modificar o visualizar su contraseña. ok
-  * las novedades para administrador no deben poder verlas los vecinos, el vecino solo debe ver notificaciones masivas, y sus propias notificaciones de sus acciones en la app, no debe ver por ejemplo que otro vecino pago expensas, que llego una visita para otro vecino, ni nada de eso.
+  * las novedades para administrador no deben poder verlas los vecinos, el vecino solo debe ver notificaciones masivas, y sus propias notificaciones de sus acciones en la app,   no debe ver por ejemplo que otro vecino pago expensas, que llego una visita para otro vecino, ni nada de eso. ok
+  ---------------------------------------------------
+  
+  * Backup de base de datos, averiguar que hacer para no perder datos de la app en ningun momento, o reponerlos en caso qeu se rompan y haya que migrar.
+  * Como se maneja la guardia
+  Guardia debe tener un panel exclusivo, en el cual de pueda usar el modulo control de guardia.
+
+  * Emitir alertas, no se puede emitir avisos a un usuario especifico.
+  * En gestion de expensas, incluir un buscador por lote, dnim apellido del vecino.
+  * Armar un usuario especifico de control de guardia, que tenga botones y buscador.
+  

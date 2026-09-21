@@ -2495,6 +2495,77 @@ body.notification-open {
   color: #bfdbfe;
 }
 
+/* ----------------- GUARD DEDICATED PANEL (@guardia) ----------------- */
+.guard-action-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.guard-action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.guard-action-card:active {
+  transform: translateY(-1px);
+}
+
+#guardScanQrBtn:hover {
+  border-color: var(--gold) !important;
+  background: rgba(212, 163, 89, 0.16) !important;
+  box-shadow: 0 0 20px rgba(212, 163, 89, 0.25);
+}
+
+#guardSearchPlateBtn:hover {
+  border-color: var(--primary) !important;
+  background: rgba(105, 210, 166, 0.16) !important;
+  box-shadow: 0 0 20px rgba(105, 210, 166, 0.25);
+}
+
+#guardNotificationsBtn:hover {
+  border-color: var(--secondary) !important;
+  background: rgba(138, 206, 255, 0.16) !important;
+  box-shadow: 0 0 20px rgba(138, 206, 255, 0.25);
+}
+
+#guardShiftChangeBtn:hover {
+  border-color: var(--danger) !important;
+  background: rgba(255, 122, 122, 0.16) !important;
+  box-shadow: 0 0 20px rgba(255, 122, 122, 0.25);
+}
+
+.guard-subfilter-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.guard-subfilter-btn.active {
+  background: rgba(212, 163, 89, 0.22) !important;
+  border-color: var(--gold) !important;
+  color: #fff !important;
+}
+
+.activity-logs-container {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.activity-logs-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.activity-logs-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+
 
 
 

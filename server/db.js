@@ -117,9 +117,34 @@ db.exec(`
     used INTEGER DEFAULT 0,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS activity_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    userName TEXT NOT NULL,
+    userRole TEXT NOT NULL,
+    action TEXT NOT NULL,
+    details TEXT,
+    ip TEXT,
+    createdAt TEXT NOT NULL
+  );
 `);
 
 // Migrations for existing databases
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      userName TEXT NOT NULL,
+      userRole TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      ip TEXT,
+      createdAt TEXT NOT NULL
+    );
+  `);
+} catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN vehiclePlate TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN guestEmail TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN qrCode TEXT;"); } catch (e) {}
@@ -266,8 +291,37 @@ function seedDatabase() {
     insertExp.run(3, 'Agosto 2026', '2026-08-15', 138000, 'Pagado', 'Expensas ordinarias + seguridad', now);
     insertExp.run(3, 'Septiembre 2026', '2026-09-15', 145000, 'Pagado', 'Expensas ordinarias + mantenimiento predio', now);
   }
+  // Seed default guard if not exists
+  try {
+    const guardExists = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'jorgerauda@guardia' OR LOWER(username) = 'jorgerauda@guardia'").get();
+    if (!guardExists) {
+      const guardPass = bcrypt.hashSync('123456', 10);
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('Rauda', 'Jorge', 'DNI', '33999111', '1133334444', 'jorgerauda@guardia', 'Jorgerauda@guardia', null, null, guardPass, 'guardia', 1, now);
+      console.log('[DB] Usuario guardia por defecto creado: Jorgerauda@guardia');
+    }
+  } catch (err) {
+    console.error('[DB Guard Seed Error]', err);
+  }
 }
 
 seedDatabase();
 
+function logActivity(userId, userName, userRole, action, details = '', ip = '') {
+  try {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO activity_logs (userId, userName, userRole, action, details, ip, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, userName || 'Usuario', userRole || 'user', action, details, ip, now);
+  } catch (err) {
+    console.error('[DB logActivity Error]', err);
+  }
+}
+
 module.exports = db;
+module.exports.db = db;
+module.exports.logActivity = logActivity;

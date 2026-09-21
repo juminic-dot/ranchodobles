@@ -47,6 +47,12 @@ const state = {
   activeViewingExpense: null,
   activeAdminTab: 'vecinos',
   activeVecinosSubtab: 'activos',
+  activeGuardAdminSubtab: 'accesos',
+  guardVisits: [],
+  guardVisitsFilter: 'all',
+  guardPlateQuery: '',
+  guardActivityLogs: [],
+  adminGuardLogs: [],
   notificationRoleFilter: 'all'
 };
 
@@ -136,6 +142,29 @@ const scannedVisitorDetails = document.getElementById('scannedVisitorDetails');
 const scannedResidentName = document.getElementById('scannedResidentName');
 const scannedVisitStatusBadge = document.getElementById('scannedVisitStatusBadge');
 const scannedVisitActions = document.getElementById('scannedVisitActions');
+
+// Guard Dedicated DOM Elements (@guardia)
+const guardSection = document.getElementById('guardSection');
+const guardOperatorName = document.getElementById('guardOperatorName');
+const guardOperatorUser = document.getElementById('guardOperatorUser');
+const guardTopbarLogoutBtn = document.getElementById('guardTopbarLogoutBtn');
+const guardScanQrBtn = document.getElementById('guardScanQrBtn');
+const guardSearchPlateBtn = document.getElementById('guardSearchPlateBtn');
+const guardNotificationsBtn = document.getElementById('guardNotificationsBtn');
+const guardShiftChangeBtn = document.getElementById('guardShiftChangeBtn');
+const guardVehiclesInsideBadge = document.getElementById('guardVehiclesInsideBadge');
+const guardNotifBadge = document.getElementById('guardNotifBadge');
+const guardVisitsCountBadge = document.getElementById('guardVisitsCountBadge');
+const guardPlateSearchInput = document.getElementById('guardPlateSearchInput');
+const guardVisitsList = document.getElementById('guardVisitsList');
+const refreshGuardVisitsBtn = document.getElementById('refreshGuardVisitsBtn');
+const guardLogsCountBadge = document.getElementById('guardLogsCountBadge');
+const refreshGuardLogsBtn = document.getElementById('refreshGuardLogsBtn');
+const guardActivityLogsList = document.getElementById('guardActivityLogsList');
+const adminGuardLogsList = document.getElementById('adminGuardLogsList');
+const refreshAdminGuardLogsBtn = document.getElementById('refreshAdminGuardLogsBtn');
+const adminGuardAccesosSubpanel = document.getElementById('adminGuardAccesosSubpanel');
+const adminGuardAuditoriaSubpanel = document.getElementById('adminGuardAuditoriaSubpanel');
 
 // Resident Pay Expense Modal DOM
 const payExpenseModal = document.getElementById('payExpenseModal');
@@ -353,14 +382,21 @@ function setAuthView(view) {
 }
 
 function setDashboardView(view, pushHistory = true) {
-  const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'admin'];
-  if (!validViews.includes(view)) {
-    view = 'home';
-  }
-
-  // Prevent unauthorized view access
-  if (view === 'admin' && state.authenticatedUser?.role !== 'admin') {
-    view = 'home';
+  const isGuard = state.authenticatedUser?.role === 'guardia';
+  if (isGuard) {
+    view = 'guard';
+  } else {
+    const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'admin'];
+    if (!validViews.includes(view)) {
+      view = 'home';
+    }
+    // Prevent unauthorized view access
+    if (view === 'admin' && state.authenticatedUser?.role !== 'admin') {
+      view = 'home';
+    }
+    if (view === 'guard') {
+      view = 'home';
+    }
   }
 
   state.activeDashboardView = view;
@@ -375,7 +411,8 @@ function setDashboardView(view, pushHistory = true) {
     news: 'newsSection',
     visits: 'myVisitsSection',
     booking: 'bookingSection',
-    admin: 'adminSection'
+    admin: 'adminSection',
+    guard: 'guardSection'
   };
 
   document.querySelectorAll('.content-section').forEach((section) => {
@@ -385,7 +422,7 @@ function setDashboardView(view, pushHistory = true) {
   // History API: sync browser URL hash and back button support
   if (pushHistory) {
     const currentHash = window.location.hash.replace('#', '');
-    const targetHash = view === 'home' ? '' : `#${view}`;
+    const targetHash = (view === 'home' || (isGuard && view === 'guard')) ? '' : `#${view}`;
     if (currentHash !== (view === 'home' ? '' : view)) {
       const basePath = window.location.pathname + (window.location.search || '');
       window.history.pushState({ view }, '', targetHash || basePath);
@@ -399,6 +436,7 @@ function setDashboardView(view, pushHistory = true) {
   if (view === 'news') loadNews();
   if (view === 'visits') loadUserVisits();
   if (view === 'booking') loadBookings();
+  if (view === 'guard') loadGuardData();
   if (view === 'admin' && state.authenticatedUser?.role === 'admin') {
     setAdminTab(state.activeAdminTab || 'vecinos');
     setVecinosSubtab(state.activeVecinosSubtab || 'activos');
@@ -414,9 +452,21 @@ function renderUserProfile() {
 
   if (userFullName) userFullName.textContent = `${user.nombre} ${user.apellido}`;
   if (userInitials) userInitials.textContent = initials || 'US';
+
+  const isGuard = user.role === 'guardia';
+  const isAdmin = user.role === 'admin';
+
   if (userRoleBadge) {
-    userRoleBadge.textContent = user.role === 'admin' ? 'Administrador' : 'Propietario';
-    userRoleBadge.style.color = user.role === 'admin' ? 'var(--gold)' : 'var(--muted)';
+    if (isGuard) {
+      userRoleBadge.textContent = '🛡️ Personal de Guardia';
+      userRoleBadge.style.color = 'var(--gold)';
+    } else if (isAdmin) {
+      userRoleBadge.textContent = 'Administrador';
+      userRoleBadge.style.color = 'var(--gold)';
+    } else {
+      userRoleBadge.textContent = 'Propietario';
+      userRoleBadge.style.color = 'var(--muted)';
+    }
   }
 
   const homeWelcomeTitle = document.getElementById('homeWelcomeTitle');
@@ -424,10 +474,16 @@ function renderUserProfile() {
     homeWelcomeTitle.textContent = `¡Hola, ${user.nombre}!`;
   }
 
+  if (guardOperatorName) guardOperatorName.textContent = `${user.nombre} ${user.apellido}`;
+  if (guardOperatorUser) guardOperatorUser.textContent = user.username || user.email;
+
   // Show or hide admin controls
-  const isAdmin = user.role === 'admin';
   if (adminNewsActions) adminNewsActions.style.display = isAdmin ? 'block' : 'none';
   if (homeAdminBtn) homeAdminBtn.style.display = isAdmin ? 'flex' : 'none';
+
+  // For guards: hide user profile button
+  const openProfileModalBtn = document.getElementById('openProfileModalBtn');
+  if (openProfileModalBtn) openProfileModalBtn.style.display = isGuard ? 'none' : 'flex';
 }
 
 // ----------------- USER PROFILE & PASSWORD ----------------- //
@@ -593,6 +649,10 @@ function renderNotifications() {
   if (notificationBadge) {
     notificationBadge.textContent = unreadCount;
     notificationBadge.style.display = unreadCount > 0 ? 'inline-flex' : 'none';
+  }
+
+  if (guardNotifBadge) {
+    guardNotifBadge.textContent = unreadCount > 0 ? `${unreadCount} nuevas (masivas)` : 'Solo masivas';
   }
 
   // Filter notifications if active filter is applied (admin only)
@@ -1729,6 +1789,7 @@ function renderAdminPanel() {
         .map((user) => {
           const isSelf = user.id === currentUserId;
           const isAdmin = user.role === 'admin';
+          const isGuard = user.role === 'guardia';
           const initials = `${(user.nombre || '')[0] || ''}${(user.apellido || '')[0] || ''}`.toUpperCase() || 'RD';
 
           let lotBadge = '';
@@ -1736,10 +1797,14 @@ function renderAdminPanel() {
             lotBadge = `<span class="badge soft" style="background: rgba(138, 206, 255, 0.15); color: var(--secondary); border: 1px solid rgba(138, 206, 255, 0.3);">Lote ${escapeHTML(user.lote || '-')} · Mz ${escapeHTML(user.manzana || '-')}</span>`;
           } else if (isAdmin && !user.lote) {
             lotBadge = `<span class="badge soft" style="background: rgba(255, 255, 255, 0.05); color: var(--muted);">Administración</span>`;
+          } else if (isGuard && !user.lote) {
+            lotBadge = `<span class="badge soft" style="background: rgba(212, 163, 89, 0.15); color: var(--gold); border: 1px solid rgba(212, 163, 89, 0.3);">Garita / Guardia</span>`;
           }
 
           const roleBadge = isAdmin
             ? `<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4);">🛡️ Administrador</span>`
+            : isGuard
+            ? `<span class="badge soft" style="background: rgba(212, 163, 89, 0.2); color: var(--gold); border: 1px solid rgba(212, 163, 89, 0.4);">🛡️ Guardia (@guardia)</span>`
             : `<span class="badge soft" style="background: rgba(105, 210, 166, 0.15); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.3);">🏡 Propietario</span>`;
 
           const usernameDisplay = user.username ? `👤 Usuario: <strong style="color: #fff;">${escapeHTML(user.username)}</strong> · ` : '';
@@ -2462,12 +2527,44 @@ async function handleEmitExpense(e) {
 
 // ----------------- ACTIVE USERS ROSTER & CREATE USER ----------------- //
 
+function updateCreateUserRoleUI() {
+  const role = newUserRole?.value || 'user';
+  const isGuard = role === 'guardia';
+  const helperNotice = document.getElementById('guardUserHelperNotice');
+  const submitBtn = document.getElementById('submitCreateUserBtn');
+  const emailLabel = document.getElementById('newUserEmailLabel');
+
+  if (helperNotice) helperNotice.style.display = isGuard ? 'block' : 'none';
+  if (submitBtn) {
+    submitBtn.textContent = isGuard ? 'Crear Usuario de Guardia (@guardia)' : 'Crear y Habilitar Vecino';
+  }
+  if (emailLabel) {
+    emailLabel.textContent = isGuard ? 'Usuario / Identificador de Guardia *' : 'Correo electrónico *';
+  }
+  if (newUserEmail) {
+    newUserEmail.placeholder = isGuard ? 'ej: Jorgerauda@guardia' : 'ejemplo@correo.com';
+  }
+  if (newUserUsername) {
+    newUserUsername.placeholder = isGuard ? 'ej: Jorgerauda@guardia' : 'Ej: L9M2';
+  }
+  if (newUserLote && newUserManzana) {
+    if (isGuard) {
+      newUserLote.placeholder = 'No aplica';
+      newUserManzana.placeholder = 'No aplica';
+    } else {
+      newUserLote.placeholder = 'Ej: 9 o L9';
+      newUserManzana.placeholder = 'Ej: 2 o M2';
+    }
+  }
+}
+
 function openCreateUserModal() {
   if (!createUserModal) return;
   if (createUserForm) createUserForm.reset();
   if (newUserDocType) newUserDocType.value = 'DNI';
   if (newUserRole) newUserRole.value = 'user';
   if (newUserPassword) newUserPassword.value = 'Vecino2026!';
+  updateCreateUserRoleUI();
   createUserModal.style.display = 'grid';
   window.history.pushState({ modal: 'createUser', view: state.activeDashboardView }, '', '#nuevo-vecino');
 }
@@ -2481,6 +2578,7 @@ function closeCreateUserModalFn(fromPopState = false) {
 }
 
 function updateAutoUsername() {
+  if (newUserRole?.value === 'guardia') return;
   if (!newUserUsername || !newUserLote || !newUserManzana) return;
   const loteVal = (newUserLote.value || '').trim();
   const manVal = (newUserManzana.value || '').trim();
@@ -2501,14 +2599,14 @@ async function handleCreateUser(e) {
   const submitBtn = document.getElementById('submitCreateUserBtn');
   const nombre = (newUserName?.value || '').trim();
   const apellido = (newUserLastName?.value || '').trim();
-  const lote = (newUserLote?.value || '').trim();
-  const manzana = (newUserManzana?.value || '').trim();
-  const username = (newUserUsername?.value || '').trim();
+  let lote = (newUserLote?.value || '').trim();
+  let manzana = (newUserManzana?.value || '').trim();
+  let username = (newUserUsername?.value || '').trim();
   const role = newUserRole?.value || 'user';
   const tipoDocumento = newUserDocType?.value || 'DNI';
   const numeroDocumento = (newUserDocNum?.value || '').trim();
   const telefono = (newUserPhone?.value || '').trim();
-  const email = (newUserEmail?.value || '').trim();
+  let email = (newUserEmail?.value || '').trim();
   const password = (newUserPassword?.value || '').trim();
 
   if (!nombre || !apellido || !numeroDocumento || !telefono || !email || !password) {
@@ -2519,6 +2617,22 @@ async function handleCreateUser(e) {
   if (password.length < 6) {
     showToast('La contraseña debe tener al menos 6 caracteres.');
     return;
+  }
+
+  if (role === 'guardia') {
+    // Format guardia username and email to guarantee @guardia
+    if (!email.includes('@')) {
+      email = `${email}@guardia`;
+    } else if (!email.toLowerCase().endsWith('@guardia')) {
+      email = `${email.split('@')[0]}@guardia`;
+    }
+    if (!username) {
+      username = email;
+    } else if (!username.toLowerCase().endsWith('@guardia')) {
+      username = `${username.split('@')[0]}@guardia`;
+    }
+    lote = '';
+    manzana = '';
   }
 
   if (submitBtn) {
@@ -2541,15 +2655,15 @@ async function handleCreateUser(e) {
       password
     });
 
-    showToast(res.message || 'Vecino creado y habilitado con éxito.');
+    showToast(res.message || 'Usuario creado y habilitado con éxito.');
     closeCreateUserModalFn();
     await loadAdminData();
   } catch (err) {
-    showToast(err.message || 'Error al crear el vecino.');
+    showToast(err.message || 'Error al crear el usuario.');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Crear y Habilitar Vecino';
+      submitBtn.textContent = role === 'guardia' ? 'Crear Usuario de Guardia (@guardia)' : 'Crear y Habilitar Vecino';
     }
   }
 }
@@ -3261,7 +3375,11 @@ function renderScannedVisitResult(visit) {
           await API.visits.updateStatus(visit.id, 'Ingresado');
           showToast(`¡Ingreso registrado! Propietario ${visit.residentName} notificado.`);
           stopQrScanner(false);
-          loadAdminData();
+          if (state.authenticatedUser?.role === 'guardia') {
+            loadGuardData();
+          } else {
+            loadAdminData();
+          }
         } catch (e) {
           showToast(e.message);
         }
@@ -3275,7 +3393,11 @@ function renderScannedVisitResult(visit) {
           await API.visits.updateStatus(visit.id, 'Egresado');
           showToast(`¡Salida registrada! Propietario notificado.`);
           stopQrScanner(false);
-          loadAdminData();
+          if (state.authenticatedUser?.role === 'guardia') {
+            loadGuardData();
+          } else {
+            loadAdminData();
+          }
         } catch (e) {
           showToast(e.message);
         }
@@ -3285,6 +3407,342 @@ function renderScannedVisitResult(visit) {
 
   scannedVisitResult.style.display = 'block';
   scannedVisitResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ----------------- GUARD PANEL FUNCTIONS (@guardia) ----------------- //
+
+async function loadGuardData() {
+  if (state.authenticatedUser?.role !== 'guardia') return;
+  await Promise.all([
+    loadGuardVisits(),
+    loadGuardActivityLogs(),
+    loadNotifications()
+  ]);
+}
+
+async function loadGuardVisits() {
+  try {
+    const visits = await API.visits.get({ all: 'true' });
+    state.guardVisits = visits || [];
+    renderGuardVisits();
+  } catch (error) {
+    console.error('Error cargando visitas en garita:', error);
+  }
+}
+
+function renderGuardVisits() {
+  if (!guardVisitsList) return;
+
+  let visits = state.guardVisits || [];
+  const insideCount = visits.filter((v) => v.status === 'Ingresado').length;
+  if (guardVehiclesInsideBadge) {
+    guardVehiclesInsideBadge.textContent = `${insideCount} en predio`;
+  }
+
+  // Filter by status tab
+  const filter = state.guardVisitsFilter || 'all';
+  if (filter === 'inside') {
+    visits = visits.filter((v) => v.status === 'Ingresado');
+  } else if (filter === 'expected') {
+    visits = visits.filter((v) => v.status === 'Confirmada' || v.status === 'Pendiente');
+  } else if (filter === 'exited') {
+    visits = visits.filter((v) => v.status === 'Egresado');
+  }
+
+  // Filter by search query
+  const query = (state.guardPlateQuery || '').trim().toLowerCase();
+  if (query) {
+    visits = visits.filter((v) => {
+      const plate = (v.vehiclePlate || '').toLowerCase();
+      const dni = (v.visitorDni || '').toLowerCase();
+      const name = (v.visitorName || '').toLowerCase();
+      const resName = (v.residentName || '').toLowerCase();
+      return plate.includes(query) || dni.includes(query) || name.includes(query) || resName.includes(query);
+    });
+  }
+
+  if (guardVisitsCountBadge) {
+    guardVisitsCountBadge.textContent = `${visits.length} registro${visits.length === 1 ? '' : 's'}`;
+  }
+
+  if (visits.length === 0) {
+    guardVisitsList.innerHTML = `
+      <li class="visit-item" style="text-align: center; padding: 1.5rem; color: var(--muted); justify-content: center;">
+        <div>
+          <strong style="display: block; font-size: 1rem; color: #fff; margin-bottom: 0.25rem;">
+            ${query ? 'No se encontraron visitantes con los datos ingresados' : 'No hay visitas en esta categoría'}
+          </strong>
+          <small>${query ? 'Probá buscando por letras de la patente, DNI o apellido.' : 'Los registros aparecerán aquí automáticamente cuando los vecinos registren visitas.'}</small>
+        </div>
+      </li>
+    `;
+    return;
+  }
+
+  guardVisitsList.innerHTML = visits
+    .map((visit) => {
+      const isInside = visit.status === 'Ingresado';
+      const isExited = visit.status === 'Egresado';
+      const plateFormatted = visit.vehiclePlate ? escapeHTML(visit.vehiclePlate) : 'Sin vehículo';
+
+      let statusBadge = '';
+      if (isInside) {
+        statusBadge = `<span class="badge soft" style="background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4);">🟢 En predio</span>`;
+      } else if (isExited) {
+        statusBadge = `<span class="badge soft" style="background: rgba(255, 255, 255, 0.08); color: var(--muted); border: 1px solid rgba(255, 255, 255, 0.15);">🚪 Egresó</span>`;
+      } else {
+        statusBadge = `<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4);">⏳ Esperada (${escapeHTML(visit.status)})</span>`;
+      }
+
+      const entryTime = visit.entryAt
+        ? `<small style="display: block; color: var(--gold); font-size: 0.8rem; margin-top: 0.15rem;">🟢 Ingresó: ${new Date(visit.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>`
+        : '';
+      const exitTime = visit.exitAt
+        ? `<small style="display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem;">🚪 Egresó: ${new Date(visit.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>`
+        : '';
+
+      let actionButtons = '';
+      if (!isInside && !isExited) {
+        actionButtons = `
+          <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-weight: 600; padding: 0.45rem 0.9rem;">
+            🟢 Confirmar Ingreso
+          </button>
+        `;
+      } else if (isInside) {
+        actionButtons = `
+          <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-weight: 600; padding: 0.45rem 0.9rem;">
+            🚪 Confirmar Egreso
+          </button>
+        `;
+      }
+
+      return `
+        <li class="visit-item" style="padding: 1rem 1.2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; width: 100%;">
+            <div style="flex: 1; min-width: 240px;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
+                <span class="badge soft" style="font-family: monospace; font-size: 0.95rem; font-weight: 700; background: rgba(212, 163, 89, 0.2); color: var(--gold); border: 1px solid rgba(212, 163, 89, 0.5); padding: 0.25rem 0.65rem; letter-spacing: 0.05em;">
+                  🚗 ${plateFormatted}
+                </span>
+                ${statusBadge}
+              </div>
+              <strong style="font-size: 1.1rem; color: #fff; display: block;">${escapeHTML(visit.visitorName)}</strong>
+              <small style="color: var(--muted); font-size: 0.84rem; display: block;">DNI: <strong>${escapeHTML(visit.visitorDni)}</strong> · Destino: <strong>${escapeHTML(visit.residentName)}</strong></small>
+              ${entryTime}
+              ${exitTime}
+            </div>
+
+            <div class="visit-actions" style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+              ${actionButtons}
+              <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver código QR del pase">
+                📱 Ver Pase QR
+              </button>
+            </div>
+          </div>
+          <div class="visit-meta" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+            <span>📅 Fecha prevista: ${escapeHTML(visit.date)} a las ${escapeHTML(visit.time)} hs</span>
+          </div>
+        </li>
+      `;
+    })
+    .join('');
+
+  // Event handlers for Confirmar Ingreso
+  guardVisitsList.querySelectorAll('.guard-confirm-entry-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const visitId = btn.dataset.id;
+      const visitorName = btn.dataset.name;
+      const plate = btn.dataset.plate;
+      btn.disabled = true;
+      try {
+        await API.visits.updateStatus(visitId, 'Ingresado');
+        showToast(`🟢 Ingreso confirmado: ${visitorName} (Patente: ${plate})`);
+        await Promise.all([loadGuardVisits(), loadGuardActivityLogs()]);
+      } catch (err) {
+        showToast(err.message || 'Error al registrar ingreso.');
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Event handlers for Confirmar Egreso
+  guardVisitsList.querySelectorAll('.guard-confirm-exit-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const visitId = btn.dataset.id;
+      const visitorName = btn.dataset.name;
+      const plate = btn.dataset.plate;
+      btn.disabled = true;
+      try {
+        await API.visits.updateStatus(visitId, 'Egresado');
+        showToast(`🚪 Egreso confirmado: ${visitorName} (Patente: ${plate})`);
+        await Promise.all([loadGuardVisits(), loadGuardActivityLogs()]);
+      } catch (err) {
+        showToast(err.message || 'Error al registrar egreso.');
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Event handlers for Ver Pase QR
+  guardVisitsList.querySelectorAll('.guard-view-qr-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const visit = state.guardVisits.find((v) => String(v.id) === String(btn.dataset.id));
+      if (visit) showQrPassModal(visit);
+    });
+  });
+}
+
+async function loadGuardActivityLogs() {
+  try {
+    const logs = await API.activityLogs.get({ limit: 60 });
+    state.guardActivityLogs = logs || [];
+    renderGuardActivityLogs();
+  } catch (error) {
+    console.error('Error cargando registros de actividad de guardia:', error);
+  }
+}
+
+function renderGuardActivityLogs() {
+  if (!guardActivityLogsList) return;
+
+  const logs = state.guardActivityLogs || [];
+  if (guardLogsCountBadge) {
+    guardLogsCountBadge.textContent = `${logs.length} acci${logs.length === 1 ? 'ón' : 'ones'}`;
+  }
+
+  if (logs.length === 0) {
+    guardActivityLogsList.innerHTML = `
+      <div style="padding: 1.2rem; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
+        Aún no hay acciones registradas en este turno. Toda acción realizada (escaneo, búsqueda, ingreso, egreso) quedará guardada aquí.
+      </div>
+    `;
+    return;
+  }
+
+  guardActivityLogsList.innerHTML = logs
+    .map((log) => {
+      const date = new Date(log.createdAt);
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+
+      let badgeColor = 'rgba(212, 163, 89, 0.2)';
+      let badgeTextColor = 'var(--gold)';
+      let actionLabel = log.action;
+
+      if (log.action.includes('INGRESO')) {
+        badgeColor = 'rgba(105, 210, 166, 0.2)';
+        badgeTextColor = 'var(--primary)';
+        actionLabel = '🟢 Ingreso Confirmado';
+      } else if (log.action.includes('EGRESO')) {
+        badgeColor = 'rgba(255, 122, 122, 0.2)';
+        badgeTextColor = 'var(--danger)';
+        actionLabel = '🚪 Egreso Confirmado';
+      } else if (log.action.includes('LOGIN')) {
+        badgeColor = 'rgba(138, 206, 255, 0.2)';
+        badgeTextColor = 'var(--secondary)';
+        actionLabel = '🛡️ Inicio Turno';
+      } else if (log.action.includes('CAMBIO_GUARDIA')) {
+        badgeColor = 'rgba(255, 122, 122, 0.2)';
+        badgeTextColor = 'var(--danger)';
+        actionLabel = '🔄 Cambio Guardia';
+      } else if (log.action.includes('QR')) {
+        badgeColor = 'rgba(212, 163, 89, 0.2)';
+        badgeTextColor = 'var(--gold)';
+        actionLabel = '📷 Pase QR';
+      } else if (log.action.includes('PATENTE')) {
+        badgeColor = 'rgba(138, 206, 255, 0.2)';
+        badgeTextColor = 'var(--secondary)';
+        actionLabel = '🔍 Búsqueda Patente';
+      }
+
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 0.85rem;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap;">
+              <span class="badge soft" style="background: ${badgeColor}; color: ${badgeTextColor}; font-size: 0.72rem; padding: 0.15rem 0.45rem;">${escapeHTML(actionLabel)}</span>
+              <strong style="color: #fff; font-size: 0.82rem;">${escapeHTML(log.details || '')}</strong>
+            </div>
+            <small style="color: var(--muted); font-size: 0.78rem;">Operador: ${escapeHTML(log.userName || '')}</small>
+          </div>
+          <span style="color: var(--muted); font-size: 0.78rem; font-family: monospace; white-space: nowrap;">${dateStr} ${timeStr}</span>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+async function handleGuardShiftChange() {
+  if (!confirm('¿Confirmás el cambio de guardia? Se cerrará la sesión actual para dar paso al nuevo operador.')) {
+    return;
+  }
+  try {
+    await API.activityLogs.log('CAMBIO_GUARDIA', 'Cierre de sesión / Cambio de turno de guardia');
+    await API.auth.logout();
+  } catch (e) {}
+
+  handleLogout();
+
+  const loginEmailInput = document.getElementById('loginEmail');
+  if (loginEmailInput) {
+    loginEmailInput.value = '';
+    loginEmailInput.placeholder = 'ej: Jorgerauda@guardia';
+    loginEmailInput.focus();
+  }
+  showToast('Cambio de guardia completado. Ingrese las credenciales del operador entrante.');
+}
+
+async function loadAdminGuardLogs() {
+  try {
+    const logs = await API.activityLogs.get({ limit: 120 });
+    state.adminGuardLogs = logs || [];
+    renderAdminGuardLogs();
+  } catch (err) {
+    console.error('Error cargando registros de auditoría de guardia:', err);
+  }
+}
+
+function renderAdminGuardLogs() {
+  if (!adminGuardLogsList) return;
+  const logs = state.adminGuardLogs || [];
+  if (logs.length === 0) {
+    adminGuardLogsList.innerHTML = `
+      <div style="padding: 1.4rem; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
+        Aún no hay registros de auditoría de guardia en el sistema.
+      </div>
+    `;
+    return;
+  }
+
+  adminGuardLogsList.innerHTML = logs
+    .map((log) => {
+      const date = new Date(log.createdAt);
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+
+      let badgeColor = 'rgba(212, 163, 89, 0.2)';
+      let badgeTextColor = 'var(--gold)';
+      if (log.action.includes('INGRESO')) {
+        badgeColor = 'rgba(105, 210, 166, 0.2)';
+        badgeTextColor = 'var(--primary)';
+      } else if (log.action.includes('EGRESO') || log.action.includes('CAMBIO')) {
+        badgeColor = 'rgba(255, 122, 122, 0.2)';
+        badgeTextColor = 'var(--danger)';
+      }
+
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 0.85rem;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap;">
+              <span class="badge soft" style="background: ${badgeColor}; color: ${badgeTextColor}; font-size: 0.72rem;">${escapeHTML(log.action)}</span>
+              <strong style="color: #fff;">${escapeHTML(log.details || '')}</strong>
+            </div>
+            <small style="color: var(--muted); font-size: 0.78rem;">Operador: <strong>${escapeHTML(log.userName || '')}</strong> · Rol: ${escapeHTML(log.userRole || '')}</small>
+          </div>
+          <span style="color: var(--muted); font-size: 0.78rem; font-family: monospace; white-space: nowrap;">${dateStr} ${timeStr}</span>
+        </div>
+      `;
+    })
+    .join('');
 }
 
 // ----------------- AUTHENTICATION FLOWS ----------------- //
@@ -3392,7 +3850,9 @@ function enterDashboard() {
   dashboardScreen.classList.add('active');
 
   let initialView = window.location.hash ? window.location.hash.replace('#', '') : 'home';
-  if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr'].includes(initialView)) {
+  if (state.authenticatedUser?.role === 'guardia') {
+    initialView = 'guard';
+  } else if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr'].includes(initialView)) {
     initialView = 'home';
   }
   setDashboardView(initialView, false);
@@ -3402,6 +3862,8 @@ function enterDashboard() {
 
   if (state.authenticatedUser?.role === 'admin') {
     loadAdminData();
+  } else if (state.authenticatedUser?.role === 'guardia') {
+    loadGuardData();
   }
 }
 
@@ -3416,7 +3878,15 @@ function attachEventListeners() {
   if (registerForm) registerForm.addEventListener('submit', handleRegister);
   if (registerLote) registerLote.addEventListener('input', updateRegisterUsernamePreview);
   if (registerManzana) registerManzana.addEventListener('input', updateRegisterUsernamePreview);
-  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (state.authenticatedUser?.role === 'guardia') {
+        handleGuardShiftChange();
+      } else {
+        handleLogout();
+      }
+    });
+  }
   if (visitForm) visitForm.addEventListener('submit', handleVisitSubmit);
 
   // Big menu buttons on main home screen
@@ -3665,6 +4135,108 @@ function attachEventListeners() {
     refreshAdminVisitsBtn.addEventListener('click', loadAdminData);
   }
 
+  // Guard Dedicated Actions (@guardia)
+  if (guardScanQrBtn) {
+    guardScanQrBtn.addEventListener('click', async () => {
+      await startQrScanner();
+      await API.activityLogs.log('LECTOR_QR', 'Apertura del lector de pase QR desde panel de guardia');
+      loadGuardActivityLogs();
+    });
+  }
+
+  if (guardSearchPlateBtn) {
+    guardSearchPlateBtn.addEventListener('click', () => {
+      const plateBlock = document.getElementById('guardPlateSearchBlock');
+      if (plateBlock) plateBlock.scrollIntoView({ behavior: 'smooth' });
+      if (guardPlateSearchInput) {
+        guardPlateSearchInput.focus();
+        guardPlateSearchInput.select();
+      }
+    });
+  }
+
+  if (guardNotificationsBtn) {
+    guardNotificationsBtn.addEventListener('click', async () => {
+      toggleNotificationsPanel(true);
+      await API.activityLogs.log('CONSULTA_NOTIFICACIONES', 'Apertura del panel de avisos masivos');
+      loadGuardActivityLogs();
+    });
+  }
+
+  if (guardShiftChangeBtn) {
+    guardShiftChangeBtn.addEventListener('click', handleGuardShiftChange);
+  }
+
+  if (guardTopbarLogoutBtn) {
+    guardTopbarLogoutBtn.addEventListener('click', handleGuardShiftChange);
+  }
+
+  if (guardPlateSearchInput) {
+    let debounceTimer = null;
+    guardPlateSearchInput.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        state.guardPlateQuery = e.target.value.trim();
+        renderGuardVisits();
+        if (state.guardPlateQuery.length >= 3) {
+          await API.activityLogs.log('BUSQUEDA_PATENTE', `Búsqueda en padrón de visitantes: "${state.guardPlateQuery}"`);
+          loadGuardActivityLogs();
+        }
+      }, 300);
+    });
+  }
+
+  document.querySelectorAll('.guard-subfilter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.guardVisitsFilter = btn.dataset.guardFilter;
+      document.querySelectorAll('.guard-subfilter-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.guardFilter === state.guardVisitsFilter);
+      });
+      renderGuardVisits();
+    });
+  });
+
+  if (refreshGuardVisitsBtn) {
+    refreshGuardVisitsBtn.addEventListener('click', async () => {
+      await loadGuardVisits();
+      showToast('Lista de visitantes actualizada.');
+    });
+  }
+
+  if (refreshGuardLogsBtn) {
+    refreshGuardLogsBtn.addEventListener('click', async () => {
+      await loadGuardActivityLogs();
+      showToast('Historial de actividad de guardia actualizado.');
+    });
+  }
+
+  if (refreshAdminGuardLogsBtn) {
+    refreshAdminGuardLogsBtn.addEventListener('click', async () => {
+      await loadAdminGuardLogs();
+      showToast('Registros de auditoría de guardia actualizados.');
+    });
+  }
+
+  // Admin Guard Subtabs (Accesos vs Auditoría de Actividad)
+  document.querySelectorAll('[data-guard-admin-subtab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const subtab = btn.dataset.guardAdminSubtab;
+      state.activeGuardAdminSubtab = subtab;
+      document.querySelectorAll('[data-guard-admin-subtab]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.guardAdminSubtab === subtab);
+      });
+      if (adminGuardAccesosSubpanel) {
+        adminGuardAccesosSubpanel.style.display = subtab === 'accesos' ? 'block' : 'none';
+      }
+      if (adminGuardAuditoriaSubpanel) {
+        adminGuardAuditoriaSubpanel.style.display = subtab === 'auditoria' ? 'block' : 'none';
+      }
+      if (subtab === 'auditoria') {
+        loadAdminGuardLogs();
+      }
+    });
+  });
+
   // Invitations (Gmail & WhatsApp) & Manual form toggle
   if (openGmailInviteBtn) openGmailInviteBtn.addEventListener('click', openGmailInvite);
   if (copyInviteLinkEmailBtn) copyInviteLinkEmailBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkEmailBtn));
@@ -3713,6 +4285,9 @@ function attachEventListeners() {
   }
   if (newUserManzana) {
     newUserManzana.addEventListener('input', updateAutoUsername);
+  }
+  if (newUserRole) {
+    newUserRole.addEventListener('change', updateCreateUserRoleUI);
   }
   if (createUserForm) {
     createUserForm.addEventListener('submit', handleCreateUser);
@@ -3944,6 +4519,7 @@ function attachEventListeners() {
   if (userChip) {
     userChip.addEventListener('click', (e) => {
       if (e.target.closest('#logoutBtn')) return;
+      if (state.authenticatedUser?.role === 'guardia') return;
       openProfileModal();
     });
   }

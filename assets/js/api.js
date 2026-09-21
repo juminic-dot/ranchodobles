@@ -117,6 +117,11 @@ const API = {
         method: 'POST',
         body: { token, newPassword, confirmPassword }
       });
+    },
+    logout() {
+      return API.request('/api/auth/logout', {
+        method: 'POST'
+      }).catch(() => {});
     }
   },
 
@@ -318,6 +323,20 @@ const API = {
     },
     getStats() {
       return API.request('/api/admin/stats');
+    }
+  },
+
+  // Activity Logs (Audit trail for guard shifts and users)
+  activityLogs: {
+    get(params = {}) {
+      const query = new URLSearchParams(params).toString();
+      return API.request(`/api/activity-logs${query ? '?' + query : ''}`);
+    },
+    log(action, details = '') {
+      return API.request('/api/activity-logs', {
+        method: 'POST',
+        body: { action, details }
+      }).catch((err) => console.warn('[Activity Log Error]', err));
     }
   }
 };

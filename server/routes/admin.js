@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const db = require('../db');
+const { db, logActivity } = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
 const { sendPasswordResetEmail } = require('../mailer');
 
@@ -80,15 +80,32 @@ router.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
     }
 
-    const emailNormalized = email.trim().toLowerCase();
+    let emailNormalized = email.trim().toLowerCase();
+    const isGuard = role === 'guardia';
+
+    if (isGuard) {
+      // Ensure email ends with @guardia
+      if (!emailNormalized.includes('@')) {
+        emailNormalized = `${emailNormalized}@guardia`;
+      } else if (!emailNormalized.endsWith('@guardia')) {
+        return res.status(400).json({ error: 'El usuario de guardia debe tener el formato @guardia (ej: Jorgerauda@guardia).' });
+      }
+    }
+
     const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(emailNormalized);
     if (existingEmail) {
-      return res.status(400).json({ error: 'Ya existe un usuario con ese correo electrónico.' });
+      return res.status(400).json({ error: 'Ya existe un usuario con ese correo o identificador.' });
     }
 
     // Determine username if provided or derive from lote + manzana (e.g. L9M2)
     let userIdentifier = username ? username.trim() : '';
-    if (!userIdentifier && lote && manzana) {
+    if (isGuard) {
+      if (!userIdentifier) {
+        userIdentifier = emailNormalized;
+      } else if (!userIdentifier.toLowerCase().endsWith('@guardia')) {
+        userIdentifier = `${userIdentifier}@guardia`;
+      }
+    } else if (!userIdentifier && lote && manzana) {
       const cleanL = lote.toString().replace(/\D/g, '') || lote.toString().trim();
       const cleanM = manzana.toString().replace(/\D/g, '') || manzana.toString().trim();
       userIdentifier = `L${cleanL}M${cleanM}`;
@@ -122,7 +139,7 @@ router.post('/users', async (req, res) => {
       lote ? lote.toString().trim() : null,
       manzana ? manzana.toString().trim() : null,
       passwordHash,
-      role === 'admin' ? 'admin' : 'user',
+      role === 'admin' ? 'admin' : (role === 'guardia' ? 'guardia' : 'user'),
       now
     );
 
@@ -131,16 +148,29 @@ router.post('/users', async (req, res) => {
     // Initial welcome notification (personal)
     db.prepare(`
       INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, 'user', ?, ?, 0, ?)
+      VALUES (?, ?, ?, ?, 0, ?)
     `).run(
       newUserId,
-      '¡Bienvenido a Rancho Doble S!',
-      'Tu cuenta de propietario ha sido creada por la administración. Podés acceder con tu usuario o email para gestionar expensas, visitas y reservas.',
+      isGuard ? 'guardia' : 'user',
+      isGuard ? '¡Bienvenido a la Guardia!' : '¡Bienvenido a Rancho Doble S!',
+      isGuard
+        ? 'Tu cuenta de guardia ha sido creada por la administración. Podés acceder con tu usuario para control de acceso en garita.'
+        : 'Tu cuenta de propietario ha sido creada por la administración. Podés acceder con tu usuario o email para gestionar expensas, visitas y reservas.',
       now
     );
 
+    // Log admin activity
+    logActivity(
+      req.user.id,
+      `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+      req.user.role,
+      'CREATE_USER',
+      `Creó usuario [${role}]: ${nombre.trim()} ${apellido.trim()} (${userIdentifier || emailNormalized})`,
+      req.ip || ''
+    );
+
     res.status(201).json({
-      message: `Usuario ${nombre.trim()} ${apellido.trim()} creado y habilitado con éxito.`,
+      message: `Usuario ${nombre.trim()} ${apellido.trim()} (${userIdentifier || emailNormalized}) creado y habilitado con éxito.`,
       user: {
         id: newUserId,
         apellido: apellido.trim(),
@@ -149,7 +179,7 @@ router.post('/users', async (req, res) => {
         username: userIdentifier || null,
         lote: lote ? lote.toString().trim() : null,
         manzana: manzana ? manzana.toString().trim() : null,
-        role: role === 'admin' ? 'admin' : 'user',
+        role: role === 'admin' ? 'admin' : (role === 'guardia' ? 'guardia' : 'user'),
         approved: 1
       }
     });
@@ -208,7 +238,7 @@ router.put('/users/:id', (req, res) => {
       }
     }
 
-    const newRole = (role === 'admin' || role === 'user') ? role : existingUser.role;
+    const newRole = (role === 'admin' || role === 'user' || role === 'guardia') ? role : existingUser.role;
 
     // Security guarantee: NEVER update or query password / passwordHash
     db.prepare(`
@@ -345,7 +375,7 @@ router.patch('/users/:id/role', (req, res) => {
     const targetUserId = Number(req.params.id);
     const { role } = req.body;
 
-    if (!['admin', 'user'].includes(role)) {
+    if (!['admin', 'user', 'guardia'].includes(role)) {
       return res.status(400).json({ error: 'Rol no válido.' });
     }
 

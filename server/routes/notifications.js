@@ -8,6 +8,7 @@ const { authenticateToken, requireAdmin } = require('../middleware');
 router.get('/', authenticateToken, (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
+    const isGuard = req.user.role === 'guardia';
     let notifications;
 
     if (isAdmin) {
@@ -30,6 +31,18 @@ router.get('/', authenticateToken, (req, res) => {
         ORDER BY n.createdAt DESC
         LIMIT 60
       `).all(req.user.id, req.user.id, req.user.id);
+    } else if (isGuard) {
+      // Guardia sees STRICTLY administration broadcasts ("solo las masivas", targetRole = 'all')
+      notifications = db.prepare(`
+        SELECT n.id, n.userId, 'all' AS targetRole, n.title, n.text, n.createdAt,
+               CASE WHEN nr.notificationId IS NOT NULL THEN 1 ELSE 0 END AS read
+        FROM notifications n
+        LEFT JOIN notification_reads nr
+          ON n.id = nr.notificationId AND nr.userId = ?
+        WHERE n.targetRole = 'all'
+        ORDER BY n.createdAt DESC
+        LIMIT 60
+      `).all(req.user.id);
     } else {
       // Resident sees strictly:
       // 1. Their own personal notifications (n.userId = req.user.id)
