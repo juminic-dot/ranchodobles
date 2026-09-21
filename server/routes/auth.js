@@ -119,7 +119,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     let user = db.prepare(`
       SELECT * FROM users
       WHERE LOWER(COALESCE(username, '')) = ?
-         OR (LOWER(email) = ? AND (role = 'admin' OR role = 'guardia' OR email LIKE '%@guardia'))
+         OR LOWER(email) = ?
     `).get(inputLower, inputLower);
 
     // If not found and input does not contain @, try matching guard username with @guardia
@@ -130,20 +130,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       `).get(`${inputLower}@guardia`, `${inputLower}@guardia`);
     }
 
+    // If not found and input is 'admin', match admin@admin
+    if (!user && inputLower === 'admin') {
+      user = db.prepare(`
+        SELECT * FROM users
+        WHERE (LOWER(email) = 'admin@admin' OR LOWER(COALESCE(username, '')) = 'admin@admin' OR LOWER(COALESCE(username, '')) = 'admin') AND role = 'admin'
+      `).get();
+    }
+
     if (!user) {
-      // Check if a neighbor attempted to log in using their email or DNI
-      const neighborByEmailOrDni = db.prepare(`
-        SELECT username FROM users
-        WHERE (LOWER(email) = ? OR numeroDocumento = ?) AND role != 'admin' AND role != 'guardia'
-      `).get(inputLower, input);
-
-      if (neighborByEmailOrDni && neighborByEmailOrDni.username) {
-        return res.status(400).json({
-          error: `Para ingresar a la app debes usar tu usuario asignado (${neighborByEmailOrDni.username}). No se permite ingresar con email o DNI.`
-        });
-      }
-
-      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: L2M9 o usuario@guardia).' });
+      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: l2m2, admin@admin o jorgecabral@guardia).' });
     }
 
     const passwordMatch = await bcrypt.compare(password.trim(), user.passwordHash);

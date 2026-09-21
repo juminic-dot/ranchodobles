@@ -2542,10 +2542,10 @@ function updateCreateUserRoleUI() {
     emailLabel.textContent = isGuard ? 'Usuario / Identificador de Guardia *' : 'Correo electrónico *';
   }
   if (newUserEmail) {
-    newUserEmail.placeholder = isGuard ? 'ej: Jorgerauda@guardia' : 'ejemplo@correo.com';
+    newUserEmail.placeholder = isGuard ? 'ej: jorgecabral@guardia' : 'ejemplo@correo.com';
   }
   if (newUserUsername) {
-    newUserUsername.placeholder = isGuard ? 'ej: Jorgerauda@guardia' : 'Ej: L9M2';
+    newUserUsername.placeholder = isGuard ? 'ej: jorgecabral@guardia' : 'Ej: L9M2';
   }
   if (newUserLote && newUserManzana) {
     if (isGuard) {
@@ -3685,7 +3685,7 @@ async function handleGuardShiftChange() {
   const loginEmailInput = document.getElementById('loginEmail');
   if (loginEmailInput) {
     loginEmailInput.value = '';
-    loginEmailInput.placeholder = 'ej: Jorgerauda@guardia';
+    loginEmailInput.placeholder = 'ej: jorgecabral@guardia';
     loginEmailInput.focus();
   }
   showToast('Cambio de guardia completado. Ingrese las credenciales del operador entrante.');

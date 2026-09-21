@@ -190,39 +190,13 @@ if (!fs.existsSync(receiptsDir)) {
   fs.mkdirSync(receiptsDir, { recursive: true });
 }
 
-// Populate default username / lotes for existing seed users if empty
-try {
-  const admin = db.prepare('SELECT id, username FROM users WHERE id = 1').get();
-  if (admin && (!admin.username || admin.username !== 'SuperAdmin')) {
-    const adminPass = bcrypt.hashSync('AdminGTC123', 10);
-    db.prepare("UPDATE users SET username = 'SuperAdmin', passwordHash = ? WHERE id = 1").run(adminPass);
-  }
-  db.prepare("UPDATE users SET lote = '9', manzana = '2', username = 'L9M2' WHERE id = 2 AND (username IS NULL OR username = '')").run();
-  db.prepare("UPDATE users SET lote = '14', manzana = '1', username = 'L14M1' WHERE id = 3 AND (username IS NULL OR username = '')").run();
-} catch (e) {}
-
 function seedDatabase() {
-  const countStmt = db.prepare('SELECT COUNT(*) as count FROM users');
-  const userCount = countStmt.get().count;
+  const countStmt = db.prepare('SELECT COUNT(*) as count FROM news');
+  const newsCount = countStmt.get().count;
 
-  if (userCount === 0) {
-    console.log('[DB] Seeding initial database records...');
+  if (newsCount === 0) {
+    console.log('[DB] Seeding initial news records...');
     const now = new Date().toISOString();
-
-    const insertUser = db.prepare(`
-      INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    // Hashing passwords securely
-    const saltRounds = 10;
-    const adminHash = bcrypt.hashSync('AdminGTC123', saltRounds);
-    const userHash = bcrypt.hashSync('123456', saltRounds);
-
-    insertUser.run('Administrador', 'Admin', 'DNI', '00000000', '1100000000', 'admin@ranchodobles.com', 'SuperAdmin', null, null, adminHash, 'admin', 1, now);
-    insertUser.run('Sánchez', 'Lucía', 'DNI', '30123456', '1123456789', 'lucia@ranchodobles.com', 'L9M2', '9', '2', userHash, 'user', 1, now);
-    insertUser.run('García', 'Nicolás', 'DNI', '40222333', '1166677788', 'nicolas@gmail.com', 'L14M1', '14', '1', userHash, 'user', 1, now);
-    insertUser.run('Gómez', 'Roberto', 'DNI', '35999888', '1144445555', 'roberto@gmail.com', 'L20M4', '20', '4', userHash, 'user', 0, now);
 
     // Initial news
     const insertNews = db.prepare(`
@@ -249,66 +223,96 @@ function seedDatabase() {
       './descarga.jfif',
       now
     );
-
-    // Initial visits
-    const insertVisit = db.prepare(`
-      INSERT INTO visits (userId, residentName, visitorName, visitorDni, date, time, status, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    insertVisit.run(2, 'Lucía Sánchez', 'María López', '24.222.333', '2026-09-12', '18:30', 'Confirmada', now);
-    insertVisit.run(2, 'Lucía Sánchez', 'José Martínez', '28.556.441', '2026-09-15', '12:00', 'Pendiente', now);
-
-    // Initial notifications
-    const insertNotif = db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    insertNotif.run(null, 'Mantenimiento programado', 'Se realizará mantenimiento del portón principal el viernes a las 10:00 hs.', 0, now);
-    insertNotif.run(2, 'Reserva confirmada', 'Tu reserva de cancha para tenis fue confirmada.', 0, now);
-    insertNotif.run(null, 'Novedad de administración', 'La reunión vecinal se realizará este miércoles a las 20:00 hs.', 1, now);
-    insertNotif.run(1, 'Nueva solicitud de registro pendiente', 'Roberto Gómez solicitó acceso al portal.', 0, now);
-
-    console.log('[DB] Seeding completed.');
   }
+}
 
-  // Check if expenses need seeding
-  const expensesCount = db.prepare('SELECT COUNT(*) as count FROM expenses').get().count;
-  if (expensesCount === 0) {
-    const now = new Date().toISOString();
-    const insertExp = db.prepare(`
-      INSERT INTO expenses (userId, period, dueDate, amount, status, concept, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    // Expenses for Lucia (id 2)
-    insertExp.run(2, 'Julio 2026', '2026-07-15', 138000, 'Pagado', 'Expensas ordinarias', now);
-    insertExp.run(2, 'Agosto 2026', '2026-08-15', 138000, 'Pagado', 'Expensas ordinarias + seguridad', now);
-    insertExp.run(2, 'Septiembre 2026', '2026-09-15', 145000, 'Pendiente', 'Expensas ordinarias + mantenimiento predio', now);
-
-    // Expenses for Nicolas (id 3)
-    insertExp.run(3, 'Agosto 2026', '2026-08-15', 138000, 'Pagado', 'Expensas ordinarias + seguridad', now);
-    insertExp.run(3, 'Septiembre 2026', '2026-09-15', 145000, 'Pagado', 'Expensas ordinarias + mantenimiento predio', now);
-  }
-  // Seed default guard if not exists
+function ensureOfficialUsers() {
   try {
-    const guardExists = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'jorgerauda@guardia' OR LOWER(username) = 'jorgerauda@guardia'").get();
-    if (!guardExists) {
-      const guardPass = bcrypt.hashSync('123456', 10);
-      const now = new Date().toISOString();
+    const saltRounds = 10;
+    const defaultHash = bcrypt.hashSync('vecinos2026', saltRounds);
+    const now = new Date().toISOString();
+
+    // 1. Delete all users that are NOT the official 3
+    const usersToDelete = db.prepare(`
+      SELECT id FROM users
+      WHERE LOWER(email) NOT IN ('admin@admin', 'jorgecabral@guardia', 'jorgesuarez@ranchodobles.com')
+        AND LOWER(COALESCE(username, '')) NOT IN ('admin@admin', 'admin', 'l2m2', 'jorgecabral@guardia')
+    `).all();
+
+    if (usersToDelete.length > 0) {
+      for (const u of usersToDelete) {
+        db.prepare('DELETE FROM users WHERE id = ?').run(u.id);
+        db.prepare('DELETE FROM visits WHERE userId = ?').run(u.id);
+        db.prepare('DELETE FROM expenses WHERE userId = ?').run(u.id);
+        db.prepare('DELETE FROM bookings WHERE userId = ?').run(u.id);
+        db.prepare('DELETE FROM invites WHERE hostId = ?').run(u.id);
+        db.prepare('DELETE FROM password_resets WHERE userId = ?').run(u.id);
+      }
+      console.log(`[DB] Se eliminaron ${usersToDelete.length} usuarios anteriores.`);
+    }
+
+    // 2. Ensure Admin: admin@admin (Password: vecinos2026)
+    const admin = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@admin' OR LOWER(username) = 'admin@admin' OR LOWER(username) = 'admin'").get();
+    if (!admin) {
       db.prepare(`
         INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run('Rauda', 'Jorge', 'DNI', '33999111', '1133334444', 'jorgerauda@guardia', 'Jorgerauda@guardia', null, null, guardPass, 'guardia', 1, now);
-      console.log('[DB] Usuario guardia por defecto creado: Jorgerauda@guardia');
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      `).run('Admin', 'Administrador', 'DNI', '00000000', '1100000000', 'admin@admin', 'admin@admin', null, null, defaultHash, 'admin', now);
+      console.log('[DB] Usuario Administrador oficial creado: admin@admin');
+    } else {
+      db.prepare("UPDATE users SET email = 'admin@admin', username = 'admin@admin', passwordHash = ?, role = 'admin', approved = 1 WHERE id = ?").run(defaultHash, admin.id);
+    }
+
+    // 3. Ensure Vecino: Jorge Suarez (Usuario: l2m2, Password: vecinos2026)
+    const vecino = db.prepare("SELECT id FROM users WHERE LOWER(username) = 'l2m2' OR LOWER(email) = 'jorgesuarez@ranchodobles.com'").get();
+    let vecinoId;
+    if (!vecino) {
+      const res = db.prepare(`
+        INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      `).run('Suarez', 'Jorge', 'DNI', '30123456', '1122334455', 'jorgesuarez@ranchodobles.com', 'l2m2', '2', '2', defaultHash, 'user', now);
+      vecinoId = Number(res.lastInsertRowid);
+      console.log('[DB] Usuario Vecino oficial creado: Jorge Suarez (l2m2)');
+
+      // Seed initial sample expenses for Jorge Suarez
+      const insertExp = db.prepare(`
+        INSERT INTO expenses (userId, period, dueDate, amount, status, concept, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertExp.run(vecinoId, 'Julio 2026', '2026-07-15', 138000, 'Pagado', 'Expensas ordinarias', now);
+      insertExp.run(vecinoId, 'Agosto 2026', '2026-08-15', 138000, 'Pagado', 'Expensas ordinarias + seguridad', now);
+      insertExp.run(vecinoId, 'Septiembre 2026', '2026-09-15', 145000, 'Pendiente', 'Expensas ordinarias + mantenimiento predio', now);
+
+      // Seed initial sample visits for Jorge Suarez
+      const insertVisit = db.prepare(`
+        INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, date, time, status, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertVisit.run(vecinoId, 'Jorge Suarez (L2M2)', 'Carlos Gómez', '28555444', 'AD 111 BC', '2026-09-22', '15:00', 'Confirmada', now);
+      insertVisit.run(vecinoId, 'Jorge Suarez (L2M2)', 'Mariana Pérez', '34222111', 'AF 234 CD', '2026-09-22', '18:30', 'Ingresado', now);
+    } else {
+      vecinoId = vecino.id;
+      db.prepare("UPDATE users SET nombre = 'Jorge', apellido = 'Suarez', email = 'jorgesuarez@ranchodobles.com', username = 'l2m2', lote = '2', manzana = '2', passwordHash = ?, role = 'user', approved = 1 WHERE id = ?").run(defaultHash, vecinoId);
+    }
+
+    // 4. Ensure Guardia: Jorge Cabral (Usuario: jorgecabral@guardia, Password: vecinos2026)
+    const guard = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'jorgecabral@guardia' OR LOWER(username) = 'jorgecabral@guardia'").get();
+    if (!guard) {
+      db.prepare(`
+        INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      `).run('Cabral', 'Jorge', 'DNI', '32999888', '1133445566', 'jorgecabral@guardia', 'jorgecabral@guardia', null, null, defaultHash, 'guardia', now);
+      console.log('[DB] Usuario Guardia oficial creado: Jorge Cabral (jorgecabral@guardia)');
+    } else {
+      db.prepare("UPDATE users SET nombre = 'Jorge', apellido = 'Cabral', email = 'jorgecabral@guardia', username = 'jorgecabral@guardia', passwordHash = ?, role = 'guardia', approved = 1 WHERE id = ?").run(defaultHash, guard.id);
     }
   } catch (err) {
-    console.error('[DB Guard Seed Error]', err);
+    console.error('[DB ensureOfficialUsers Error]', err);
   }
 }
 
 seedDatabase();
+ensureOfficialUsers();
 
 function logActivity(userId, userName, userRole, action, details = '', ip = '') {
   try {

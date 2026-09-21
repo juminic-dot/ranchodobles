@@ -88,7 +88,7 @@ router.post('/users', async (req, res) => {
       if (!emailNormalized.includes('@')) {
         emailNormalized = `${emailNormalized}@guardia`;
       } else if (!emailNormalized.endsWith('@guardia')) {
-        return res.status(400).json({ error: 'El usuario de guardia debe tener el formato @guardia (ej: Jorgerauda@guardia).' });
+        return res.status(400).json({ error: 'El usuario de guardia debe tener el formato @guardia (ej: jorgecabral@guardia).' });
       }
     }
 
