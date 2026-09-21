@@ -25,11 +25,15 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
   font-family: "Inter", sans-serif;
   background:
     radial-gradient(circle at top left, rgba(105, 210, 166, 0.15), transparent 35%),
@@ -3016,38 +3020,57 @@ body.notification-open {
     font-size: 0.84rem;
   }
 
+  .dashboard-layout {
+    width: 100% !important;
+    padding: 0.75rem 0.65rem 1.5rem !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  .content-panel,
+  .content-section,
+  #guardSection {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
   .guard-buttons-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.65rem;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
     margin-bottom: 1.25rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .guard-action-card {
-    padding: 0.95rem 0.85rem;
-    gap: 0.35rem;
-    border-radius: 14px;
+    padding: 1.05rem 1.15rem;
+    gap: 0.45rem;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .guard-card-icon {
-    font-size: 1.75rem;
+    font-size: 1.85rem;
   }
 
   .guard-card-badge {
-    font-size: 0.68rem;
-    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.55rem;
   }
 
   .guard-card-title {
-    font-size: 0.98rem;
+    font-size: 1.08rem;
   }
 
   .guard-card-desc {
-    font-size: 0.73rem;
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    display: block;
   }
 
   /* Filter tabs horizontal scroll */
@@ -3128,17 +3151,16 @@ body.notification-open {
 
 /* Extra Small Screens (<= 380px) */
 @media (max-width: 380px) {
-  .guard-buttons-grid {
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
+  .dashboard-layout {
+    padding: 0.5rem 0.4rem 1.25rem !important;
   }
 
   .guard-action-card {
-    padding: 0.85rem 1rem;
+    padding: 0.85rem 0.9rem;
   }
 
-  .guard-card-desc {
-    -webkit-line-clamp: 3;
+  .guard-card-title {
+    font-size: 1rem;
   }
 
   .guard-visit-actions {
