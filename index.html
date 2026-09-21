@@ -743,20 +743,20 @@
             <!-- Sección Panel de Guardia (Exclusivo para usuarios @guardia) -->
             <section id="guardSection" class="content-section">
               <!-- Banner superior de estado del puesto -->
-              <div class="glass-card" style="padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; border-radius: var(--radius-md); background: linear-gradient(135deg, rgba(14, 25, 38, 0.9), rgba(22, 40, 60, 0.95)); border: 1px solid rgba(212, 163, 89, 0.4); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem;">
+              <div class="glass-card guard-operator-card">
+                <div class="guard-operator-header">
                   <div>
-                    <span class="eyebrow" style="color: var(--gold); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">🛡️ Control de Acceso y Garita</span>
-                    <h3 style="margin: 0.2rem 0; font-size: 1.5rem; color: #fff;">Panel de Guardia</h3>
-                    <p style="margin: 0; color: var(--muted); font-size: 0.88rem;">
-                      Operador en turno: <strong id="guardOperatorName" style="color: #fff;">--</strong> (<span id="guardOperatorUser" style="color: var(--gold);">@guardia</span>)
+                    <span class="eyebrow guard-eyebrow">🛡️ Control de Acceso y Garita</span>
+                    <h3 class="guard-panel-title">Panel de Guardia</h3>
+                    <p class="guard-operator-subtitle">
+                      Operador en turno: <strong id="guardOperatorName">--</strong> (<span id="guardOperatorUser">@guardia</span>)
                     </p>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                    <span class="badge soft" style="background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); padding: 0.4rem 0.85rem; font-weight: 600;">
+                  <div class="guard-operator-status">
+                    <span class="badge soft guard-shift-badge">
                       🟢 Turno Activo
                     </span>
-                    <button type="button" class="btn-inline-action danger" id="guardTopbarLogoutBtn" style="padding: 0.4rem 0.85rem; font-size: 0.82rem;">
+                    <button type="button" class="btn-inline-action danger guard-shift-change-topbar-btn" id="guardTopbarLogoutBtn">
                       🔄 Cambio de guardia
                     </button>
                   </div>
@@ -764,53 +764,53 @@
               </div>
 
               <!-- Los 4 Botones Principales Exclusivos de la Guardia -->
-              <div class="guard-buttons-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+              <div class="guard-buttons-grid">
                 
                 <!-- Botón 1: Escanear QR (Linkeado directo al escanear QR de control de guardia) -->
-                <button type="button" class="guard-action-card glass-card" id="guardScanQrBtn" style="padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid rgba(212, 163, 89, 0.45); background: rgba(212, 163, 89, 0.09); text-align: left; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span style="font-size: 2.2rem;">📷</span>
-                    <span class="badge soft" style="background: rgba(212, 163, 89, 0.25); color: var(--gold); font-size: 0.75rem;">Cámara / Lector</span>
+                <button type="button" class="guard-action-card glass-card" id="guardScanQrBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">📷</span>
+                    <span class="badge soft guard-card-badge">Cámara / Lector</span>
                   </div>
-                  <h4 style="margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700;">Escanear QR</h4>
-                  <p style="margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4;">Lector de pase QR por cámara de garita o pistola lectora USB para registrar ingresos.</p>
+                  <h4 class="guard-card-title">Escanear QR</h4>
+                  <p class="guard-card-desc">Lector de pase QR por cámara de garita o pistola lectora USB para registrar ingresos.</p>
                 </button>
 
                 <!-- Botón 2: Buscar Patente -->
-                <button type="button" class="guard-action-card glass-card active" id="guardSearchPlateBtn" style="padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid rgba(105, 210, 166, 0.45); background: rgba(105, 210, 166, 0.09); text-align: left; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span style="font-size: 2.2rem;">🚗</span>
-                    <span class="badge soft" style="background: rgba(105, 210, 166, 0.25); color: var(--primary); font-size: 0.75rem;" id="guardVehiclesInsideBadge">0 en predio</span>
+                <button type="button" class="guard-action-card glass-card active" id="guardSearchPlateBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">🚗</span>
+                    <span class="badge soft guard-card-badge" id="guardVehiclesInsideBadge">0 en predio</span>
                   </div>
-                  <h4 style="margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700;">Buscar patente</h4>
-                  <p style="margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4;">Buscá invitados registrados, ubicá su vehículo y confirmá el ingreso o egreso.</p>
+                  <h4 class="guard-card-title">Buscar patente</h4>
+                  <p class="guard-card-desc">Buscá invitados registrados, ubicá su vehículo y confirmá el ingreso o egreso.</p>
                 </button>
 
                 <!-- Botón 3: Notificaciones Masivas -->
-                <button type="button" class="guard-action-card glass-card" id="guardNotificationsBtn" style="padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid rgba(138, 206, 255, 0.4); background: rgba(138, 206, 255, 0.09); text-align: left; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span style="font-size: 2.2rem;">📢</span>
-                    <span class="badge soft" id="guardNotifBadge" style="background: rgba(138, 206, 255, 0.25); color: var(--secondary); font-size: 0.75rem;">Solo masivas</span>
+                <button type="button" class="guard-action-card glass-card" id="guardNotificationsBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">📢</span>
+                    <span class="badge soft guard-card-badge" id="guardNotifBadge">Solo masivas</span>
                   </div>
-                  <h4 style="margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700;">Notificaciones</h4>
-                  <p style="margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4;">Avisos comunitarios y alertas masivas emitidas por la administración.</p>
+                  <h4 class="guard-card-title">Notificaciones</h4>
+                  <p class="guard-card-desc">Avisos comunitarios y alertas masivas emitidas por la administración.</p>
                 </button>
 
                 <!-- Botón 4: Cambio de Guardia -->
-                <button type="button" class="guard-action-card glass-card" id="guardShiftChangeBtn" style="padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid rgba(255, 122, 122, 0.45); background: rgba(255, 122, 122, 0.09); text-align: left; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span style="font-size: 2.2rem;">🔄</span>
-                    <span class="badge soft" style="background: rgba(255, 122, 122, 0.25); color: var(--danger); font-size: 0.75rem;">Relevo</span>
+                <button type="button" class="guard-action-card glass-card" id="guardShiftChangeBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">🔄</span>
+                    <span class="badge soft guard-card-badge">Relevo</span>
                   </div>
-                  <h4 style="margin: 0; font-size: 1.2rem; color: #fff; font-weight: 700;">Cambio de guardia</h4>
-                  <p style="margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4;">Cierra la sesión del operador actual y abre el login para el nuevo relevo.</p>
+                  <h4 class="guard-card-title">Cambio de guardia</h4>
+                  <p class="guard-card-desc">Cierra la sesión del operador actual y abre el login para el nuevo relevo.</p>
                 </button>
               </div>
 
               <!-- Subpanel: Buscador de Patentes e Invitados Registrados -->
               <div class="glass-card panel-block" id="guardPlateSearchBlock" style="margin-bottom: 1.5rem;">
                 <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                     <h4>🚗 Buscador de Patente (Formularios de Invitados)</h4>
                     <span class="badge soft" id="guardVisitsCountBadge">0 registrados</span>
                   </div>
@@ -819,17 +819,17 @@
                 <p class="panel-subtext">Buscá entre las solicitudes e invitaciones registradas, localizá al visitante y confirmá su <strong>ingreso</strong>, y luego su <strong>egreso</strong>.</p>
 
                 <!-- Input de búsqueda en tiempo real -->
-                <div style="display: flex; flex-direction: column; gap: 0.6rem; margin: 0.85rem 0;">
+                <div class="guard-search-container">
                   <div style="position: relative;">
                     <input
                       type="search"
                       id="guardPlateSearchInput"
-                      placeholder="🔍 Escribí la patente (ej: AD 111 BC, VFB256), DNI o nombre del visitante..."
-                      style="width: 100%; padding: 0.75rem 1rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.95rem;"
+                      placeholder="🔍 Escribí la patente (ej: AD 111 BC, VFB256), DNI o visitante..."
+                      class="guard-search-input"
                       autocomplete="off"
                     />
                   </div>
-                  <div class="guard-filter-tabs" style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                  <div class="guard-filter-tabs">
                     <button type="button" class="btn-inline-action active guard-subfilter-btn" data-guard-filter="all">Todas</button>
                     <button type="button" class="btn-inline-action guard-subfilter-btn" data-guard-filter="inside">🟢 En predio</button>
                     <button type="button" class="btn-inline-action guard-subfilter-btn" data-guard-filter="expected">⏳ Esperadas</button>
@@ -844,7 +844,7 @@
               <!-- Subpanel: Registro de Todo lo que Hace el Usuario (Auditoría en Vivo) -->
               <div class="glass-card panel-block" id="guardShiftLogBlock">
                 <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
-                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                     <h4>📋 Registro de Actividad de la Guardia</h4>
                     <span class="badge soft" id="guardLogsCountBadge">0 acciones</span>
                   </div>

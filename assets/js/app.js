@@ -3504,42 +3504,42 @@ function renderGuardVisits() {
       let actionButtons = '';
       if (!isInside && !isExited) {
         actionButtons = `
-          <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-weight: 600; padding: 0.45rem 0.9rem;">
+          <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}">
             🟢 Confirmar Ingreso
           </button>
         `;
       } else if (isInside) {
         actionButtons = `
-          <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-weight: 600; padding: 0.45rem 0.9rem;">
+          <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}">
             🚪 Confirmar Egreso
           </button>
         `;
       }
 
       return `
-        <li class="visit-item" style="padding: 1rem 1.2rem;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; width: 100%;">
-            <div style="flex: 1; min-width: 240px;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
-                <span class="badge soft" style="font-family: monospace; font-size: 0.95rem; font-weight: 700; background: rgba(212, 163, 89, 0.2); color: var(--gold); border: 1px solid rgba(212, 163, 89, 0.5); padding: 0.25rem 0.65rem; letter-spacing: 0.05em;">
+        <li class="visit-item guard-visit-card">
+          <div class="guard-visit-header">
+            <div class="guard-visit-info">
+              <div class="guard-visit-tags">
+                <span class="badge soft guard-plate-badge">
                   🚗 ${plateFormatted}
                 </span>
                 ${statusBadge}
               </div>
-              <strong style="font-size: 1.1rem; color: #fff; display: block;">${escapeHTML(visit.visitorName)}</strong>
-              <small style="color: var(--muted); font-size: 0.84rem; display: block;">DNI: <strong>${escapeHTML(visit.visitorDni)}</strong> · Destino: <strong>${escapeHTML(visit.residentName)}</strong></small>
+              <strong class="guard-visitor-name">${escapeHTML(visit.visitorName)}</strong>
+              <small class="guard-visitor-dest">DNI: <strong>${escapeHTML(visit.visitorDni)}</strong> · Destino: <strong>${escapeHTML(visit.residentName)}</strong></small>
               ${entryTime}
               ${exitTime}
             </div>
 
-            <div class="visit-actions" style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+            <div class="visit-actions guard-visit-actions">
               ${actionButtons}
               <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver código QR del pase">
                 📱 Ver Pase QR
               </button>
             </div>
           </div>
-          <div class="visit-meta" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+          <div class="visit-meta guard-visit-meta">
             <span>📅 Fecha prevista: ${escapeHTML(visit.date)} a las ${escapeHTML(visit.time)} hs</span>
           </div>
         </li>
@@ -3656,15 +3656,15 @@ function renderGuardActivityLogs() {
       }
 
       return `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 0.85rem;">
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap;">
-              <span class="badge soft" style="background: ${badgeColor}; color: ${badgeTextColor}; font-size: 0.72rem; padding: 0.15rem 0.45rem;">${escapeHTML(actionLabel)}</span>
-              <strong style="color: #fff; font-size: 0.82rem;">${escapeHTML(log.details || '')}</strong>
+        <div class="guard-log-item">
+          <div class="guard-log-info">
+            <div class="guard-log-badge-row">
+              <span class="badge soft guard-log-badge" style="background: ${badgeColor}; color: ${badgeTextColor};">${escapeHTML(actionLabel)}</span>
+              <strong class="guard-log-detail">${escapeHTML(log.details || '')}</strong>
             </div>
-            <small style="color: var(--muted); font-size: 0.78rem;">Operador: ${escapeHTML(log.userName || '')}</small>
+            <small class="guard-log-operator">Operador: ${escapeHTML(log.userName || '')}</small>
           </div>
-          <span style="color: var(--muted); font-size: 0.78rem; font-family: monospace; white-space: nowrap;">${dateStr} ${timeStr}</span>
+          <span class="guard-log-time">${dateStr} ${timeStr}</span>
         </div>
       `;
     })
@@ -3730,15 +3730,15 @@ function renderAdminGuardLogs() {
       }
 
       return `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 0.85rem;">
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap;">
-              <span class="badge soft" style="background: ${badgeColor}; color: ${badgeTextColor}; font-size: 0.72rem;">${escapeHTML(log.action)}</span>
-              <strong style="color: #fff;">${escapeHTML(log.details || '')}</strong>
+        <div class="guard-log-item">
+          <div class="guard-log-info">
+            <div class="guard-log-badge-row">
+              <span class="badge soft guard-log-badge" style="background: ${badgeColor}; color: ${badgeTextColor};">${escapeHTML(log.action)}</span>
+              <strong class="guard-log-detail">${escapeHTML(log.details || '')}</strong>
             </div>
-            <small style="color: var(--muted); font-size: 0.78rem;">Operador: <strong>${escapeHTML(log.userName || '')}</strong> · Rol: ${escapeHTML(log.userRole || '')}</small>
+            <small class="guard-log-operator">Operador: <strong>${escapeHTML(log.userName || '')}</strong> · Rol: ${escapeHTML(log.userRole || '')}</small>
           </div>
-          <span style="color: var(--muted); font-size: 0.78rem; font-family: monospace; white-space: nowrap;">${dateStr} ${timeStr}</span>
+          <span class="guard-log-time">${dateStr} ${timeStr}</span>
         </div>
       `;
     })
