@@ -235,6 +235,24 @@ const API = {
       return API.request(`/api/notifications/admin/${id}`, {
         method: 'DELETE'
       });
+    },
+    guardToAdmin(data) {
+      return API.request('/api/notifications/guard-to-admin', {
+        method: 'POST',
+        body: data
+      });
+    },
+    adminToGuard(data) {
+      return API.request('/api/notifications/admin-to-guard', {
+        method: 'POST',
+        body: data
+      });
+    },
+    adminNotifyResidents(data) {
+      return API.request('/api/notifications/admin/notify-residents', {
+        method: 'POST',
+        body: data
+      });
     }
   },
 
@@ -337,6 +355,35 @@ const API = {
         method: 'POST',
         body: { action, details }
       }).catch((err) => console.warn('[Activity Log Error]', err));
+    }
+  },
+
+  // Guard Notices (Avisos a guardia y Notificaciones de guardia a vecinos)
+  guardNotices: {
+    get(status) {
+      const query = status ? `?status=${encodeURIComponent(status)}` : '';
+      return API.request(`/api/guard-notices${query}`);
+    },
+    create(data) {
+      return API.request('/api/guard-notices', {
+        method: 'POST',
+        body: data
+      });
+    },
+    updateStatus(id, data) {
+      return API.request(`/api/guard-notices/${id}/status`, {
+        method: 'PATCH',
+        body: data
+      });
+    },
+    getResidents() {
+      return API.request('/api/guard-notices/residents');
+    },
+    notifyResident(data) {
+      return API.request('/api/guard-notices/notify-resident', {
+        method: 'POST',
+        body: data
+      });
     }
   }
 };

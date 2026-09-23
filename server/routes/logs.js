@@ -1,34 +1,47 @@
 const express = require('express');
 const router = express.Router();
 const { db, logActivity } = require('../db');
-const { authenticateToken } = require('../middleware');
+const { authenticateToken, requireAdmin } = require('../middleware');
 
-// GET /api/activity-logs
-router.get('/', authenticateToken, (req, res) => {
+// GET /api/activity-logs (Strictly Admin only: audit trail of all app activities)
+router.get('/', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const { userId, limit = 100 } = req.query;
-    const isAdmin = req.user.role === 'admin';
-    const isGuard = req.user.role === 'guardia';
+    const { userId, role, action, search, limit = 200 } = req.query;
 
     let query = `
       SELECT id, userId, userName, userRole, action, details, ip, createdAt
       FROM activity_logs
     `;
+    const conditions = [];
     const params = [];
 
-    if (isAdmin) {
-      if (userId) {
-        query += ' WHERE userId = ?';
-        params.push(userId);
-      }
-    } else {
-      // Guard or resident sees their own activity logs
-      query += ' WHERE userId = ?';
-      params.push(req.user.id);
+    if (userId) {
+      conditions.push('userId = ?');
+      params.push(Number(userId));
+    }
+
+    if (role && role.trim() && role !== 'all') {
+      conditions.push('userRole = ?');
+      params.push(role.trim());
+    }
+
+    if (action && action.trim()) {
+      conditions.push('action LIKE ?');
+      params.push(`%${action.trim()}%`);
+    }
+
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push('(userName LIKE ? OR action LIKE ? OR details LIKE ?)');
+      params.push(term, term, term);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
     }
 
     query += ' ORDER BY id DESC LIMIT ?';
-    params.push(Math.min(Number(limit) || 100, 200));
+    params.push(Math.min(Number(limit) || 200, 500));
 
     const logs = db.prepare(query).all(...params);
     res.json(logs);

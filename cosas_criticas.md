@@ -162,10 +162,5 @@
   ---------------------------------------------------
   
   * Backup de base de datos, averiguar que hacer para no perder datos de la app en ningun momento, o reponerlos en caso qeu se rompan y haya que migrar.
-  * Como se maneja la guardia
-  Guardia debe tener un panel exclusivo, en el cual de pueda usar el modulo control de guardia.
-
-  * Emitir alertas, no se puede emitir avisos a un usuario especifico.
-  * En gestion de expensas, incluir un buscador por lote, dnim apellido del vecino.
-  * Armar un usuario especifico de control de guardia, que tenga botones y buscador.
-  
+  * Poner sonido a las notificaciones, que le suenen al cliente cuando le llegan.
+   

@@ -1869,6 +1869,17 @@ body.notification-open {
   border-color: rgba(247, 199, 109, 0.25);
 }
 
+.menu-big-btn.btn-guard-notices::before {
+  background: #f59e0b;
+}
+.menu-big-btn.btn-guard-notices:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+}
+.menu-big-btn.btn-guard-notices .menu-btn-icon {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
 .menu-big-btn.btn-admin::before {
   background: #c084fc;
 }
@@ -2585,10 +2596,10 @@ body.notification-open {
   border-color: var(--danger);
 }
 
-/* 2. Main 4 Action Buttons Grid */
+/* 2. Main Action Buttons Grid (Guard Panel) */
 .guard-buttons-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -3216,6 +3227,146 @@ body.notification-open {
   .guard-visit-actions {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==========================================================================
+   Avisos a Guardia (Resident View & Guard Panel)
+   ========================================================================== */
+
+.guard-notice-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.notice-option-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 1rem 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text);
+  position: relative;
+  overflow: hidden;
+}
+
+.notice-option-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(247, 199, 109, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.notice-option-card.active {
+  background: rgba(247, 199, 109, 0.12);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 8px 24px rgba(212, 163, 89, 0.15);
+}
+
+.option-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.option-card-icon {
+  font-size: 1.75rem;
+}
+
+.option-card-tag {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.notice-option-card.active .option-card-tag {
+  background: rgba(247, 199, 109, 0.2);
+  color: var(--gold);
+}
+
+.option-card-title {
+  font-size: 0.96rem;
+  color: #fff;
+  font-weight: 700;
+  margin: 0;
+}
+
+.option-card-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.guard-notice-item-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.guard-notice-item-card.pending {
+  border-left: 4px solid var(--gold);
+}
+
+.guard-notice-item-card.attended {
+  border-left: 4px solid #10b981;
+}
+
+.notice-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.notice-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.notice-item-details {
+  font-size: 0.9rem;
+  color: #fff;
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.notice-item-response {
+  font-size: 0.84rem;
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
 }
 
 

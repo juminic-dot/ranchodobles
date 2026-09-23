@@ -53,7 +53,19 @@ const state = {
   guardPlateQuery: '',
   guardActivityLogs: [],
   adminGuardLogs: [],
-  notificationRoleFilter: 'all'
+  adminAuditLogs: [],
+  adminAuditRoleFilter: 'all',
+  adminAuditSearchQuery: '',
+  notificationRoleFilter: 'all',
+  residentNotices: [],
+  activeNoticeCategory: 'Delivery',
+  guardNotices: [],
+  guardNoticeFilter: 'all',
+  guardResidentsList: [],
+  selectedNotifyResidentId: null,
+  adminExpensesSearchQuery: '',
+  adminNotifyResidentsSearchQuery: '',
+  adminNotifySelectedResidents: new Set()
 };
 
 // DOM Elements
@@ -165,6 +177,50 @@ const adminGuardLogsList = document.getElementById('adminGuardLogsList');
 const refreshAdminGuardLogsBtn = document.getElementById('refreshAdminGuardLogsBtn');
 const adminGuardAccesosSubpanel = document.getElementById('adminGuardAccesosSubpanel');
 const adminGuardAuditoriaSubpanel = document.getElementById('adminGuardAuditoriaSubpanel');
+const adminAuditLogsCountBadge = document.getElementById('adminAuditLogsCountBadge');
+const refreshAdminAuditLogsBtn = document.getElementById('refreshAdminAuditLogsBtn');
+const adminAuditSearchInput = document.getElementById('adminAuditSearchInput');
+const adminGlobalAuditLogsList = document.getElementById('adminGlobalAuditLogsList');
+const adminGoToAuditFromGuardBtn = document.getElementById('adminGoToAuditFromGuardBtn');
+
+// Resident Avisos a Guardia DOM Elements
+const guardNoticesSection = document.getElementById('guardNoticesSection');
+const guardNoticeForm = document.getElementById('guardNoticeForm');
+const guardNoticeCategoryInput = document.getElementById('guardNoticeCategoryInput');
+const selectedNoticeCategoryBadge = document.getElementById('selectedNoticeCategoryBadge');
+const guardNoticeCompanyInput = document.getElementById('guardNoticeCompanyInput');
+const guardNoticeCompanyLabel = document.getElementById('guardNoticeCompanyLabel');
+const guardNoticeTimeInput = document.getElementById('guardNoticeTimeInput');
+const guardNoticeDetailsInput = document.getElementById('guardNoticeDetailsInput');
+const submitGuardNoticeBtn = document.getElementById('submitGuardNoticeBtn');
+const residentNoticesCountBadge = document.getElementById('residentNoticesCountBadge');
+const residentNoticesList = document.getElementById('residentNoticesList');
+const refreshResidentNoticesBtn = document.getElementById('refreshResidentNoticesBtn');
+
+// Guard Resident Notices Subpanel DOM Elements
+const guardResidentNoticesBtn = document.getElementById('guardResidentNoticesBtn');
+const guardResidentNoticesBadge = document.getElementById('guardResidentNoticesBadge');
+const guardResidentNoticesBlock = document.getElementById('guardResidentNoticesBlock');
+const guardResidentNoticesCountBadge = document.getElementById('guardResidentNoticesCountBadge');
+const guardOpenNotifyResidentTopBtn = document.getElementById('guardOpenNotifyResidentTopBtn');
+const refreshGuardResidentNoticesBtn = document.getElementById('refreshGuardResidentNoticesBtn');
+const guardResidentNoticesList = document.getElementById('guardResidentNoticesList');
+
+// Guard Notify Resident Modal DOM Elements
+const guardNotifyResidentBtn = document.getElementById('guardNotifyResidentBtn');
+const guardNotifyResidentModal = document.getElementById('guardNotifyResidentModal');
+const closeGuardNotifyResidentModal = document.getElementById('closeGuardNotifyResidentModal');
+const cancelGuardNotifyBtn = document.getElementById('cancelGuardNotifyBtn');
+const guardNotifyResidentForm = document.getElementById('guardNotifyResidentForm');
+const guardNotifyTargetSelect = document.getElementById('guardNotifyTargetSelect');
+const guardNotifySelectedNeighborInfo = document.getElementById('guardNotifySelectedNeighborInfo');
+const guardNotifyNeighborName = document.getElementById('guardNotifyNeighborName');
+const guardNotifyNeighborLocation = document.getElementById('guardNotifyNeighborLocation');
+const guardNotifyNeighborPhone = document.getElementById('guardNotifyNeighborPhone');
+const guardNotifyPresetSelect = document.getElementById('guardNotifyPresetSelect');
+const guardNotifyTitleInput = document.getElementById('guardNotifyTitleInput');
+const guardNotifyMessageInput = document.getElementById('guardNotifyMessageInput');
+const submitGuardNotifyBtn = document.getElementById('submitGuardNotifyBtn');
 
 // Resident Pay Expense Modal DOM
 const payExpenseModal = document.getElementById('payExpenseModal');
@@ -335,6 +391,47 @@ const broadcastAlertTitle = document.getElementById('broadcastAlertTitle');
 const broadcastAlertText = document.getElementById('broadcastAlertText');
 const submitBroadcastAlertBtn = document.getElementById('submitBroadcastAlertBtn');
 
+// Admin Expenses Search DOM
+const adminExpensesSearchInput = document.getElementById('adminExpensesSearchInput');
+
+// Admin Notify Specific Residents Modal DOM
+const openNotifySpecificResidentsModalBtn = document.getElementById('openNotifySpecificResidentsModalBtn');
+const adminNotifySpecificResidentsModal = document.getElementById('adminNotifySpecificResidentsModal');
+const closeAdminNotifySpecificResidentsModal = document.getElementById('closeAdminNotifySpecificResidentsModal');
+const cancelAdminNotifySpecificBtn = document.getElementById('cancelAdminNotifySpecificBtn');
+const adminNotifySpecificResidentsForm = document.getElementById('adminNotifySpecificResidentsForm');
+const adminNotifyResidentsSearchInput = document.getElementById('adminNotifyResidentsSearchInput');
+const adminNotifyResidentsCheckboxesList = document.getElementById('adminNotifyResidentsCheckboxesList');
+const adminNotifySelectAllBtn = document.getElementById('adminNotifySelectAllBtn');
+const adminNotifyDeselectAllBtn = document.getElementById('adminNotifyDeselectAllBtn');
+const adminNotifySelectedCount = document.getElementById('adminNotifySelectedCount');
+const adminNotifySpecificTitleInput = document.getElementById('adminNotifySpecificTitleInput');
+const adminNotifySpecificMessageInput = document.getElementById('adminNotifySpecificMessageInput');
+const submitAdminNotifySpecificBtn = document.getElementById('submitAdminNotifySpecificBtn');
+
+// Guard Notify Admin Modal DOM
+const guardNotifyAdminBtn = document.getElementById('guardNotifyAdminBtn');
+const guardNotifyAdminModal = document.getElementById('guardNotifyAdminModal');
+const closeGuardNotifyAdminModal = document.getElementById('closeGuardNotifyAdminModal');
+const cancelGuardNotifyAdminBtn = document.getElementById('cancelGuardNotifyAdminBtn');
+const guardNotifyAdminForm = document.getElementById('guardNotifyAdminForm');
+const guardNotifyAdminPresetSelect = document.getElementById('guardNotifyAdminPresetSelect');
+const guardNotifyAdminTitleInput = document.getElementById('guardNotifyAdminTitleInput');
+const guardNotifyAdminMessageInput = document.getElementById('guardNotifyAdminMessageInput');
+const submitGuardNotifyAdminBtn = document.getElementById('submitGuardNotifyAdminBtn');
+
+// Admin Notify Guard Modal DOM
+const openNotifyGuardModalBtn = document.getElementById('openNotifyGuardModalBtn');
+const adminNotifyGuardFromGuardBtn = document.getElementById('adminNotifyGuardFromGuardBtn');
+const adminNotifyGuardModal = document.getElementById('adminNotifyGuardModal');
+const closeAdminNotifyGuardModal = document.getElementById('closeAdminNotifyGuardModal');
+const cancelAdminNotifyGuardBtn = document.getElementById('cancelAdminNotifyGuardBtn');
+const adminNotifyGuardForm = document.getElementById('adminNotifyGuardForm');
+const adminNotifyGuardPresetSelect = document.getElementById('adminNotifyGuardPresetSelect');
+const adminNotifyGuardTitleInput = document.getElementById('adminNotifyGuardTitleInput');
+const adminNotifyGuardMessageInput = document.getElementById('adminNotifyGuardMessageInput');
+const submitAdminNotifyGuardBtn = document.getElementById('submitAdminNotifyGuardBtn');
+
 // Profile Modal DOM
 const openProfileModalBtn = document.getElementById('openProfileModalBtn');
 const homeProfileBtn = document.getElementById('homeProfileBtn');
@@ -386,7 +483,7 @@ function setDashboardView(view, pushHistory = true) {
   if (isGuard) {
     view = 'guard';
   } else {
-    const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'admin'];
+    const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'guardNotices', 'admin'];
     if (!validViews.includes(view)) {
       view = 'home';
     }
@@ -411,6 +508,7 @@ function setDashboardView(view, pushHistory = true) {
     news: 'newsSection',
     visits: 'myVisitsSection',
     booking: 'bookingSection',
+    guardNotices: 'guardNoticesSection',
     admin: 'adminSection',
     guard: 'guardSection'
   };
@@ -436,6 +534,7 @@ function setDashboardView(view, pushHistory = true) {
   if (view === 'news') loadNews();
   if (view === 'visits') loadUserVisits();
   if (view === 'booking') loadBookings();
+  if (view === 'guardNotices') loadResidentGuardNotices();
   if (view === 'guard') loadGuardData();
   if (view === 'admin' && state.authenticatedUser?.role === 'admin') {
     setAdminTab(state.activeAdminTab || 'vecinos');
@@ -1699,6 +1798,9 @@ async function loadAdminData() {
     }
 
     renderAdminPanel();
+    if (state.activeAdminTab === 'auditoria') {
+      loadAdminAuditLogs();
+    }
   } catch (error) {
     console.error('Error loading admin data:', error);
   }
@@ -1715,11 +1817,15 @@ function setAdminTab(tabName) {
     guardia: 'adminTabGuardia',
     expensas: 'adminTabExpensas',
     canchas: 'adminTabCanchas',
-    alertas: 'adminTabAlertas'
+    alertas: 'adminTabAlertas',
+    auditoria: 'adminTabAuditoria'
   };
   document.querySelectorAll('.admin-tab-view').forEach((view) => {
     view.classList.toggle('active', view.id === tabMap[tabName]);
   });
+  if (tabName === 'auditoria') {
+    loadAdminAuditLogs();
+  }
 }
 
 function setVecinosSubtab(subtabName) {
@@ -2116,111 +2222,7 @@ function renderAdminPanel() {
   }
 
   // Admin expenses list
-  const adminExpensesList = document.getElementById('adminExpensesList');
-  const adminExpensesStatusBadge = document.getElementById('adminExpensesStatusBadge');
-  if (adminExpensesList) {
-    const expenses = state.adminExpenses || [];
-    const inReviewCount = expenses.filter((e) => e.status === 'En revisión').length;
-
-    if (adminExpensesStatusBadge) {
-      adminExpensesStatusBadge.textContent = inReviewCount > 0 ? `${inReviewCount} en revisión` : `${expenses.length} liquidaciones`;
-    }
-
-    if (expenses.length === 0) {
-      adminExpensesList.innerHTML = `
-        <li class="visit-item">
-          <div>
-            <strong>Sin liquidaciones cargadas</strong>
-            <small>Hacé click en "➕ Emitir Nueva Liquidación" para generar las expensas del mes.</small>
-          </div>
-        </li>
-      `;
-    } else {
-      adminExpensesList.innerHTML = expenses
-        .map((exp) => `
-          <li class="visit-item">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-              <div>
-                <strong>${escapeHTML(exp.nombre)} ${escapeHTML(exp.apellido)} <small>(DNI ${escapeHTML(exp.numeroDocumento)}${exp.lote ? ` · Lote ${escapeHTML(exp.lote)} Mz ${escapeHTML(exp.manzana || '-')}` : ''})</small></strong>
-                <p style="margin: 0.2rem 0; font-size: 0.95rem;">
-                  <strong>${escapeHTML(exp.period)}</strong> — $ ${Number(exp.amount).toLocaleString('es-AR')}
-                </p>
-                <small>${exp.concept ? `📌 ${escapeHTML(exp.concept)} · ` : ''}${exp.paymentReference ? `📄 Ref: <strong>${escapeHTML(exp.paymentReference)}</strong> · ` : ''}Vencimiento: ${escapeHTML(exp.dueDate)}</small>
-              </div>
-              <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                ${exp.receiptPath ? `
-                  <button type="button" class="btn-inline-action view-receipt-btn admin-view-receipt-btn" data-id="${exp.id}" title="Ver comprobante de pago digital">
-                    <span>📎</span> Ver Comprobante
-                  </button>
-                ` : ''}
-                ${exp.status !== 'Pagado' ? `
-                  <button type="button" class="btn-inline-action success admin-approve-expense-btn" data-id="${exp.id}" title="Confirmar cobro">Acreditar Pago</button>
-                ` : `
-                  <span class="badge soft">Acreditado</span>
-                `}
-                ${exp.status === 'En revisión' ? `
-                  <button type="button" class="btn-inline-action danger admin-reject-expense-btn" data-id="${exp.id}" title="Rechazar comprobante informado">Desestimar</button>
-                ` : ''}
-                ${exp.status === 'Pendiente' ? `
-                  <button type="button" class="btn-inline-action danger admin-delete-expense-btn" data-id="${exp.id}" title="Eliminar liquidación emitida por error">Eliminar</button>
-                ` : ''}
-              </div>
-            </div>
-            <div class="visit-meta" style="margin-top: 0.4rem;">
-              <span>${exp.paidAt ? `Fecha pago: ${new Date(exp.paidAt).toLocaleDateString()}` : 'Emitida'}${exp.receiptPath ? ' · 📎 Comprobante adjunto' : ''}</span>
-              <em class="visit-status ${exp.status === 'Pagado' ? 'confirmed' : (exp.status === 'En revisión' ? 'neutral' : 'pending')}">${escapeHTML(exp.status)}</em>
-            </div>
-          </li>
-        `)
-        .join('');
-
-      adminExpensesList.querySelectorAll('.admin-view-receipt-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const exp = (state.adminExpenses || []).find((e) => String(e.id) === String(btn.dataset.id));
-          if (exp) openViewReceiptModal(exp);
-        });
-      });
-
-      adminExpensesList.querySelectorAll('.admin-approve-expense-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('¿Confirmar y acreditar el pago de este periodo?')) return;
-          try {
-            await API.expenses.updateStatus(btn.dataset.id, 'Pagado');
-            showToast('Pago acreditado con éxito. Propietario notificado.');
-            loadAdminData();
-          } catch (err) {
-            showToast(err.message);
-          }
-        });
-      });
-
-      adminExpensesList.querySelectorAll('.admin-reject-expense-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('¿Desestimar este aviso de pago y devolverlo a estado Pendiente?')) return;
-          try {
-            await API.expenses.updateStatus(btn.dataset.id, 'Pendiente');
-            showToast('Aviso de pago desestimado. Vuelto a Pendiente.');
-            loadAdminData();
-          } catch (err) {
-            showToast(err.message);
-          }
-        });
-      });
-
-      adminExpensesList.querySelectorAll('.admin-delete-expense-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('¿Estás seguro de eliminar esta liquidación emitida?')) return;
-          try {
-            await API.expenses.deleteAdmin(btn.dataset.id);
-            showToast('Liquidación eliminada correctamente.');
-            loadAdminData();
-          } catch (err) {
-            showToast(err.message);
-          }
-        });
-      });
-    }
-  }
+  renderAdminExpensesList();
 
   // Admin Court Supervision
   if (adminCourtScheduleList) {
@@ -2421,6 +2423,153 @@ function renderAdminPanel() {
       });
     }
   }
+}
+
+function renderAdminExpensesList() {
+  const adminExpensesList = document.getElementById('adminExpensesList');
+  const adminExpensesStatusBadge = document.getElementById('adminExpensesStatusBadge');
+  if (!adminExpensesList) return;
+
+  let expenses = state.adminExpenses || [];
+  const inReviewCount = expenses.filter((e) => e.status === 'En revisión').length;
+
+  if (adminExpensesStatusBadge) {
+    adminExpensesStatusBadge.textContent = inReviewCount > 0 ? `${inReviewCount} en revisión` : `${expenses.length} liquidaciones`;
+  }
+
+  // Filter by search query (lote, manzana, dni, nombre, apellido, period, ref)
+  if (state.adminExpensesSearchQuery && state.adminExpensesSearchQuery.trim()) {
+    const q = state.adminExpensesSearchQuery.trim().toLowerCase();
+    const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+    expenses = expenses.filter((exp) => {
+      const lote = String(exp.lote || '').toLowerCase();
+      const manzana = String(exp.manzana || '').toLowerCase();
+      const dni = String(exp.numeroDocumento || '').toLowerCase();
+      const nombre = String(exp.nombre || '').toLowerCase();
+      const apellido = String(exp.apellido || '').toLowerCase();
+      const fullName = `${nombre} ${apellido}`;
+      const period = String(exp.period || '').toLowerCase();
+      const ref = String(exp.paymentReference || '').toLowerCase();
+
+      // Combined formats like L2, L2M2, Lote 2 Mz 2
+      const lotFormats = [
+        lote,
+        `l${lote}`,
+        `lote ${lote}`,
+        `l${lote}m${manzana}`,
+        `l${lote}mz${manzana}`,
+        `lote ${lote} mz ${manzana}`
+      ];
+
+      return (
+        dni.includes(q) ||
+        apellido.includes(q) ||
+        nombre.includes(q) ||
+        fullName.includes(q) ||
+        period.includes(q) ||
+        ref.includes(q) ||
+        lotFormats.some((fmt) => fmt.includes(q)) ||
+        (cleanQ && `${lote}${manzana}`.includes(cleanQ))
+      );
+    });
+  }
+
+  if (expenses.length === 0) {
+    const isFiltered = Boolean(state.adminExpensesSearchQuery && state.adminExpensesSearchQuery.trim());
+    adminExpensesList.innerHTML = `
+      <li class="visit-item">
+        <div>
+          <strong>${isFiltered ? 'No se encontraron liquidaciones' : 'Sin liquidaciones cargadas'}</strong>
+          <small>${isFiltered ? 'No coinciden con el término de búsqueda (lote, DNI o apellido).' : 'Hacé click en "➕ Emitir Nueva Liquidación" para generar las expensas del mes.'}</small>
+        </div>
+      </li>
+    `;
+    return;
+  }
+
+  adminExpensesList.innerHTML = expenses
+    .map((exp) => `
+      <li class="visit-item">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+          <div>
+            <strong>${escapeHTML(exp.nombre)} ${escapeHTML(exp.apellido)} <small>(DNI ${escapeHTML(exp.numeroDocumento)}${exp.lote ? ` · Lote ${escapeHTML(exp.lote)} Mz ${escapeHTML(exp.manzana || '-')}` : ''})</small></strong>
+            <p style="margin: 0.2rem 0; font-size: 0.95rem;">
+              <strong>${escapeHTML(exp.period)}</strong> — $ ${Number(exp.amount).toLocaleString('es-AR')}
+            </p>
+            <small>${exp.concept ? `📌 ${escapeHTML(exp.concept)} · ` : ''}${exp.paymentReference ? `📄 Ref: <strong>${escapeHTML(exp.paymentReference)}</strong> · ` : ''}Vencimiento: ${escapeHTML(exp.dueDate)}</small>
+          </div>
+          <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+            ${exp.receiptPath ? `
+              <button type="button" class="btn-inline-action view-receipt-btn admin-view-receipt-btn" data-id="${exp.id}" title="Ver comprobante de pago digital">
+                <span>📎</span> Ver Comprobante
+              </button>
+            ` : ''}
+            ${exp.status !== 'Pagado' ? `
+              <button type="button" class="btn-inline-action success admin-approve-expense-btn" data-id="${exp.id}" title="Confirmar cobro">Acreditar Pago</button>
+            ` : `
+              <span class="badge soft">Acreditado</span>
+            `}
+            ${exp.status === 'En revisión' ? `
+              <button type="button" class="btn-inline-action danger admin-reject-expense-btn" data-id="${exp.id}" title="Rechazar comprobante informado">Desestimar</button>
+            ` : ''}
+            ${exp.status === 'Pendiente' ? `
+              <button type="button" class="btn-inline-action danger admin-delete-expense-btn" data-id="${exp.id}" title="Eliminar liquidación emitida por error">Eliminar</button>
+            ` : ''}
+          </div>
+        </div>
+        <div class="visit-meta" style="margin-top: 0.4rem;">
+          <span>${exp.paidAt ? `Fecha pago: ${new Date(exp.paidAt).toLocaleDateString()}` : 'Emitida'}${exp.receiptPath ? ' · 📎 Comprobante adjunto' : ''}</span>
+          <em class="visit-status ${exp.status === 'Pagado' ? 'confirmed' : (exp.status === 'En revisión' ? 'neutral' : 'pending')}">${escapeHTML(exp.status)}</em>
+        </div>
+      </li>
+    `)
+    .join('');
+
+  adminExpensesList.querySelectorAll('.admin-view-receipt-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const exp = (state.adminExpenses || []).find((e) => String(e.id) === String(btn.dataset.id));
+      if (exp) openViewReceiptModal(exp);
+    });
+  });
+
+  adminExpensesList.querySelectorAll('.admin-approve-expense-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Confirmar y acreditar el pago de este periodo?')) return;
+      try {
+        await API.expenses.updateStatus(btn.dataset.id, 'Pagado');
+        showToast('Pago acreditado con éxito. Propietario notificado.');
+        loadAdminData();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  });
+
+  adminExpensesList.querySelectorAll('.admin-reject-expense-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Desestimar este aviso de pago y devolverlo a estado Pendiente?')) return;
+      try {
+        await API.expenses.updateStatus(btn.dataset.id, 'Pendiente');
+        showToast('Aviso de pago desestimado. Vuelto a Pendiente.');
+        loadAdminData();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  });
+
+  adminExpensesList.querySelectorAll('.admin-delete-expense-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro de eliminar esta liquidación emitida?')) return;
+      try {
+        await API.expenses.deleteAdmin(btn.dataset.id);
+        showToast('Liquidación eliminada correctamente.');
+        loadAdminData();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  });
 }
 
 // ----------------- ADMIN EXPENSE EMISSION ----------------- //
@@ -3167,6 +3316,305 @@ async function handleBroadcastAlert(e) {
   }
 }
 
+// ----------------- GUARD TO ADMIN NOTIFICATIONS ----------------- //
+
+const GUARD_TO_ADMIN_PRESETS = {
+  custom: {
+    title: 'Novedad de Guardia para Administración',
+    text: ''
+  },
+  incidente: {
+    title: '🚨 Novedad / Incidente de seguridad en predio',
+    text: 'Se informa a la administración que se ha registrado una novedad o incidente de seguridad en el predio. Detalle constatado por el personal de garita: '
+  },
+  mantenimiento: {
+    title: '🔧 Solicitud urgente de mantenimiento o reparación',
+    text: 'Se solicita intervención de mantenimiento con carácter prioritario debido a un desperfecto en garita / barrera de acceso / luminaria perimetral: '
+  },
+  paquete_admin: {
+    title: '📦 Correspondencia o paquetería para administración',
+    text: 'Ha arribado a la garita correspondencia o paquetería dirigida a la Administración de Rancho Doble S. Queda resguardada en garita para su retiro.'
+  },
+  consulta: {
+    title: '📋 Consulta operativa o de autorización',
+    text: 'Se eleva la siguiente consulta operativa a la administración respecto a la autorización o situación de: '
+  },
+  relevo: {
+    title: '🛡️ Reporte o novedad de cierre de turno',
+    text: 'Reporte del personal de guardia al cierre de turno sin novedades operativas relevantes / novedades del turno a considerar: '
+  }
+};
+
+function openGuardNotifyAdminModal() {
+  if (!guardNotifyAdminModal) return;
+  if (guardNotifyAdminForm) guardNotifyAdminForm.reset();
+  if (guardNotifyAdminPresetSelect) guardNotifyAdminPresetSelect.value = 'custom';
+  if (guardNotifyAdminTitleInput) guardNotifyAdminTitleInput.value = 'Novedad de Guardia para Administración';
+  if (guardNotifyAdminMessageInput) guardNotifyAdminMessageInput.value = '';
+  guardNotifyAdminModal.style.display = 'grid';
+  window.history.pushState({ modal: 'guardNotifyAdmin', view: state.activeDashboardView }, '', '#guardia-a-admin');
+}
+
+function closeGuardNotifyAdminModalFn(fromPopState = false) {
+  if (!guardNotifyAdminModal) return;
+  guardNotifyAdminModal.style.display = 'none';
+  if (!fromPopState && window.history.state?.modal === 'guardNotifyAdmin') {
+    window.history.back();
+  }
+}
+
+async function handleGuardNotifyAdminSubmit(e) {
+  e.preventDefault();
+  const title = guardNotifyAdminTitleInput ? guardNotifyAdminTitleInput.value.trim() : '';
+  const text = guardNotifyAdminMessageInput ? guardNotifyAdminMessageInput.value.trim() : '';
+
+  if (!title || !text) {
+    showToast('Por favor completá el título y el mensaje para la administración.');
+    return;
+  }
+
+  try {
+    if (submitGuardNotifyAdminBtn) {
+      submitGuardNotifyAdminBtn.disabled = true;
+      submitGuardNotifyAdminBtn.textContent = 'Enviando...';
+    }
+
+    const res = await API.notifications.guardToAdmin({ title, text });
+    showToast(res.message || 'Notificación enviada a la Administración.');
+    closeGuardNotifyAdminModalFn(false);
+    if (guardNotifyAdminForm) guardNotifyAdminForm.reset();
+    await loadNotifications();
+  } catch (err) {
+    showToast(err.message || 'Error al enviar notificación a la administración.');
+  } finally {
+    if (submitGuardNotifyAdminBtn) {
+      submitGuardNotifyAdminBtn.disabled = false;
+      submitGuardNotifyAdminBtn.textContent = '📨 Enviar a Administración';
+    }
+  }
+}
+
+// ----------------- ADMIN TO GUARD NOTIFICATIONS ----------------- //
+
+const ADMIN_TO_GUARD_PRESETS = {
+  custom: {
+    title: 'Instrucción de Administración para Guardia',
+    text: ''
+  },
+  autorizacion: {
+    title: '🚗 Autorización de ingreso especial',
+    text: 'Se autoriza por parte de la administración el ingreso del siguiente vehículo / proveedor / visita al lote: '
+  },
+  seguridad: {
+    title: '🚨 Alerta preventiva de seguridad para accesos',
+    text: 'Instrucción preventiva para el personal de garita: extremar los controles de ingreso y verificación de patentes durante el día de hoy.'
+  },
+  obra: {
+    title: '🔨 Directiva sobre horarios de obras y proveedores',
+    text: 'Recordatorio para garita: el horario de ingreso de cuadrillas de obra y proveedores es de 08:00 a 17:00 hs. No permitir ingresos fuera de ese rango salvo expresa autorización.'
+  },
+  protocolo: {
+    title: '🔄 Actualización de directiva o protocolo de garita',
+    text: 'Se instruye al personal de guardia implementar la siguiente directiva operativa en el control de accesos: '
+  }
+};
+
+function openAdminNotifyGuardModal() {
+  if (!adminNotifyGuardModal) return;
+  if (adminNotifyGuardForm) adminNotifyGuardForm.reset();
+  if (adminNotifyGuardPresetSelect) adminNotifyGuardPresetSelect.value = 'custom';
+  if (adminNotifyGuardTitleInput) adminNotifyGuardTitleInput.value = 'Instrucción de Administración para Guardia';
+  if (adminNotifyGuardMessageInput) adminNotifyGuardMessageInput.value = '';
+  adminNotifyGuardModal.style.display = 'grid';
+  window.history.pushState({ modal: 'adminNotifyGuard', view: state.activeDashboardView }, '', '#admin-a-guardia');
+}
+
+function closeAdminNotifyGuardModalFn(fromPopState = false) {
+  if (!adminNotifyGuardModal) return;
+  adminNotifyGuardModal.style.display = 'none';
+  if (!fromPopState && window.history.state?.modal === 'adminNotifyGuard') {
+    window.history.back();
+  }
+}
+
+async function handleAdminNotifyGuardSubmit(e) {
+  e.preventDefault();
+  const title = adminNotifyGuardTitleInput ? adminNotifyGuardTitleInput.value.trim() : '';
+  const text = adminNotifyGuardMessageInput ? adminNotifyGuardMessageInput.value.trim() : '';
+
+  if (!title || !text) {
+    showToast('Por favor completá el título y la instrucción para la guardia.');
+    return;
+  }
+
+  try {
+    if (submitAdminNotifyGuardBtn) {
+      submitAdminNotifyGuardBtn.disabled = true;
+      submitAdminNotifyGuardBtn.textContent = 'Enviando...';
+    }
+
+    const res = await API.notifications.adminToGuard({ title, text });
+    showToast(res.message || 'Instrucción enviada al personal de Guardia.');
+    closeAdminNotifyGuardModalFn(false);
+    if (adminNotifyGuardForm) adminNotifyGuardForm.reset();
+    await loadNotifications();
+  } catch (err) {
+    showToast(err.message || 'Error al enviar instrucción a la guardia.');
+  } finally {
+    if (submitAdminNotifyGuardBtn) {
+      submitAdminNotifyGuardBtn.disabled = false;
+      submitAdminNotifyGuardBtn.textContent = '📨 Enviar a Guardia';
+    }
+  }
+}
+
+// ----------------- ADMIN TO SPECIFIC RESIDENTS NOTIFICATIONS ----------------- //
+
+async function openAdminNotifySpecificResidentsModal() {
+  if (!adminNotifySpecificResidentsModal) return;
+  state.adminNotifySelectedResidents = new Set();
+  state.adminNotifyResidentsSearchQuery = '';
+  if (adminNotifyResidentsSearchInput) adminNotifyResidentsSearchInput.value = '';
+  if (adminNotifySpecificTitleInput) adminNotifySpecificTitleInput.value = 'Aviso de Administración';
+  if (adminNotifySpecificMessageInput) adminNotifySpecificMessageInput.value = '';
+
+  // Ensure approved users roster is available
+  if (!state.approvedUsers || state.approvedUsers.length === 0) {
+    try {
+      const activeUsers = await API.admin.getApprovedUsers();
+      state.approvedUsers = activeUsers || [];
+    } catch (e) {
+      console.warn('Error fetching active users for notification', e);
+    }
+  }
+
+  renderAdminNotifyResidentsCheckboxes();
+  adminNotifySpecificResidentsModal.style.display = 'grid';
+  window.history.pushState({ modal: 'adminNotifySpecific', view: state.activeDashboardView }, '', '#notificar-vecinos');
+}
+
+function closeAdminNotifySpecificResidentsModalFn(fromPopState = false) {
+  if (!adminNotifySpecificResidentsModal) return;
+  adminNotifySpecificResidentsModal.style.display = 'none';
+  if (!fromPopState && window.history.state?.modal === 'adminNotifySpecific') {
+    window.history.back();
+  }
+}
+
+function updateAdminNotifyCountBadge() {
+  if (!adminNotifySelectedCount) return;
+  const count = state.adminNotifySelectedResidents ? state.adminNotifySelectedResidents.size : 0;
+  adminNotifySelectedCount.textContent = `${count} seleccionado${count === 1 ? '' : 's'}`;
+}
+
+function renderAdminNotifyResidentsCheckboxes() {
+  if (!adminNotifyResidentsCheckboxesList) return;
+
+  let residents = (state.approvedUsers || []).filter((u) => u.role === 'user' || (u.lote && u.role !== 'guardia'));
+
+  if (state.adminNotifyResidentsSearchQuery && state.adminNotifyResidentsSearchQuery.trim()) {
+    const q = state.adminNotifyResidentsSearchQuery.trim().toLowerCase();
+    residents = residents.filter((r) => {
+      const lote = String(r.lote || '').toLowerCase();
+      const manzana = String(r.manzana || '').toLowerCase();
+      const dni = String(r.numeroDocumento || '').toLowerCase();
+      const nombre = String(r.nombre || '').toLowerCase();
+      const apellido = String(r.apellido || '').toLowerCase();
+      const user = String(r.username || '').toLowerCase();
+      const email = String(r.email || '').toLowerCase();
+      return (
+        lote.includes(q) ||
+        `l${lote}`.includes(q) ||
+        `l${lote}m${manzana}`.includes(q) ||
+        dni.includes(q) ||
+        nombre.includes(q) ||
+        apellido.includes(q) ||
+        `${nombre} ${apellido}`.includes(q) ||
+        user.includes(q) ||
+        email.includes(q)
+      );
+    });
+  }
+
+  if (residents.length === 0) {
+    adminNotifyResidentsCheckboxesList.innerHTML = `
+      <div style="padding: 0.8rem; text-align: center; color: var(--muted); font-size: 0.82rem;">
+        No se encontraron vecinos habilitados que coincidan con la búsqueda.
+      </div>
+    `;
+    updateAdminNotifyCountBadge();
+    return;
+  }
+
+  adminNotifyResidentsCheckboxesList.innerHTML = residents
+    .map((r) => {
+      const isChecked = state.adminNotifySelectedResidents.has(Number(r.id)) || state.adminNotifySelectedResidents.has(String(r.id));
+      const loc = r.lote || r.manzana ? `Lote ${escapeHTML(r.lote || '-')}, Mz ${escapeHTML(r.manzana || '-')}` : 'Sin lote';
+      return `
+        <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.6rem; border-radius: 6px; background: rgba(255,255,255,0.03); cursor: pointer; user-select: none;">
+          <input type="checkbox" class="admin-notify-resident-cb" value="${r.id}" ${isChecked ? 'checked' : ''} style="cursor: pointer; width: 16px; height: 16px;" />
+          <div style="font-size: 0.83rem; flex: 1;">
+            <strong style="color: #fff;">${escapeHTML(r.apellido)}, ${escapeHTML(r.nombre)}</strong>
+            <span style="color: var(--muted); font-size: 0.76rem;"> · 📍 ${loc} · 🪪 DNI ${escapeHTML(r.numeroDocumento || '-')}</span>
+          </div>
+        </label>
+      `;
+    })
+    .join('');
+
+  adminNotifyResidentsCheckboxesList.querySelectorAll('.admin-notify-resident-cb').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      const val = Number(e.target.value);
+      if (e.target.checked) {
+        state.adminNotifySelectedResidents.add(val);
+      } else {
+        state.adminNotifySelectedResidents.delete(val);
+      }
+      updateAdminNotifyCountBadge();
+    });
+  });
+
+  updateAdminNotifyCountBadge();
+}
+
+async function handleAdminNotifySpecificSubmit(e) {
+  e.preventDefault();
+  const residentIds = Array.from(state.adminNotifySelectedResidents || []);
+  const title = adminNotifySpecificTitleInput ? adminNotifySpecificTitleInput.value.trim() : '';
+  const text = adminNotifySpecificMessageInput ? adminNotifySpecificMessageInput.value.trim() : '';
+
+  if (residentIds.length === 0) {
+    showToast('Por favor seleccioná al menos un vecino destinatario.');
+    return;
+  }
+
+  if (!title || !text) {
+    showToast('Por favor completá el título y el mensaje.');
+    return;
+  }
+
+  try {
+    if (submitAdminNotifySpecificBtn) {
+      submitAdminNotifySpecificBtn.disabled = true;
+      submitAdminNotifySpecificBtn.textContent = 'Enviando...';
+    }
+
+    const res = await API.notifications.adminNotifyResidents({ residentIds, title, text });
+    showToast(res.message || `Notificación privada enviada a ${residentIds.length} vecino(s).`);
+    closeAdminNotifySpecificResidentsModalFn(false);
+    if (adminNotifySpecificResidentsForm) adminNotifySpecificResidentsForm.reset();
+    state.adminNotifySelectedResidents.clear();
+    await loadNotifications();
+  } catch (err) {
+    showToast(err.message || 'Error al enviar notificación a los vecinos.');
+  } finally {
+    if (submitAdminNotifySpecificBtn) {
+      submitAdminNotifySpecificBtn.disabled = false;
+      submitAdminNotifySpecificBtn.textContent = '📨 Enviar a Vecinos Seleccionados';
+    }
+  }
+}
+
 // ----------------- GUARD QR SCANNER & VISITOR LOOKUP ----------------- //
 
 let html5QrCodeScanner = null;
@@ -3415,7 +3863,7 @@ async function loadGuardData() {
   if (state.authenticatedUser?.role !== 'guardia') return;
   await Promise.all([
     loadGuardVisits(),
-    loadGuardActivityLogs(),
+    loadGuardResidentNotices(),
     loadNotifications()
   ]);
 }
@@ -3557,7 +4005,7 @@ function renderGuardVisits() {
       try {
         await API.visits.updateStatus(visitId, 'Ingresado');
         showToast(`🟢 Ingreso confirmado: ${visitorName} (Patente: ${plate})`);
-        await Promise.all([loadGuardVisits(), loadGuardActivityLogs()]);
+        await loadGuardVisits();
       } catch (err) {
         showToast(err.message || 'Error al registrar ingreso.');
         btn.disabled = false;
@@ -3575,7 +4023,7 @@ function renderGuardVisits() {
       try {
         await API.visits.updateStatus(visitId, 'Egresado');
         showToast(`🚪 Egreso confirmado: ${visitorName} (Patente: ${plate})`);
-        await Promise.all([loadGuardVisits(), loadGuardActivityLogs()]);
+        await loadGuardVisits();
       } catch (err) {
         showToast(err.message || 'Error al registrar egreso.');
         btn.disabled = false;
@@ -3593,82 +4041,12 @@ function renderGuardVisits() {
 }
 
 async function loadGuardActivityLogs() {
-  try {
-    const logs = await API.activityLogs.get({ limit: 60 });
-    state.guardActivityLogs = logs || [];
-    renderGuardActivityLogs();
-  } catch (error) {
-    console.error('Error cargando registros de actividad de guardia:', error);
-  }
+  // Activity audit is restricted to administrators only.
+  return;
 }
 
 function renderGuardActivityLogs() {
-  if (!guardActivityLogsList) return;
-
-  const logs = state.guardActivityLogs || [];
-  if (guardLogsCountBadge) {
-    guardLogsCountBadge.textContent = `${logs.length} acci${logs.length === 1 ? 'ón' : 'ones'}`;
-  }
-
-  if (logs.length === 0) {
-    guardActivityLogsList.innerHTML = `
-      <div style="padding: 1.2rem; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
-        Aún no hay acciones registradas en este turno. Toda acción realizada (escaneo, búsqueda, ingreso, egreso) quedará guardada aquí.
-      </div>
-    `;
-    return;
-  }
-
-  guardActivityLogsList.innerHTML = logs
-    .map((log) => {
-      const date = new Date(log.createdAt);
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
-
-      let badgeColor = 'rgba(212, 163, 89, 0.2)';
-      let badgeTextColor = 'var(--gold)';
-      let actionLabel = log.action;
-
-      if (log.action.includes('INGRESO')) {
-        badgeColor = 'rgba(105, 210, 166, 0.2)';
-        badgeTextColor = 'var(--primary)';
-        actionLabel = '🟢 Ingreso Confirmado';
-      } else if (log.action.includes('EGRESO')) {
-        badgeColor = 'rgba(255, 122, 122, 0.2)';
-        badgeTextColor = 'var(--danger)';
-        actionLabel = '🚪 Egreso Confirmado';
-      } else if (log.action.includes('LOGIN')) {
-        badgeColor = 'rgba(138, 206, 255, 0.2)';
-        badgeTextColor = 'var(--secondary)';
-        actionLabel = '🛡️ Inicio Turno';
-      } else if (log.action.includes('CAMBIO_GUARDIA')) {
-        badgeColor = 'rgba(255, 122, 122, 0.2)';
-        badgeTextColor = 'var(--danger)';
-        actionLabel = '🔄 Cambio Guardia';
-      } else if (log.action.includes('QR')) {
-        badgeColor = 'rgba(212, 163, 89, 0.2)';
-        badgeTextColor = 'var(--gold)';
-        actionLabel = '📷 Pase QR';
-      } else if (log.action.includes('PATENTE')) {
-        badgeColor = 'rgba(138, 206, 255, 0.2)';
-        badgeTextColor = 'var(--secondary)';
-        actionLabel = '🔍 Búsqueda Patente';
-      }
-
-      return `
-        <div class="guard-log-item">
-          <div class="guard-log-info">
-            <div class="guard-log-badge-row">
-              <span class="badge soft guard-log-badge" style="background: ${badgeColor}; color: ${badgeTextColor};">${escapeHTML(actionLabel)}</span>
-              <strong class="guard-log-detail">${escapeHTML(log.details || '')}</strong>
-            </div>
-            <small class="guard-log-operator">Operador: ${escapeHTML(log.userName || '')}</small>
-          </div>
-          <span class="guard-log-time">${dateStr} ${timeStr}</span>
-        </div>
-      `;
-    })
-    .join('');
+  return;
 }
 
 async function handleGuardShiftChange() {
@@ -3691,42 +4069,481 @@ async function handleGuardShiftChange() {
   showToast('Cambio de guardia completado. Ingrese las credenciales del operador entrante.');
 }
 
-async function loadAdminGuardLogs() {
-  try {
-    const logs = await API.activityLogs.get({ limit: 120 });
-    state.adminGuardLogs = logs || [];
-    renderAdminGuardLogs();
-  } catch (err) {
-    console.error('Error cargando registros de auditoría de guardia:', err);
+// =========================================================================
+// AVISOS A GUARDIA & NOTIFICACIONES DE GUARDIA A VECINOS
+// =========================================================================
+
+const NOTICE_CATEGORY_CONFIG = {
+  'Delivery': {
+    icon: '🛵',
+    tag: 'Ingreso',
+    companyLabel: 'Empresa / Comercio / Repartidor (opcional)',
+    companyPlaceholder: 'Ej: PedidosYa, Rappi, Coto, etc.',
+    detailsPlaceholder: 'Ej: Llega repartidor de PedidosYa en moto roja. Autorizo el ingreso al Lote.'
+  },
+  'Proveedor de servicios': {
+    icon: '🔧',
+    tag: 'Trabajos',
+    companyLabel: 'Proveedor / Empresa / Rubro (opcional)',
+    companyPlaceholder: 'Ej: Piletero Juan Pérez / Jardinero',
+    detailsPlaceholder: 'Ej: Ingresa jardinero Carlos Gómez (DNI ...) a realizar corte de pasto en el día de hoy.'
+  },
+  'Consulta de ingresos': {
+    icon: '🔍',
+    tag: 'Control',
+    companyLabel: 'Persona o servicio a consultar (opcional)',
+    companyPlaceholder: 'Ej: Flete / Técnico de internet / Visita',
+    detailsPlaceholder: 'Ej: Deseo consultar si ingresó el service técnico de internet o si se encuentra alguien en el lote.'
+  },
+  'Animales sueltos': {
+    icon: '🐕',
+    tag: 'Alerta',
+    companyLabel: 'Ubicación observada / Raza (opcional)',
+    companyPlaceholder: 'Ej: Calle Los Álamos / Labrador dorado',
+    detailsPlaceholder: 'Ej: Hay un perro labrador suelto sobre la calle principal cerca del lote 5.'
+  },
+  'Otros…': {
+    icon: '📝',
+    tag: 'General',
+    companyLabel: 'Referencia u organismo (opcional)',
+    companyPlaceholder: 'Ej: Consulta general / Inspección',
+    detailsPlaceholder: 'Escribí tu consulta, observación o aviso particular para el personal de garita...'
+  }
+};
+
+function setNoticeCategory(category) {
+  state.activeNoticeCategory = category;
+  const config = NOTICE_CATEGORY_CONFIG[category] || NOTICE_CATEGORY_CONFIG['Otros…'];
+
+  // Update category buttons active state
+  document.querySelectorAll('.notice-option-card').forEach((btn) => {
+    const isSelected = btn.dataset.noticeCat === category;
+    btn.classList.toggle('active', isSelected);
+  });
+
+  if (guardNoticeCategoryInput) {
+    guardNoticeCategoryInput.value = category;
+  }
+
+  if (selectedNoticeCategoryBadge) {
+    selectedNoticeCategoryBadge.textContent = `${config.icon} ${category}`;
+  }
+
+  if (guardNoticeCompanyLabel) {
+    guardNoticeCompanyLabel.textContent = config.companyLabel;
+  }
+
+  if (guardNoticeCompanyInput) {
+    guardNoticeCompanyInput.placeholder = config.companyPlaceholder;
+  }
+
+  if (guardNoticeDetailsInput) {
+    guardNoticeDetailsInput.placeholder = config.detailsPlaceholder;
   }
 }
 
-function renderAdminGuardLogs() {
-  if (!adminGuardLogsList) return;
-  const logs = state.adminGuardLogs || [];
-  if (logs.length === 0) {
-    adminGuardLogsList.innerHTML = `
-      <div style="padding: 1.4rem; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
-        Aún no hay registros de auditoría de guardia en el sistema.
+async function loadResidentGuardNotices() {
+  if (!state.authenticatedUser) return;
+  try {
+    const notices = await API.guardNotices.get();
+    state.residentNotices = notices || [];
+    renderResidentGuardNotices();
+  } catch (error) {
+    console.error('Error cargando avisos de guardia del residente:', error);
+  }
+}
+
+function renderResidentGuardNotices() {
+  if (!residentNoticesList) return;
+  const notices = state.residentNotices || [];
+
+  if (residentNoticesCountBadge) {
+    residentNoticesCountBadge.textContent = `${notices.length} aviso${notices.length === 1 ? '' : 's'}`;
+  }
+
+  if (notices.length === 0) {
+    residentNoticesList.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.1);">
+        <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🛎️</span>
+        <strong style="color: #fff; display: block; font-size: 0.95rem;">Aún no enviaste avisos a la guardia</strong>
+        <p style="font-size: 0.82rem; margin: 0.25rem 0 0 0;">Seleccioná una opción arriba para coordinar entregas o informar novedades al puesto de acceso.</p>
       </div>
     `;
     return;
   }
 
-  adminGuardLogsList.innerHTML = logs
+  residentNoticesList.innerHTML = notices
+    .map((notice) => {
+      const isPending = notice.status === 'Pendiente';
+      const cfg = NOTICE_CATEGORY_CONFIG[notice.category] || { icon: '🛎️' };
+      const date = new Date(notice.createdAt);
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let statusBadge = '';
+      if (isPending) {
+        statusBadge = `<span class="badge soft" style="background: rgba(245, 158, 11, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35);">🟡 Pendiente en guardia</span>`;
+      } else {
+        statusBadge = `<span class="badge soft" style="background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);">🟢 Atendido</span>`;
+      }
+
+      let extraInfo = '';
+      if (notice.company || notice.timeEstimated) {
+        const parts = [];
+        if (notice.company) parts.push(`<strong>Empresa/Repartidor:</strong> ${escapeHTML(notice.company)}`);
+        if (notice.timeEstimated) parts.push(`<strong>Horario estimado:</strong> ${escapeHTML(notice.timeEstimated)}`);
+        extraInfo = `<div style="font-size: 0.82rem; color: var(--gold); margin-bottom: 0.35rem;">${parts.join(' · ')}</div>`;
+      }
+
+      let responseBlock = '';
+      if (notice.response || notice.resolvedBy) {
+        const resDate = notice.resolvedAt ? new Date(notice.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        responseBlock = `
+          <div class="notice-item-response">
+            <span>🛡️</span>
+            <div>
+              <strong>Atendido por ${escapeHTML(notice.resolvedBy || 'Personal de Guardia')}</strong> ${resDate ? `(${resDate} hs)` : ''}
+              ${notice.response ? `<div style="margin-top: 0.2rem; color: #fff;">${escapeHTML(notice.response)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="guard-notice-item-card ${isPending ? 'pending' : 'attended'}">
+          <div class="notice-item-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span style="font-size: 1.25rem;">${cfg.icon}</span>
+              <strong style="font-size: 1rem; color: #fff;">${escapeHTML(notice.category)}</strong>
+              ${statusBadge}
+            </div>
+            <span class="notice-item-meta">📅 ${dateStr} ${timeStr} hs</span>
+          </div>
+
+          ${extraInfo}
+
+          <div class="notice-item-details">
+            ${escapeHTML(notice.details)}
+          </div>
+
+          ${responseBlock}
+        </div>
+      `;
+    })
+    .join('');
+}
+
+// ----------------- GUARD RESIDENT NOTICES & NOTIFICATION FUNCTIONS ----------------- //
+
+async function loadGuardResidentNotices() {
+  try {
+    const notices = await API.guardNotices.get();
+    state.guardNotices = notices || [];
+    renderGuardResidentNotices();
+  } catch (error) {
+    console.error('Error cargando avisos de residentes en garita:', error);
+  }
+}
+
+function renderGuardResidentNotices() {
+  if (!guardResidentNoticesList) return;
+
+  const notices = state.guardNotices || [];
+  const pendingCount = notices.filter((n) => n.status === 'Pendiente').length;
+
+  if (guardResidentNoticesBadge) {
+    guardResidentNoticesBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+  }
+
+  let filtered = notices;
+  const filter = state.guardNoticeFilter || 'all';
+  if (filter === 'pending') {
+    filtered = notices.filter((n) => n.status === 'Pendiente');
+  } else if (filter === 'attended') {
+    filtered = notices.filter((n) => n.status === 'Atendido' || n.status === 'Finalizado');
+  }
+
+  if (guardResidentNoticesCountBadge) {
+    guardResidentNoticesCountBadge.textContent = `${filtered.length} aviso${filtered.length === 1 ? '' : 's'}`;
+  }
+
+  if (filtered.length === 0) {
+    guardResidentNoticesList.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.1);">
+        <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🛎️</span>
+        <strong style="color: #fff; display: block; font-size: 0.95rem;">No hay avisos en esta sección</strong>
+        <p style="font-size: 0.82rem; margin: 0.25rem 0 0 0;">Los avisos de delivery, servicios y consultas de los vecinos aparecerán aquí automáticamente.</p>
+      </div>
+    `;
+    return;
+  }
+
+  guardResidentNoticesList.innerHTML = filtered
+    .map((notice) => {
+      const isPending = notice.status === 'Pendiente';
+      const cfg = NOTICE_CATEGORY_CONFIG[notice.category] || { icon: '🛎️' };
+      const date = new Date(notice.createdAt);
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let statusBadge = isPending
+        ? `<span class="badge soft" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">🟡 Pendiente</span>`
+        : `<span class="badge soft" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">🟢 Atendido</span>`;
+
+      const locationStr = notice.lote || notice.manzana ? `(Lote ${escapeHTML(notice.lote || '-')}, Mz ${escapeHTML(notice.manzana || '-')})` : '';
+
+      let extraInfo = '';
+      if (notice.company || notice.timeEstimated) {
+        const parts = [];
+        if (notice.company) parts.push(`<strong>Empresa/Repartidor:</strong> ${escapeHTML(notice.company)}`);
+        if (notice.timeEstimated) parts.push(`<strong>Horario estimado:</strong> ${escapeHTML(notice.timeEstimated)}`);
+        extraInfo = `<div style="font-size: 0.82rem; color: var(--gold); margin-bottom: 0.25rem;">${parts.join(' · ')}</div>`;
+      }
+
+      let responseBlock = '';
+      if (notice.response || notice.resolvedBy) {
+        const resTime = notice.resolvedAt ? new Date(notice.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        responseBlock = `
+          <div class="notice-item-response" style="margin-top: 0.4rem;">
+            <span>🛡️</span>
+            <div>
+              <strong>Atendido por ${escapeHTML(notice.resolvedBy || 'Personal de Guardia')}</strong> ${resTime ? `(${resTime} hs)` : ''}
+              ${notice.response ? `<div style="color: #fff; margin-top: 0.15rem;">${escapeHTML(notice.response)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      let actionButtons = '';
+      if (isPending) {
+        actionButtons = `
+          <button type="button" class="btn-inline-action success btn-attend-notice" data-notice-id="${notice.id}" style="font-size: 0.82rem; padding: 0.4rem 0.8rem; font-weight: 700;">
+            ✅ Marcar como Atendido
+          </button>
+        `;
+      }
+
+      return `
+        <div class="guard-notice-item-card ${isPending ? 'pending' : 'attended'}">
+          <div class="notice-item-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 1.25rem;">${cfg.icon}</span>
+                <strong style="font-size: 1rem; color: #fff;">${escapeHTML(notice.category)}</strong>
+                ${statusBadge}
+              </div>
+              <div style="font-size: 0.88rem; color: #fff; margin-top: 0.25rem;">
+                🏡 <strong>${escapeHTML(notice.residentName)}</strong> <span style="color: var(--gold);">${locationStr}</span>
+              </div>
+            </div>
+            <span class="notice-item-meta">📅 ${dateStr} ${timeStr} hs</span>
+          </div>
+
+          ${extraInfo}
+
+          <div class="notice-item-details">
+            ${escapeHTML(notice.details)}
+          </div>
+
+          ${responseBlock}
+
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; margin-top: 0.4rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+            ${actionButtons}
+            <button type="button" class="btn-inline-action btn-notify-resident-from-notice" data-user-id="${notice.userId}" data-cat="${escapeHTML(notice.category)}" data-name="${escapeHTML(notice.residentName)}" style="font-size: 0.82rem; padding: 0.4rem 0.8rem;">
+              💬 Notificar al Vecino
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+async function handleAttendNotice(noticeId) {
+  const customResponse = prompt('¿Deseás agregar una respuesta o aclaración para el vecino? (Opcional, podés dejar vacío para marcar atendido directo):');
+  if (customResponse === null) return; // user cancelled prompt
+
+  try {
+    await API.guardNotices.updateStatus(noticeId, {
+      status: 'Atendido',
+      response: customResponse.trim() || undefined
+    });
+    showToast('Aviso marcado como atendido. Notificación enviada al vecino.');
+    await loadGuardResidentNotices();
+  } catch (error) {
+    showToast(error.message || 'Error al actualizar estado del aviso.');
+  }
+}
+
+// ----------------- GUARD TO RESIDENT NOTIFICATION MODAL ----------------- //
+
+async function openGuardNotifyResidentModal(targetUserId = null, defaultTitle = '', defaultMessage = '') {
+  try {
+    if (!state.guardResidentsList || state.guardResidentsList.length === 0) {
+      const residents = await API.guardNotices.getResidents();
+      state.guardResidentsList = residents || [];
+    }
+  } catch (err) {
+    console.error('Error cargando lista de residentes para guardia:', err);
+  }
+
+  if (guardNotifyTargetSelect) {
+    const list = state.guardResidentsList || [];
+    if (list.length === 0) {
+      guardNotifyTargetSelect.innerHTML = '<option value="">No se encontraron vecinos registrados activos</option>';
+    } else {
+      guardNotifyTargetSelect.innerHTML = `
+        <option value="">-- Seleccionar vecino destinatario (${list.length} disponibles) --</option>
+        ${list
+          .map((r) => {
+            const loc = r.lote || r.manzana ? `(Lote ${escapeHTML(r.lote || '-')}, Mz ${escapeHTML(r.manzana || '-')})` : '';
+            return `<option value="${r.id}">${escapeHTML(r.apellido)}, ${escapeHTML(r.nombre)} ${loc} — ${escapeHTML(r.username || r.email)}</option>`;
+          })
+          .join('')}
+      `;
+    }
+
+    if (targetUserId) {
+      guardNotifyTargetSelect.value = String(targetUserId);
+      updateSelectedNeighborDetails(targetUserId);
+    } else {
+      if (guardNotifySelectedNeighborInfo) guardNotifySelectedNeighborInfo.style.display = 'none';
+    }
+  }
+
+  if (guardNotifyTitleInput) {
+    guardNotifyTitleInput.value = defaultTitle || 'Aviso de Guardia';
+  }
+
+  if (guardNotifyMessageInput) {
+    guardNotifyMessageInput.value = defaultMessage || '';
+  }
+
+  if (guardNotifyPresetSelect) {
+    guardNotifyPresetSelect.value = 'custom';
+  }
+
+  if (guardNotifyResidentModal) {
+    guardNotifyResidentModal.style.display = 'flex';
+  }
+
+  setTimeout(() => {
+    if (targetUserId && guardNotifyMessageInput) {
+      guardNotifyMessageInput.focus();
+    } else if (guardNotifyTargetSelect) {
+      guardNotifyTargetSelect.focus();
+    }
+  }, 100);
+}
+
+function closeGuardNotifyResidentModalFn() {
+  if (guardNotifyResidentModal) {
+    guardNotifyResidentModal.style.display = 'none';
+  }
+}
+
+function updateSelectedNeighborDetails(userId) {
+  if (!guardNotifySelectedNeighborInfo) return;
+  const numId = Number(userId);
+  const resident = (state.guardResidentsList || []).find((r) => r.id === numId);
+
+  if (!resident) {
+    guardNotifySelectedNeighborInfo.style.display = 'none';
+    return;
+  }
+
+  guardNotifySelectedNeighborInfo.style.display = 'block';
+  if (guardNotifyNeighborName) {
+    guardNotifyNeighborName.textContent = `${resident.nombre} ${resident.apellido}`;
+  }
+  if (guardNotifyNeighborLocation) {
+    const loc = resident.lote || resident.manzana ? `Lote ${resident.lote || '-'} · Manzana ${resident.manzana || '-'}` : 'Sin lote asignado';
+    guardNotifyNeighborLocation.textContent = `(${loc})`;
+  }
+  if (guardNotifyNeighborPhone) {
+    guardNotifyNeighborPhone.textContent = resident.telefono || 'Sin teléfono';
+  }
+}
+
+async function loadAdminAuditLogs() {
+  if (state.authenticatedUser?.role !== 'admin') return;
+  try {
+    const params = { limit: 300 };
+    if (state.adminAuditRoleFilter && state.adminAuditRoleFilter !== 'all') {
+      params.role = state.adminAuditRoleFilter;
+    }
+    if (state.adminAuditSearchQuery && state.adminAuditSearchQuery.trim()) {
+      params.search = state.adminAuditSearchQuery.trim();
+    }
+    const logs = await API.activityLogs.get(params);
+    state.adminAuditLogs = logs || [];
+    renderAdminAuditLogs();
+  } catch (err) {
+    console.error('Error cargando registros de auditoría general:', err);
+  }
+}
+
+// Backward compatibility alias
+async function loadAdminGuardLogs() {
+  return loadAdminAuditLogs();
+}
+
+function renderAdminAuditLogs() {
+  const targetContainer = adminGlobalAuditLogsList || adminGuardLogsList;
+  if (!targetContainer) return;
+
+  const logs = state.adminAuditLogs || [];
+  if (adminAuditLogsCountBadge) {
+    adminAuditLogsCountBadge.textContent = `${logs.length} acci${logs.length === 1 ? 'ón' : 'ones'}`;
+  }
+
+  if (logs.length === 0) {
+    targetContainer.innerHTML = `
+      <div style="padding: 1.6rem; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
+        No se encontraron registros de auditoría para los filtros seleccionados.
+      </div>
+    `;
+    return;
+  }
+
+  targetContainer.innerHTML = logs
     .map((log) => {
       const date = new Date(log.createdAt);
       const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
 
       let badgeColor = 'rgba(212, 163, 89, 0.2)';
       let badgeTextColor = 'var(--gold)';
-      if (log.action.includes('INGRESO')) {
+      const act = String(log.action || '').toUpperCase();
+
+      if (act.includes('INGRESO') || act.includes('APROBAR') || act.includes('ACREDITAR')) {
         badgeColor = 'rgba(105, 210, 166, 0.2)';
         badgeTextColor = 'var(--primary)';
-      } else if (log.action.includes('EGRESO') || log.action.includes('CAMBIO')) {
+      } else if (act.includes('EGRESO') || act.includes('RECHAZAR') || act.includes('CAMBIO') || act.includes('ELIMINAR') || act.includes('BAJA')) {
         badgeColor = 'rgba(255, 122, 122, 0.2)';
         badgeTextColor = 'var(--danger)';
+      } else if (act.includes('LOGIN') || act.includes('TURNO')) {
+        badgeColor = 'rgba(138, 206, 255, 0.2)';
+        badgeTextColor = 'var(--secondary)';
+      } else if (act.includes('NOTIFICACION')) {
+        badgeColor = 'rgba(192, 132, 252, 0.2)';
+        badgeTextColor = '#c084fc';
+      } else if (act.includes('AVISO')) {
+        badgeColor = 'rgba(245, 158, 11, 0.2)';
+        badgeTextColor = '#f59e0b';
+      } else if (act.includes('EMISION') || act.includes('EXPENSA')) {
+        badgeColor = 'rgba(56, 189, 248, 0.2)';
+        badgeTextColor = '#38bdf8';
+      }
+
+      let roleBadge = '';
+      const r = String(log.userRole || '').toLowerCase();
+      if (r === 'admin') {
+        roleBadge = '<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); font-size: 0.7rem;">👑 Admin</span>';
+      } else if (r === 'guardia') {
+        roleBadge = '<span class="badge soft" style="background: rgba(105, 210, 166, 0.2); color: var(--primary); font-size: 0.7rem;">🛡️ Guardia</span>';
+      } else {
+        roleBadge = '<span class="badge soft" style="background: rgba(138, 206, 255, 0.2); color: var(--secondary); font-size: 0.7rem;">👤 Vecino</span>';
       }
 
       return `
@@ -3734,11 +4551,15 @@ function renderAdminGuardLogs() {
           <div class="guard-log-info">
             <div class="guard-log-badge-row">
               <span class="badge soft guard-log-badge" style="background: ${badgeColor}; color: ${badgeTextColor};">${escapeHTML(log.action)}</span>
+              ${roleBadge}
               <strong class="guard-log-detail">${escapeHTML(log.details || '')}</strong>
             </div>
-            <small class="guard-log-operator">Operador: <strong>${escapeHTML(log.userName || '')}</strong> · Rol: ${escapeHTML(log.userRole || '')}</small>
+            <small class="guard-log-operator">
+              Operador: <strong>${escapeHTML(log.userName || 'Usuario')}</strong>
+              ${log.ip ? ` · <span style="opacity: 0.6;">IP: ${escapeHTML(log.ip)}</span>` : ''}
+            </small>
           </div>
-          <span class="guard-log-time">${dateStr} ${timeStr}</span>
+          <span class="guard-log-time" style="font-size: 0.78rem; opacity: 0.8; white-space: nowrap;">${dateStr} ${timeStr}</span>
         </div>
       `;
     })
@@ -4140,7 +4961,6 @@ function attachEventListeners() {
     guardScanQrBtn.addEventListener('click', async () => {
       await startQrScanner();
       await API.activityLogs.log('LECTOR_QR', 'Apertura del lector de pase QR desde panel de guardia');
-      loadGuardActivityLogs();
     });
   }
 
@@ -4159,7 +4979,6 @@ function attachEventListeners() {
     guardNotificationsBtn.addEventListener('click', async () => {
       toggleNotificationsPanel(true);
       await API.activityLogs.log('CONSULTA_NOTIFICACIONES', 'Apertura del panel de avisos masivos');
-      loadGuardActivityLogs();
     });
   }
 
@@ -4180,7 +4999,6 @@ function attachEventListeners() {
         renderGuardVisits();
         if (state.guardPlateQuery.length >= 3) {
           await API.activityLogs.log('BUSQUEDA_PATENTE', `Búsqueda en padrón de visitantes: "${state.guardPlateQuery}"`);
-          loadGuardActivityLogs();
         }
       }, 300);
     });
@@ -4203,17 +5021,250 @@ function attachEventListeners() {
     });
   }
 
-  if (refreshGuardLogsBtn) {
-    refreshGuardLogsBtn.addEventListener('click', async () => {
-      await loadGuardActivityLogs();
-      showToast('Historial de actividad de guardia actualizado.');
+  if (refreshAdminAuditLogsBtn) {
+    refreshAdminAuditLogsBtn.addEventListener('click', async () => {
+      await loadAdminAuditLogs();
+      showToast('Auditoría general actualizada.');
     });
   }
 
   if (refreshAdminGuardLogsBtn) {
     refreshAdminGuardLogsBtn.addEventListener('click', async () => {
-      await loadAdminGuardLogs();
-      showToast('Registros de auditoría de guardia actualizados.');
+      await loadAdminAuditLogs();
+      showToast('Auditoría general actualizada.');
+    });
+  }
+
+  if (adminGoToAuditFromGuardBtn) {
+    adminGoToAuditFromGuardBtn.addEventListener('click', () => {
+      setAdminTab('auditoria');
+    });
+  }
+
+  document.querySelectorAll('.audit-role-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      state.adminAuditRoleFilter = btn.dataset.roleFilter;
+      document.querySelectorAll('.audit-role-filter-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.roleFilter === state.adminAuditRoleFilter);
+      });
+      await loadAdminAuditLogs();
+    });
+  });
+
+  if (adminAuditSearchInput) {
+    let auditDebounce = null;
+    adminAuditSearchInput.addEventListener('input', (e) => {
+      clearTimeout(auditDebounce);
+      auditDebounce = setTimeout(async () => {
+        state.adminAuditSearchQuery = e.target.value.trim();
+        await loadAdminAuditLogs();
+      }, 300);
+    });
+  }
+
+  // Guard Resident Notices Actions
+  if (guardResidentNoticesBtn) {
+    guardResidentNoticesBtn.addEventListener('click', async () => {
+      const block = document.getElementById('guardResidentNoticesBlock');
+      if (block) block.scrollIntoView({ behavior: 'smooth' });
+      await loadGuardResidentNotices();
+    });
+  }
+
+  if (guardNotifyResidentBtn) {
+    guardNotifyResidentBtn.addEventListener('click', () => {
+      openGuardNotifyResidentModal();
+    });
+  }
+
+  if (guardOpenNotifyResidentTopBtn) {
+    guardOpenNotifyResidentTopBtn.addEventListener('click', () => {
+      openGuardNotifyResidentModal();
+    });
+  }
+
+  if (refreshGuardResidentNoticesBtn) {
+    refreshGuardResidentNoticesBtn.addEventListener('click', async () => {
+      await loadGuardResidentNotices();
+      showToast('Avisos de vecinos actualizados.');
+    });
+  }
+
+  document.querySelectorAll('.guard-notice-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.guardNoticeFilter = btn.dataset.noticeFilter;
+      document.querySelectorAll('.guard-notice-filter-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.noticeFilter === state.guardNoticeFilter);
+      });
+      renderGuardResidentNotices();
+    });
+  });
+
+  if (guardResidentNoticesList) {
+    guardResidentNoticesList.addEventListener('click', async (e) => {
+      const attendBtn = e.target.closest('.btn-attend-notice');
+      if (attendBtn) {
+        const id = attendBtn.dataset.noticeId;
+        if (id) await handleAttendNotice(id);
+        return;
+      }
+
+      const notifyBtn = e.target.closest('.btn-notify-resident-from-notice');
+      if (notifyBtn) {
+        const userId = notifyBtn.dataset.userId;
+        const category = notifyBtn.dataset.cat || '';
+        const name = notifyBtn.dataset.name || '';
+        openGuardNotifyResidentModal(
+          userId,
+          `Aviso de Guardia: ${category}`,
+          `Estimado/a ${name}, respecto a tu aviso de ${category} te informamos que: `
+        );
+      }
+    });
+  }
+
+  // Guard to Resident Notification Modal
+  if (closeGuardNotifyResidentModal) {
+    closeGuardNotifyResidentModal.addEventListener('click', closeGuardNotifyResidentModalFn);
+  }
+  if (cancelGuardNotifyBtn) {
+    cancelGuardNotifyBtn.addEventListener('click', closeGuardNotifyResidentModalFn);
+  }
+
+  if (guardNotifyTargetSelect) {
+    guardNotifyTargetSelect.addEventListener('change', (e) => {
+      updateSelectedNeighborDetails(e.target.value);
+    });
+  }
+
+  if (guardNotifyPresetSelect) {
+    guardNotifyPresetSelect.addEventListener('change', (e) => {
+      const preset = e.target.value;
+      const targetOption = guardNotifyTargetSelect?.selectedOptions?.[0];
+      const targetText = targetOption && targetOption.value ? targetOption.textContent : 'Estimado vecino';
+      const nameMatch = targetText.split('(')[0].trim();
+
+      if (preset === 'paquete') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '📦 Paquete / Encomienda en Garita';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, le informamos que ha llegado un paquete/encomienda a su nombre a la garita de guardia. Puede pasar a retirarlo cuando lo desee.`;
+      } else if (preset === 'delivery') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '🛵 Delivery en Acceso Principal';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, se encuentra en la guardia un repartidor de delivery solicitando ingresar o entregar un pedido a su nombre.`;
+      } else if (preset === 'proveedor') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '🔧 Proveedor de Servicios en Garita';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, se encuentra en garita un proveedor de servicios solicitando autorización para ingresar a realizar trabajos a su lote.`;
+      } else if (preset === 'vehiculo') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '🚗 Aviso de Vehículo';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, le informamos desde guardia que un vehículo asociado a su lote se encuentra mal estacionado / con las luces encendidas en la vía pública.`;
+      } else if (preset === 'mascota') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '🐕 Aviso de Mascota Suelta';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, le informamos desde la guardia que se ha observado un animal/mascota suelto en las inmediaciones de su sector.`;
+      } else if (preset === 'general') {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = '📢 Comunicado de Guardia';
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = `Hola ${nameMatch}, le informamos desde la guardia: `;
+      } else {
+        if (guardNotifyTitleInput) guardNotifyTitleInput.value = 'Aviso de Guardia';
+      }
+    });
+  }
+
+  if (guardNotifyResidentForm) {
+    guardNotifyResidentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const residentId = guardNotifyTargetSelect ? guardNotifyTargetSelect.value : null;
+      const title = guardNotifyTitleInput ? guardNotifyTitleInput.value.trim() : 'Aviso de Guardia';
+      const message = guardNotifyMessageInput ? guardNotifyMessageInput.value.trim() : '';
+
+      if (!residentId) {
+        showToast('Por favor, seleccioná el vecino destinatario.');
+        if (guardNotifyTargetSelect) guardNotifyTargetSelect.focus();
+        return;
+      }
+
+      if (!message) {
+        showToast('Por favor, escribí el comentario o mensaje para el vecino.');
+        if (guardNotifyMessageInput) guardNotifyMessageInput.focus();
+        return;
+      }
+
+      try {
+        if (submitGuardNotifyBtn) {
+          submitGuardNotifyBtn.disabled = true;
+          submitGuardNotifyBtn.textContent = 'Enviando...';
+        }
+
+        const res = await API.guardNotices.notifyResident({ residentId, title, message });
+        showToast(res.message || 'Notificación enviada al vecino y registrada en auditoría.');
+
+        closeGuardNotifyResidentModalFn();
+        if (guardNotifyMessageInput) guardNotifyMessageInput.value = '';
+      } catch (err) {
+        showToast(err.message || 'Error al enviar notificación.');
+      } finally {
+        if (submitGuardNotifyBtn) {
+          submitGuardNotifyBtn.disabled = false;
+          submitGuardNotifyBtn.textContent = '📨 Enviar Notificación Auditada';
+        }
+      }
+    });
+  }
+
+  // Resident Avisos a Guardia Actions
+  document.querySelectorAll('.notice-option-card').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setNoticeCategory(btn.dataset.noticeCat);
+    });
+  });
+
+  if (guardNoticeForm) {
+    guardNoticeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const category = guardNoticeCategoryInput ? guardNoticeCategoryInput.value : 'Delivery';
+      const details = guardNoticeDetailsInput ? guardNoticeDetailsInput.value.trim() : '';
+      const company = guardNoticeCompanyInput ? guardNoticeCompanyInput.value.trim() : '';
+      const timeEstimated = guardNoticeTimeInput ? guardNoticeTimeInput.value.trim() : '';
+
+      if (!details) {
+        showToast('Por favor, escribí el detalle o comentario del aviso.');
+        if (guardNoticeDetailsInput) guardNoticeDetailsInput.focus();
+        return;
+      }
+
+      try {
+        if (submitGuardNoticeBtn) {
+          submitGuardNoticeBtn.disabled = true;
+          submitGuardNoticeBtn.textContent = 'Enviando aviso...';
+        }
+
+        const res = await API.guardNotices.create({
+          category,
+          details,
+          company: company || undefined,
+          timeEstimated: timeEstimated || undefined
+        });
+
+        showToast(res.message || 'Aviso enviado a la guardia con éxito.');
+
+        if (guardNoticeDetailsInput) guardNoticeDetailsInput.value = '';
+        if (guardNoticeCompanyInput) guardNoticeCompanyInput.value = '';
+        if (guardNoticeTimeInput) guardNoticeTimeInput.value = '';
+
+        await loadResidentGuardNotices();
+      } catch (err) {
+        showToast(err.message || 'Error al enviar aviso a guardia.');
+      } finally {
+        if (submitGuardNoticeBtn) {
+          submitGuardNoticeBtn.disabled = false;
+          submitGuardNoticeBtn.textContent = '🛎️ Enviar Aviso a la Guardia';
+        }
+      }
+    });
+  }
+
+  if (refreshResidentNoticesBtn) {
+    refreshResidentNoticesBtn.addEventListener('click', async () => {
+      await loadResidentGuardNotices();
+      showToast('Avisos enviados actualizados.');
     });
   }
 
@@ -4509,6 +5560,136 @@ function attachEventListeners() {
     });
   }
 
+  // Admin Expenses Search Listener
+  if (adminExpensesSearchInput) {
+    adminExpensesSearchInput.addEventListener('input', (e) => {
+      state.adminExpensesSearchQuery = e.target.value;
+      renderAdminExpensesList();
+    });
+  }
+
+  // Admin Notify Specific Residents Listeners
+  if (openNotifySpecificResidentsModalBtn) {
+    openNotifySpecificResidentsModalBtn.addEventListener('click', openAdminNotifySpecificResidentsModal);
+  }
+  if (closeAdminNotifySpecificResidentsModal) {
+    closeAdminNotifySpecificResidentsModal.addEventListener('click', () => closeAdminNotifySpecificResidentsModalFn(false));
+  }
+  if (cancelAdminNotifySpecificBtn) {
+    cancelAdminNotifySpecificBtn.addEventListener('click', () => closeAdminNotifySpecificResidentsModalFn(false));
+  }
+  if (adminNotifySpecificResidentsModal) {
+    adminNotifySpecificResidentsModal.addEventListener('click', (e) => {
+      if (e.target === adminNotifySpecificResidentsModal) closeAdminNotifySpecificResidentsModalFn(false);
+    });
+  }
+  if (adminNotifyResidentsSearchInput) {
+    adminNotifyResidentsSearchInput.addEventListener('input', (e) => {
+      state.adminNotifyResidentsSearchQuery = e.target.value;
+      renderAdminNotifyResidentsCheckboxes();
+    });
+  }
+  if (adminNotifySelectAllBtn) {
+    adminNotifySelectAllBtn.addEventListener('click', () => {
+      let residents = (state.approvedUsers || []).filter((u) => u.role === 'user' || (u.lote && u.role !== 'guardia'));
+      if (state.adminNotifyResidentsSearchQuery && state.adminNotifyResidentsSearchQuery.trim()) {
+        const q = state.adminNotifyResidentsSearchQuery.trim().toLowerCase();
+        residents = residents.filter((r) => {
+          const lote = String(r.lote || '').toLowerCase();
+          const manzana = String(r.manzana || '').toLowerCase();
+          const dni = String(r.numeroDocumento || '').toLowerCase();
+          const nombre = String(r.nombre || '').toLowerCase();
+          const apellido = String(r.apellido || '').toLowerCase();
+          const user = String(r.username || '').toLowerCase();
+          const email = String(r.email || '').toLowerCase();
+          return (
+            lote.includes(q) ||
+            `l${lote}`.includes(q) ||
+            `l${lote}m${manzana}`.includes(q) ||
+            dni.includes(q) ||
+            nombre.includes(q) ||
+            apellido.includes(q) ||
+            `${nombre} ${apellido}`.includes(q) ||
+            user.includes(q) ||
+            email.includes(q)
+          );
+        });
+      }
+      residents.forEach((r) => state.adminNotifySelectedResidents.add(Number(r.id)));
+      renderAdminNotifyResidentsCheckboxes();
+    });
+  }
+  if (adminNotifyDeselectAllBtn) {
+    adminNotifyDeselectAllBtn.addEventListener('click', () => {
+      state.adminNotifySelectedResidents.clear();
+      renderAdminNotifyResidentsCheckboxes();
+    });
+  }
+  if (adminNotifySpecificResidentsForm) {
+    adminNotifySpecificResidentsForm.addEventListener('submit', handleAdminNotifySpecificSubmit);
+  }
+
+  // Guard to Admin Notification Listeners
+  if (guardNotifyAdminBtn) {
+    guardNotifyAdminBtn.addEventListener('click', openGuardNotifyAdminModal);
+  }
+  if (closeGuardNotifyAdminModal) {
+    closeGuardNotifyAdminModal.addEventListener('click', () => closeGuardNotifyAdminModalFn(false));
+  }
+  if (cancelGuardNotifyAdminBtn) {
+    cancelGuardNotifyAdminBtn.addEventListener('click', () => closeGuardNotifyAdminModalFn(false));
+  }
+  if (guardNotifyAdminModal) {
+    guardNotifyAdminModal.addEventListener('click', (e) => {
+      if (e.target === guardNotifyAdminModal) closeGuardNotifyAdminModalFn(false);
+    });
+  }
+  if (guardNotifyAdminPresetSelect) {
+    guardNotifyAdminPresetSelect.addEventListener('change', (e) => {
+      const presetKey = e.target.value;
+      const preset = GUARD_TO_ADMIN_PRESETS[presetKey];
+      if (preset && presetKey !== 'custom') {
+        if (guardNotifyAdminTitleInput) guardNotifyAdminTitleInput.value = preset.title;
+        if (guardNotifyAdminMessageInput) guardNotifyAdminMessageInput.value = preset.text;
+      }
+    });
+  }
+  if (guardNotifyAdminForm) {
+    guardNotifyAdminForm.addEventListener('submit', handleGuardNotifyAdminSubmit);
+  }
+
+  // Admin to Guard Notification Listeners
+  if (openNotifyGuardModalBtn) {
+    openNotifyGuardModalBtn.addEventListener('click', openAdminNotifyGuardModal);
+  }
+  if (adminNotifyGuardFromGuardBtn) {
+    adminNotifyGuardFromGuardBtn.addEventListener('click', openAdminNotifyGuardModal);
+  }
+  if (closeAdminNotifyGuardModal) {
+    closeAdminNotifyGuardModal.addEventListener('click', () => closeAdminNotifyGuardModalFn(false));
+  }
+  if (cancelAdminNotifyGuardBtn) {
+    cancelAdminNotifyGuardBtn.addEventListener('click', () => closeAdminNotifyGuardModalFn(false));
+  }
+  if (adminNotifyGuardModal) {
+    adminNotifyGuardModal.addEventListener('click', (e) => {
+      if (e.target === adminNotifyGuardModal) closeAdminNotifyGuardModalFn(false);
+    });
+  }
+  if (adminNotifyGuardPresetSelect) {
+    adminNotifyGuardPresetSelect.addEventListener('change', (e) => {
+      const presetKey = e.target.value;
+      const preset = ADMIN_TO_GUARD_PRESETS[presetKey];
+      if (preset && presetKey !== 'custom') {
+        if (adminNotifyGuardTitleInput) adminNotifyGuardTitleInput.value = preset.title;
+        if (adminNotifyGuardMessageInput) adminNotifyGuardMessageInput.value = preset.text;
+      }
+    });
+  }
+  if (adminNotifyGuardForm) {
+    adminNotifyGuardForm.addEventListener('submit', handleAdminNotifyGuardSubmit);
+  }
+
   // Profile Modal Listeners
   if (openProfileModalBtn) {
     openProfileModalBtn.addEventListener('click', openProfileModal);
@@ -4576,6 +5757,12 @@ function attachEventListeners() {
         closeBlockCourtModalFn(false);
       } else if (broadcastAlertModal && broadcastAlertModal.style.display !== 'none') {
         closeBroadcastAlertModalFn(false);
+      } else if (adminNotifySpecificResidentsModal && adminNotifySpecificResidentsModal.style.display !== 'none') {
+        closeAdminNotifySpecificResidentsModalFn(false);
+      } else if (guardNotifyAdminModal && guardNotifyAdminModal.style.display !== 'none') {
+        closeGuardNotifyAdminModalFn(false);
+      } else if (adminNotifyGuardModal && adminNotifyGuardModal.style.display !== 'none') {
+        closeAdminNotifyGuardModalFn(false);
       } else if (profileModal && profileModal.style.display !== 'none') {
         closeProfileModalFn(false);
       } else if (scanQrModal && scanQrModal.style.display !== 'none') {
@@ -4640,6 +5827,18 @@ function attachEventListeners() {
       closeBroadcastAlertModalFn(true);
       return;
     }
+    if (adminNotifySpecificResidentsModal && adminNotifySpecificResidentsModal.style.display !== 'none') {
+      closeAdminNotifySpecificResidentsModalFn(true);
+      return;
+    }
+    if (guardNotifyAdminModal && guardNotifyAdminModal.style.display !== 'none') {
+      closeGuardNotifyAdminModalFn(true);
+      return;
+    }
+    if (adminNotifyGuardModal && adminNotifyGuardModal.style.display !== 'none') {
+      closeAdminNotifyGuardModalFn(true);
+      return;
+    }
     if (profileModal && profileModal.style.display !== 'none') {
       closeProfileModalFn(true);
       return;
@@ -4651,7 +5850,7 @@ function attachEventListeners() {
 
     if (dashboardScreen && dashboardScreen.classList.contains('active')) {
       let targetView = e.state?.view || (window.location.hash ? window.location.hash.replace('#', '') : 'home');
-      if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr', 'nuevo-vecino', 'editar-vecino', 'recuperar-clave', 'restablecer-clave', 'bloquear-cancha', 'alerta-comunitaria', 'mi-perfil', 'informar-pago', 'ver-comprobante'].includes(targetView)) {
+      if (['qr-modal', 'notificaciones', 'nueva-publicacion', 'emitir-expensas', 'escanear-qr', 'nuevo-vecino', 'editar-vecino', 'recuperar-clave', 'restablecer-clave', 'bloquear-cancha', 'alerta-comunitaria', 'mi-perfil', 'informar-pago', 'ver-comprobante', 'notificar-vecinos', 'guardia-a-admin', 'admin-a-guardia'].includes(targetView)) {
         targetView = 'home';
       }
       setDashboardView(targetView, false);

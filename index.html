@@ -16,7 +16,7 @@
     />
     <link rel="icon" type="image/png" href="assets/img/logo.png" />
     <link rel="apple-touch-icon" href="assets/img/logo.png" />
-    <link rel="stylesheet" href="assets/css/styles.css?v=2.5" />
+    <link rel="stylesheet" href="assets/css/styles.css?v=2.6" />
   </head>
   <body>
     <div id="app">
@@ -185,28 +185,31 @@
               </div>
 
               <div class="main-menu-stack">
-                <button type="button" class="menu-big-btn btn-booking" data-target-view="booking">
+                <!-- a. Novedades -->
+                <button type="button" class="menu-big-btn btn-news" data-target-view="news">
                   <div class="menu-btn-left">
-                    <div class="menu-btn-icon">🎾</div>
+                    <div class="menu-btn-icon">📢</div>
                     <div class="menu-btn-text">
-                      <h4>Reserva de cancha</h4>
-                      <p>Consultá disponibilidad de turnos de tenis y realizá tu reserva.</p>
+                      <h4>Novedades</h4>
+                      <p>Enterate de los comunicados oficiales, obras y avisos del predio.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
                 </button>
 
+                <!-- b. Visitas -->
                 <button type="button" class="menu-big-btn btn-visits" data-target-view="visits">
                   <div class="menu-btn-left">
                     <div class="menu-btn-icon">🚗</div>
                     <div class="menu-btn-text">
-                      <h4>Mis visitas</h4>
+                      <h4>Visitas</h4>
                       <p>Registrá ingresos anticipados de invitados y gestioná el acceso en guardia.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
                 </button>
 
+                <!-- c. Expensas -->
                 <button type="button" class="menu-big-btn btn-expenses" data-target-view="expenses">
                   <div class="menu-btn-left">
                     <div class="menu-btn-icon">💳</div>
@@ -218,12 +221,25 @@
                   <div class="menu-btn-arrow">➔</div>
                 </button>
 
-                <button type="button" class="menu-big-btn btn-news" data-target-view="news">
+                <!-- d. Turnos de cancha -->
+                <button type="button" class="menu-big-btn btn-booking" data-target-view="booking">
                   <div class="menu-btn-left">
-                    <div class="menu-btn-icon">📢</div>
+                    <div class="menu-btn-icon">🎾</div>
                     <div class="menu-btn-text">
-                      <h4>Novedades</h4>
-                      <p>Enterate de los comunicados oficiales, obras y avisos del predio.</p>
+                      <h4>Turnos de cancha</h4>
+                      <p>Consultá disponibilidad de turnos de tenis y realizá tu reserva.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- e. Avisos a guardia -->
+                <button type="button" class="menu-big-btn btn-guard-notices" data-target-view="guardNotices">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🛎️</div>
+                    <div class="menu-btn-text">
+                      <h4>Avisos a guardia</h4>
+                      <p>Informá sobre delivery, proveedores, consultas de ingreso o animales sueltos.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -519,6 +535,138 @@
               </div>
             </section>
 
+            <!-- Sección Avisos a Guardia (Residente) -->
+            <section id="guardNoticesSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al Menú Principal
+                </button>
+              </div>
+
+              <div class="panel-heading" style="margin-bottom: 1.25rem;">
+                <p class="eyebrow">🛎️ Comunicación con Garita</p>
+                <h3>Avisos a Guardia</h3>
+                <p class="panel-subtext">
+                  Informá de forma inmediata al personal de guardia sobre entregas, servicios, animales sueltos o cualquier consulta en el predio.
+                </p>
+              </div>
+
+              <!-- Selector interactivo de las 5 opciones requeridas -->
+              <div class="glass-card panel-block" style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 0.35rem;">1. Seleccioná el tipo de aviso</h4>
+                <p class="panel-subtext" style="margin-bottom: 1rem;">Elegí la opción que mejor describa tu notificación para el personal de garita:</p>
+
+                <div class="guard-notice-options-grid">
+                  <!-- Opción a: Delivery -->
+                  <button type="button" class="notice-option-card active" data-notice-cat="Delivery">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">🛵</span>
+                      <span class="option-card-tag">Ingreso</span>
+                    </div>
+                    <strong class="option-card-title">Delivery</strong>
+                    <p class="option-card-desc">PedidosYa, Rappi, encomiendas, delivery de comida, bidones de agua o compras.</p>
+                  </button>
+
+                  <!-- Opción b: Proveedor de servicios -->
+                  <button type="button" class="notice-option-card" data-notice-cat="Proveedor de servicios">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">🔧</span>
+                      <span class="option-card-tag">Trabajos</span>
+                    </div>
+                    <strong class="option-card-title">Proveedor de servicios</strong>
+                    <p class="option-card-desc">Jardinería, piletero, electricista, fletes, service técnico u obras.</p>
+                  </button>
+
+                  <!-- Opción c: Consulta de ingresos -->
+                  <button type="button" class="notice-option-card" data-notice-cat="Consulta de ingresos">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">🔍</span>
+                      <span class="option-card-tag">Control</span>
+                    </div>
+                    <strong class="option-card-title">Consulta de ingresos</strong>
+                    <p class="option-card-desc">Consultar si ingresó una persona, visita autorizada o vehículo a tu lote.</p>
+                  </button>
+
+                  <!-- Opción d: Animales sueltos -->
+                  <button type="button" class="notice-option-card" data-notice-cat="Animales sueltos">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">🐕</span>
+                      <span class="option-card-tag">Alerta</span>
+                    </div>
+                    <strong class="option-card-title">Animales sueltos</strong>
+                    <p class="option-card-desc">Mascota o animal suelto en calles internas o lotes del predio.</p>
+                  </button>
+
+                  <!-- Opción e: Otros… -->
+                  <button type="button" class="notice-option-card" data-notice-cat="Otros…">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">📝</span>
+                      <span class="option-card-tag">General</span>
+                    </div>
+                    <strong class="option-card-title">Otros…</strong>
+                    <p class="option-card-desc">Cualquier otra consulta, aviso particular o novedad para la guardia.</p>
+                  </button>
+                </div>
+
+                <!-- Formulario de envío del aviso -->
+                <form id="guardNoticeForm" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 0.9rem; color: var(--muted);">Opción seleccionada:</span>
+                      <span class="badge soft" id="selectedNoticeCategoryBadge" style="background: rgba(247, 199, 109, 0.15); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.3); font-weight: 700; font-size: 0.88rem;">
+                        🛵 Delivery
+                      </span>
+                    </div>
+                    <input type="hidden" id="guardNoticeCategoryInput" value="Delivery" />
+                  </div>
+
+                  <div class="field-grid two-col" id="guardNoticeExtraFields">
+                    <label>
+                      <span id="guardNoticeCompanyLabel">Empresa / Comercio / Repartidor (opcional)</span>
+                      <input type="text" id="guardNoticeCompanyInput" placeholder="Ej: PedidosYa, Rappi, cadete particular..." />
+                    </label>
+                    <label>
+                      <span>Horario aproximado estimado (opcional)</span>
+                      <input type="text" id="guardNoticeTimeInput" placeholder="Ej: En 15-20 minutos, o 14:30 hs" />
+                    </label>
+                  </div>
+
+                  <label style="margin-top: 0.8rem; display: block;">
+                    <span style="font-weight: 600;">Detalle o Comentario para la Guardia *</span>
+                    <textarea
+                      id="guardNoticeDetailsInput"
+                      rows="3"
+                      required
+                      placeholder="Escribí las indicaciones o detalles para el personal de guardia en garita..."
+                      style="width: 100%; box-sizing: border-box;"
+                    ></textarea>
+                  </label>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="font-size: 0.8rem; color: var(--muted);">
+                      🛡️ El aviso llegará al puesto de garita en tiempo real con tu nombre y lote/manzana.
+                    </div>
+                    <button type="submit" class="primary-btn" id="submitGuardNoticeBtn" style="padding: 0.65rem 1.6rem; font-weight: 700; width: auto;">
+                      🛎️ Enviar Aviso a la Guardia
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Historial de avisos enviados por este residente -->
+              <div class="glass-card panel-block">
+                <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h4>📋 Mis Avisos Enviados a Garita</h4>
+                    <span class="badge soft" id="residentNoticesCountBadge">0 avisos</span>
+                  </div>
+                  <button type="button" class="text-btn" id="refreshResidentNoticesBtn">Actualizar</button>
+                </div>
+                <p class="panel-subtext">Historial de avisos enviados y estado de respuesta del personal de guardia.</p>
+                <div id="residentNoticesList" style="display: grid; gap: 0.75rem; margin-top: 0.85rem;"></div>
+              </div>
+            </section>
+
             <!-- Sección Administración (Sólo rol Admin) -->
             <section id="adminSection" class="content-section">
               <div class="section-top-nav">
@@ -552,6 +700,9 @@
                 </button>
                 <button type="button" class="admin-nav-btn" data-admin-tab="alertas">
                   📢 Avisos y Alertas
+                </button>
+                <button type="button" class="admin-nav-btn" data-admin-tab="auditoria">
+                  📋 Auditoría General
                 </button>
               </div>
 
@@ -623,19 +774,18 @@
                         <button type="button" class="text-btn" id="refreshAdminVisitsBtn">Actualizar</button>
                       </div>
                     </div>
-                    <!-- Sub-navegación: Control de accesos y Auditoría de Guardia -->
-                    <div class="vecinos-subnav" role="tablist" aria-label="Subsecciones de guardia" style="margin-top: 0.85rem;">
-                      <button type="button" class="vecinos-subnav-btn active" data-guard-admin-subtab="accesos">
-                        🛡️ Control de Accesos
-                      </button>
-                      <button type="button" class="vecinos-subnav-btn" data-guard-admin-subtab="auditoria">
-                        📋 Auditoría de Actividad de Guardias
-                      </button>
-                    </div>
-
-                    <!-- Subpanel 1: Control de Accesos -->
-                    <div id="adminGuardAccesosSubpanel">
-                      <p class="panel-subtext" style="margin-top: 0.6rem;">Escaneá el código QR del pase o buscá por patente o DNI para registrar el ingreso o salida de visitantes.</p>
+                    <!-- Control de accesos -->
+                    <div id="adminGuardAccesosSubpanel" style="margin-top: 0.85rem;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                          <button type="button" class="btn-inline-action" id="adminNotifyGuardFromGuardBtn" style="font-size: 0.8rem;">
+                            🛡️ Notificar a Guardia
+                          </button>
+                          <button type="button" class="btn-inline-action" id="adminGoToAuditFromGuardBtn" style="font-size: 0.8rem;">
+                            📋 Ver Auditoría General
+                          </button>
+                        </div>
+                      </div>
 
                       <!-- Buscador en tiempo real y filtros -->
                       <div class="guard-search-bar" style="margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
@@ -656,15 +806,6 @@
 
                       <ul id="adminVisitsList" class="list-stack visit-list"></ul>
                     </div>
-
-                    <!-- Subpanel 2: Auditoría de Guardia -->
-                    <div id="adminGuardAuditoriaSubpanel" style="display: none; margin-top: 0.75rem;">
-                      <p class="panel-subtext">Historial completo de todo lo que realizan los usuarios con rol guardia en sus turnos activos (ingresos, egresos, búsquedas, escaneos y cierres de sesión).</p>
-                      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.6rem;">
-                        <button type="button" class="text-btn" id="refreshAdminGuardLogsBtn">Actualizar registros</button>
-                      </div>
-                      <div id="adminGuardLogsList" class="activity-logs-container" style="display: grid; gap: 0.5rem;"></div>
-                    </div>
                   </div>
                 </div>
 
@@ -681,6 +822,18 @@
                       </button>
                     </div>
                     <p class="panel-subtext">Emití periodos para todos los propietarios o vecinos específicos, y verificá los avisos de transferencia informados.</p>
+
+                    <!-- Buscador en tiempo real de expensas por Lote, DNI o Apellido -->
+                    <div style="margin: 0.75rem 0;">
+                      <input
+                        type="search"
+                        id="adminExpensesSearchInput"
+                        placeholder="🔍 Buscar por Lote (ej: L2M2 o 2), DNI, Apellido o Nombre..."
+                        style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
+                        autocomplete="off"
+                      />
+                    </div>
+
                     <ul id="adminExpensesList" class="list-stack visit-list"></ul>
                   </div>
                 </div>
@@ -727,14 +880,56 @@
                       </div>
                       <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                         <button type="button" class="primary-btn" id="openBroadcastAlertModalBtn" style="padding: 0.42rem 0.95rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
-                          🚨 Emitir Alerta General
+                          🚨 Alerta Masiva
+                        </button>
+                        <button type="button" class="primary-btn" id="openNotifySpecificResidentsModalBtn" style="padding: 0.42rem 0.95rem; font-size: 0.85rem; width: auto; background: #2563eb; color: #fff; border: none; font-weight: 600;">
+                          👥 Notificar a Vecino(s)
+                        </button>
+                        <button type="button" class="btn-inline-action" id="openNotifyGuardModalBtn" style="font-size: 0.85rem;">
+                          🛡️ Notificar a Guardia
                         </button>
                         <button type="button" class="text-btn" id="refreshAdminAlertsBtn">Actualizar</button>
                       </div>
                     </div>
-                    <p class="panel-subtext">Emití avisos de emergencia, cortes de servicios o alertas urgentes directo a la campanita 🔔 de todos los vecinos habilitados.</p>
+                    <p class="panel-subtext">Emití alertas comunitarias para todo el predio, avisos específicos para uno o varios vecinos, o instrucciones directas para la guardia.</p>
 
                     <div id="adminBroadcastAlertsList" class="list-stack" style="display: grid; gap: 0.65rem; margin-top: 0.75rem;"></div>
+                  </div>
+                </div>
+
+                <!-- MÓDULO 6: Auditoría General (Exclusivo Administrador) -->
+                <div class="admin-tab-view" id="adminTabAuditoria">
+                  <div class="glass-card panel-block" id="adminAuditPanel">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <h4>📋 Auditoría General del Sistema</h4>
+                        <span class="badge soft" id="adminAuditLogsCountBadge">0 acciones</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="text-btn" id="refreshAdminAuditLogsBtn">🔄 Actualizar auditoría</button>
+                      </div>
+                    </div>
+                    <p class="panel-subtext">Historial auditable centralizado e inalterable de cada acción realizada en la aplicación por vecinos, personal de guardia y administradores.</p>
+
+                    <!-- Filtros de búsqueda y roles -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; align-items: center;">
+                      <input
+                        type="search"
+                        id="adminAuditSearchInput"
+                        placeholder="🔍 Buscar por operador, acción, lote, detalle..."
+                        style="flex: 1; min-width: 220px; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem;"
+                        autocomplete="off"
+                      />
+                      <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;" id="adminAuditRoleFilters">
+                        <button type="button" class="btn-inline-action active audit-role-filter-btn" data-role-filter="all">Todos los roles</button>
+                        <button type="button" class="btn-inline-action audit-role-filter-btn" data-role-filter="user">👤 Vecinos</button>
+                        <button type="button" class="btn-inline-action audit-role-filter-btn" data-role-filter="guardia">🛡️ Guardia</button>
+                        <button type="button" class="btn-inline-action audit-role-filter-btn" data-role-filter="admin">👑 Administración</button>
+                      </div>
+                    </div>
+
+                    <!-- Lista de registros de auditoría -->
+                    <div id="adminGlobalAuditLogsList" class="activity-logs-container" style="display: grid; gap: 0.5rem; max-height: 550px; overflow-y: auto;"></div>
                   </div>
                 </div>
               </div>
@@ -786,7 +981,37 @@
                   <p class="guard-card-desc">Buscá invitados registrados, ubicá su vehículo y confirmá el ingreso o egreso.</p>
                 </button>
 
-                <!-- Botón 3: Notificaciones Masivas -->
+                <!-- Botón 3: Avisos de Vecinos (Delivery, servicios, etc.) -->
+                <button type="button" class="guard-action-card glass-card" id="guardResidentNoticesBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">🛎️</span>
+                    <span class="badge soft guard-card-badge" id="guardResidentNoticesBadge">0 avisos</span>
+                  </div>
+                  <h4 class="guard-card-title">Avisos de Vecinos</h4>
+                  <p class="guard-card-desc">Delivery, proveedores, animales sueltos y consultas enviadas por propietarios.</p>
+                </button>
+
+                <!-- Botón 4: Notificar a Vecino Específico -->
+                <button type="button" class="guard-action-card glass-card" id="guardNotifyResidentBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">💬</span>
+                    <span class="badge soft guard-card-badge">Directo</span>
+                  </div>
+                  <h4 class="guard-card-title">Notificar a Vecino</h4>
+                  <p class="guard-card-desc">Enviar novedad o comentario a un vecino específico con auditoría en vivo.</p>
+                </button>
+
+                <!-- Botón 5: Notificar a Administración -->
+                <button type="button" class="guard-action-card glass-card" id="guardNotifyAdminBtn">
+                  <div class="guard-card-top">
+                    <span class="guard-card-icon">👑</span>
+                    <span class="badge soft guard-card-badge">Directo</span>
+                  </div>
+                  <h4 class="guard-card-title">Notificar a Administración</h4>
+                  <p class="guard-card-desc">Enviar novedad de turno, incidente o consulta a la administración.</p>
+                </button>
+
+                <!-- Botón 5: Notificaciones Masivas -->
                 <button type="button" class="guard-action-card glass-card" id="guardNotificationsBtn">
                   <div class="guard-card-top">
                     <span class="guard-card-icon">📢</span>
@@ -796,7 +1021,7 @@
                   <p class="guard-card-desc">Avisos comunitarios y alertas masivas emitidas por la administración.</p>
                 </button>
 
-                <!-- Botón 4: Cambio de Guardia -->
+                <!-- Botón 6: Cambio de Guardia -->
                 <button type="button" class="guard-action-card glass-card" id="guardShiftChangeBtn">
                   <div class="guard-card-top">
                     <span class="guard-card-icon">🔄</span>
@@ -841,17 +1066,29 @@
                 <ul id="guardVisitsList" class="list-stack visit-list"></ul>
               </div>
 
-              <!-- Subpanel: Registro de Todo lo que Hace el Usuario (Auditoría en Vivo) -->
-              <div class="glass-card panel-block" id="guardShiftLogBlock">
+              <!-- Subpanel: Avisos Recibidos de Vecinos (Delivery, Servicios, Animales, etc.) -->
+              <div class="glass-card panel-block" id="guardResidentNoticesBlock" style="margin-bottom: 1.5rem;">
                 <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                   <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                    <h4>📋 Registro de Actividad de la Guardia</h4>
-                    <span class="badge soft" id="guardLogsCountBadge">0 acciones</span>
+                    <h4>🛎️ Avisos Recibidos de Vecinos</h4>
+                    <span class="badge soft" id="guardResidentNoticesCountBadge">0 avisos</span>
                   </div>
-                  <button type="button" class="text-btn" id="refreshGuardLogsBtn">Actualizar registro</button>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-inline-action" id="guardOpenNotifyResidentTopBtn" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);">
+                      💬 Notificar a un Vecino
+                    </button>
+                    <button type="button" class="text-btn" id="refreshGuardResidentNoticesBtn">Actualizar lista</button>
+                  </div>
                 </div>
-                <p class="panel-subtext">Historial registrado de cada acción realizada durante la guardia activa (ingresos, egresos, búsquedas, escaneos y cambios de turno).</p>
-                <div id="guardActivityLogsList" class="activity-logs-container" style="display: grid; gap: 0.5rem; margin-top: 0.65rem;"></div>
+                <p class="panel-subtext">Avisos de delivery, ingreso de proveedores, consultas y alertas de animales enviadas por los propietarios en tiempo real.</p>
+
+                <div class="guard-filter-tabs" style="margin-bottom: 0.85rem;">
+                  <button type="button" class="btn-inline-action active guard-notice-filter-btn" data-notice-filter="all">Todos</button>
+                  <button type="button" class="btn-inline-action guard-notice-filter-btn" data-notice-filter="pending">🟡 Pendientes</button>
+                  <button type="button" class="btn-inline-action guard-notice-filter-btn" data-notice-filter="attended">🟢 Atendidos</button>
+                </div>
+
+                <div id="guardResidentNoticesList" style="display: grid; gap: 0.75rem;"></div>
               </div>
             </section>
           </main>
@@ -943,7 +1180,7 @@
           <div class="field-grid two-col">
             <label>
               <span>Monto a abonar ($ ARS)</span>
-              <input type="number" name="expenseAmount" id="emitExpenseAmount" min="1" step="100" required placeholder="150000" />
+              <input type="number" name="expenseAmount" id="emitExpenseAmount" min="1" step="any" required placeholder="150000" />
             </label>
             <label>
               <span>Destinatarios</span>
@@ -1774,11 +2011,280 @@
       </div>
     </div>
 
+    <!-- Modal para Notificar a Vecino Específico desde Garita (Guardia / Admin) -->
+    <div id="guardNotifyResidentModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 540px; width: 95%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">💬</span>
+            <div>
+              <h4 style="margin: 0;">Notificar a un Vecino Específico</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">
+                Envío directo al centro de alertas del vecino. Acción 100% auditada.
+              </p>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" id="closeGuardNotifyResidentModal">✕</button>
+        </div>
+
+        <form id="guardNotifyResidentForm" class="modal-form" style="margin-top: 0.85rem;">
+          <label>
+            <span>Seleccionar Vecino Destinatario *</span>
+            <select id="guardNotifyTargetSelect" required>
+              <option value="">-- Cargando vecinos habilitados... --</option>
+            </select>
+          </label>
+
+          <!-- Tarjeta resumen del vecino seleccionado -->
+          <div id="guardNotifySelectedNeighborInfo" style="display: none; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.84rem; margin-top: -0.3rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
+              <div>
+                <strong id="guardNotifyNeighborName" style="color: #fff;">--</strong>
+                <span style="color: var(--gold); margin-left: 0.35rem;" id="guardNotifyNeighborLocation">--</span>
+              </div>
+              <div style="color: var(--muted); font-size: 0.8rem;">
+                📞 <span id="guardNotifyNeighborPhone">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selector rápido de plantilla / motivo -->
+          <label style="margin-top: 0.4rem;">
+            <span>Plantilla rápida / Motivo (opcional)</span>
+            <select id="guardNotifyPresetSelect">
+              <option value="custom" selected>✏️ Redactar comentario libre</option>
+              <option value="paquete">📦 Paquete o encomienda recibida en garita</option>
+              <option value="delivery">🛵 Delivery esperando en la guardia de ingreso</option>
+              <option value="proveedor">🔧 Proveedor solicita autorización para ingresar a su lote</option>
+              <option value="vehiculo">🚗 Aviso de vehículo (mal estacionado o luces encendidas)</option>
+              <option value="mascota">🐕 Aviso de mascota o animal suelto en el barrio</option>
+              <option value="general">📢 Mensaje o novedad general de la guardia</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Título o Asunto del Aviso *</span>
+            <input type="text" id="guardNotifyTitleInput" required value="Aviso de Guardia" placeholder="Ej: Paquete en garita / Delivery en acceso" />
+          </label>
+
+          <label>
+            <span>Comentario o Mensaje Libre para el Vecino *</span>
+            <textarea
+              id="guardNotifyMessageInput"
+              rows="4"
+              required
+              placeholder="Escribí detalladamente el comentario o indicación para el vecino..."
+              style="width: 100%; box-sizing: border-box;"
+            ></textarea>
+          </label>
+
+          <div style="padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(247, 199, 109, 0.1); border: 1px solid rgba(247, 199, 109, 0.25); font-size: 0.8rem; color: var(--gold); line-height: 1.4;">
+            🛡️ <strong>Auditoría obligatoria:</strong> Esta notificación se registrará de inmediato con tu usuario de operador, fecha, hora, vecino y contenido íntegro en el Registro de Actividad.
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.9rem;">
+            <button type="button" class="text-btn" id="cancelGuardNotifyBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitGuardNotifyBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
+              📨 Enviar Notificación Auditada
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Notificar a Vecino(s) Específico(s) desde Administración -->
+    <div id="adminNotifySpecificResidentsModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 580px; width: 95%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">👥</span>
+            <div>
+              <h4 style="margin: 0;">Notificar a Vecino(s) Específico(s)</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">
+                Envío privado para uno o varios vecinos seleccionados. No se emite de forma masiva.
+              </p>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" id="closeAdminNotifySpecificResidentsModal">✕</button>
+        </div>
+
+        <form id="adminNotifySpecificResidentsForm" class="modal-form" style="margin-top: 0.85rem;">
+          <!-- Buscador y selección de vecinos -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+              <span style="font-size: 0.88rem; font-weight: 600;">Seleccionar Destinatarios *</span>
+              <div style="display: flex; gap: 0.4rem; align-items: center;">
+                <span class="badge soft" id="adminNotifySelectedCount" style="font-size: 0.76rem;">0 seleccionados</span>
+                <button type="button" class="text-btn" id="adminNotifySelectAllBtn" style="font-size: 0.78rem; padding: 0.15rem 0.4rem;">Marcar todos</button>
+                <button type="button" class="text-btn" id="adminNotifyDeselectAllBtn" style="font-size: 0.78rem; padding: 0.15rem 0.4rem;">Desmarcar</button>
+              </div>
+            </div>
+
+            <input
+              type="search"
+              id="adminNotifyResidentsSearchInput"
+              placeholder="🔍 Filtrar lista por nombre, apellido, lote o DNI..."
+              style="width: 100%; padding: 0.5rem 0.8rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; margin-bottom: 0.5rem;"
+              autocomplete="off"
+            />
+
+            <div id="adminNotifyResidentsCheckboxesList" style="max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); padding: 0.5rem; display: grid; gap: 0.35rem;">
+              <!-- Se puebla dinámicamente con checkboxes de vecinos -->
+            </div>
+          </div>
+
+          <label style="margin-top: 0.6rem;">
+            <span>Título o Asunto *</span>
+            <input type="text" id="adminNotifySpecificTitleInput" required value="Aviso de Administración" placeholder="Ej: Citación a reunión / Aviso sobre su lote" />
+          </label>
+
+          <label>
+            <span>Mensaje o Notificación *</span>
+            <textarea
+              id="adminNotifySpecificMessageInput"
+              rows="4"
+              required
+              placeholder="Escribí el texto que recibirán los vecinos seleccionados en su campanita privada..."
+              style="width: 100%; box-sizing: border-box;"
+            ></textarea>
+          </label>
+
+          <div style="padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); background: rgba(105, 210, 166, 0.1); border: 1px solid rgba(105, 210, 166, 0.25); font-size: 0.8rem; color: var(--primary); line-height: 1.4;">
+            🔒 <strong>Privacidad estricta:</strong> Cada notificación será entregada de forma estrictamente individual a los propietarios seleccionados. Nadie más en la comunidad tendrá visibilidad de este mensaje.
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.9rem;">
+            <button type="button" class="text-btn" id="cancelAdminNotifySpecificBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitAdminNotifySpecificBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700; background: #2563eb;">
+              📨 Enviar a Vecinos Seleccionados
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Notificar a Administración desde Guardia -->
+    <div id="guardNotifyAdminModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 520px; width: 95%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">👑</span>
+            <div>
+              <h4 style="margin: 0;">Enviar Notificación a Administración</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">
+                Aviso directo desde garita a la administración central. Acción auditada.
+              </p>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" id="closeGuardNotifyAdminModal">✕</button>
+        </div>
+
+        <form id="guardNotifyAdminForm" class="modal-form" style="margin-top: 0.85rem;">
+          <label>
+            <span>Motivo / Plantilla (opcional)</span>
+            <select id="guardNotifyAdminPresetSelect">
+              <option value="custom" selected>✏️ Redactar mensaje libre</option>
+              <option value="incidente">🚨 Novedad / Incidente de seguridad en predio</option>
+              <option value="mantenimiento">🔧 Solicitud urgente de mantenimiento o reparación</option>
+              <option value="paquete_admin">📦 Correspondencia o paquetería para administración</option>
+              <option value="consulta">📋 Consulta operativa o de autorización</option>
+              <option value="relevo">🛡️ Reporte o novedad de cierre de turno</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Título o Asunto *</span>
+            <input type="text" id="guardNotifyAdminTitleInput" required value="Novedad de Guardia para Administración" placeholder="Ej: Reporte de turno / Incidente en acceso" />
+          </label>
+
+          <label>
+            <span>Detalle o Mensaje para la Administración *</span>
+            <textarea
+              id="guardNotifyAdminMessageInput"
+              rows="4"
+              required
+              placeholder="Escribí detalladamente el reporte, incidente o consulta para la administración..."
+              style="width: 100%; box-sizing: border-box;"
+            ></textarea>
+          </label>
+
+          <div style="padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); background: rgba(247, 199, 109, 0.1); border: 1px solid rgba(247, 199, 109, 0.25); font-size: 0.8rem; color: var(--gold); line-height: 1.4;">
+            🛡️ <strong>Canal Guardia-Administración:</strong> Este mensaje se enviará directamente al panel de alertas de la Administración y quedará registrado en el historial de auditoría del consorcio.
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.9rem;">
+            <button type="button" class="text-btn" id="cancelGuardNotifyAdminBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitGuardNotifyAdminBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
+              📨 Enviar a Administración
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Notificar a Guardia desde Administración -->
+    <div id="adminNotifyGuardModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card" style="max-width: 520px; width: 95%;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">🛡️</span>
+            <div>
+              <h4 style="margin: 0;">Enviar Notificación a la Guardia</h4>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">
+                Instrucción, aviso o novedad inmediata para el personal de garita.
+              </p>
+            </div>
+          </div>
+          <button type="button" class="icon-btn" id="closeAdminNotifyGuardModal">✕</button>
+        </div>
+
+        <form id="adminNotifyGuardForm" class="modal-form" style="margin-top: 0.85rem;">
+          <label>
+            <span>Tipo de Instrucción / Asunto (opcional)</span>
+            <select id="adminNotifyGuardPresetSelect">
+              <option value="custom" selected>✏️ Redactar instrucción libre</option>
+              <option value="autorizacion">🚗 Autorización de ingreso especial de visita o proveedor</option>
+              <option value="seguridad">🚨 Alerta preventiva de seguridad para accesos</option>
+              <option value="obra">🔨 Novedad sobre horarios de obras o proveedores</option>
+              <option value="protocolo">🔄 Actualización o directiva de protocolo de garita</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Título o Asunto *</span>
+            <input type="text" id="adminNotifyGuardTitleInput" required value="Instrucción de Administración para Guardia" placeholder="Ej: Autorización de ingreso / Instrucción de seguridad" />
+          </label>
+
+          <label>
+            <span>Instrucción o Mensaje para el Personal de Guardia *</span>
+            <textarea
+              id="adminNotifyGuardMessageInput"
+              rows="4"
+              required
+              placeholder="Escribí la instrucción o indicación para los operadores de turno en garita..."
+              style="width: 100%; box-sizing: border-box;"
+            ></textarea>
+          </label>
+
+          <div style="padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); background: rgba(105, 210, 166, 0.1); border: 1px solid rgba(105, 210, 166, 0.25); font-size: 0.8rem; color: var(--primary); line-height: 1.4;">
+            🛡️ <strong>Canal Administración-Guardia:</strong> La guardia en turno recibirá esta notificación en tiempo real en su centro de avisos y quedará registrada en la auditoría general.
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.9rem;">
+            <button type="button" class="text-btn" id="cancelAdminNotifyGuardBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitAdminNotifyGuardBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
+              📨 Enviar a Guardia
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Mensaje flotante Toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="assets/js/html5-qrcode.min.js"></script>
-    <script src="assets/js/api.js?v=2.5"></script>
-    <script src="assets/js/app.js?v=2.5"></script>
+    <script src="assets/js/api.js?v=2.6"></script>
+    <script src="assets/js/app.js?v=2.6"></script>
   </body>
 </html>

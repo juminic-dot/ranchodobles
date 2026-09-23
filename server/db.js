@@ -128,6 +128,23 @@ db.exec(`
     ip TEXT,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS guard_notices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    residentName TEXT NOT NULL,
+    lote TEXT,
+    manzana TEXT,
+    category TEXT NOT NULL,
+    company TEXT,
+    timeEstimated TEXT,
+    details TEXT NOT NULL,
+    status TEXT DEFAULT 'Pendiente',
+    response TEXT,
+    resolvedAt TEXT,
+    resolvedBy TEXT,
+    createdAt TEXT NOT NULL
+  );
 `);
 
 // Migrations for existing databases
@@ -141,6 +158,26 @@ try {
       action TEXT NOT NULL,
       details TEXT,
       ip TEXT,
+      createdAt TEXT NOT NULL
+    );
+  `);
+} catch (e) {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS guard_notices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      residentName TEXT NOT NULL,
+      lote TEXT,
+      manzana TEXT,
+      category TEXT NOT NULL,
+      company TEXT,
+      timeEstimated TEXT,
+      details TEXT NOT NULL,
+      status TEXT DEFAULT 'Pendiente',
+      response TEXT,
+      resolvedAt TEXT,
+      resolvedBy TEXT,
       createdAt TEXT NOT NULL
     );
   `);
@@ -161,27 +198,41 @@ try { db.exec("ALTER TABLE users ADD COLUMN manzana TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN isBlocked INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.exec("ALTER TABLE bookings ADD COLUMN blockReason TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE notifications ADD COLUMN targetRole TEXT DEFAULT 'user';"); } catch (e) {}
+try { db.exec("ALTER TABLE notifications ADD COLUMN senderId INTEGER;"); } catch (e) {}
+try { db.exec("ALTER TABLE notifications ADD COLUMN senderName TEXT;"); } catch (e) {}
 
-// Retroactively classify existing notifications
+// Retroactively classify legacy notifications (only if targetRole is NULL)
 try {
   db.exec(`
     UPDATE notifications
     SET targetRole = 'admin'
-    WHERE (title LIKE '%aviso de pago%'
+    WHERE targetRole IS NULL
+      AND (title LIKE '%aviso de pago%'
        OR title LIKE '%solicitud%'
-       OR title LIKE '%liquidaci%'
-       OR title LIKE '%nuevo registro%')
-      AND (targetRole IS NULL OR targetRole = 'user');
-  `);
-  db.exec(`
-    UPDATE notifications
-    SET targetRole = 'all'
-    WHERE userId IS NULL AND (targetRole IS NULL OR targetRole != 'admin');
-  `);
-  db.exec(`
+       OR title LIKE '%nuevo registro%');
+
     UPDATE notifications
     SET targetRole = 'user'
-    WHERE userId IS NOT NULL AND (targetRole IS NULL OR targetRole = '');
+    WHERE targetRole IS NULL AND userId IS NOT NULL;
+
+    UPDATE notifications
+    SET targetRole = 'all'
+    WHERE targetRole IS NULL AND userId IS NULL;
+
+    -- Fix any notices incorrectly broadcasted to 'all' that were meant for guardia
+    UPDATE notifications
+    SET targetRole = 'guardia'
+    WHERE title LIKE 'Aviso de vecino%' AND (targetRole = 'all' OR targetRole IS NULL);
+
+    -- Fix any personal expense notifications for residents that were marked as admin
+    UPDATE notifications
+    SET targetRole = 'user'
+    WHERE title = 'Nueva liquidación de expensas' AND userId IS NOT NULL AND targetRole != 'user';
+
+    -- Fix any old expense emission summary notifications incorrectly set to 'all'
+    UPDATE notifications
+    SET targetRole = 'admin'
+    WHERE title = 'Emisión de expensas realizada' AND targetRole = 'all';
   `);
 } catch (e) {}
 

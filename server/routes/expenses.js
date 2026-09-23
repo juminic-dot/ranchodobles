@@ -317,26 +317,24 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       if (!userId) {
         return res.status(400).json({ error: 'Debes seleccionar un propietario.' });
       }
-      const user = db.prepare('SELECT id, nombre, apellido, email, approved FROM users WHERE id = ?').get(userId);
+      const user = db.prepare('SELECT id, nombre, apellido, email, approved, role FROM users WHERE id = ?').get(userId);
       if (!user) {
         return res.status(404).json({ error: 'Propietario no encontrado.' });
+      }
+      if (user.role !== 'user') {
+        return res.status(400).json({ error: 'Solo se pueden emitir expensas a vecinos/propietarios.' });
       }
       if (!user.approved) {
         return res.status(400).json({ error: 'El propietario aún no ha sido aprobado.' });
       }
       targetUsers = [user];
     } else {
-      // All active approved users
+      // All active approved residents only (never guards or admins)
       targetUsers = db.prepare(`
         SELECT id, nombre, apellido, email
         FROM users
-        WHERE approved = 1 AND role != 'admin'
+        WHERE approved = 1 AND role = 'user'
       `).all();
-
-      // If no normal users, also check for any approved users
-      if (targetUsers.length === 0) {
-        targetUsers = db.prepare(`SELECT id, nombre, apellido, email FROM users WHERE approved = 1`).all();
-      }
     }
 
     if (targetUsers.length === 0) {
@@ -348,7 +346,7 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       INSERT INTO expenses (userId, period, dueDate, amount, status, concept, createdAt)
       VALUES (?, ?, ?, ?, 'Pendiente', ?, ?)
     `);
-    const notifStmt = db.prepare(`
+    const residentNotifStmt = db.prepare(`
       INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
       VALUES (?, 'user', ?, ?, 0, ?)
     `);
@@ -364,7 +362,8 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       }
 
       insertStmt.run(u.id, cleanPeriod, cleanDueDate, numAmount, cleanConcept, now);
-      notifStmt.run(
+      // Strictly personal notification for this neighbor only
+      residentNotifStmt.run(
         u.id,
         'Nueva liquidación de expensas',
         `Se emitió la liquidación de expensas para ${cleanPeriod} por un total de $ ${numAmount.toLocaleString('es-AR')}. Vencimiento: ${cleanDueDate}.`,
@@ -373,14 +372,29 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       createdCount++;
     }
 
-    // Broadcast admin notification
+    // Admin-only notification summary (strictly targetRole = 'admin', userId = req.user.id)
     if (createdCount > 0) {
-      notifStmt.run(
-        null,
+      db.prepare(`
+        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+        VALUES (?, 'admin', ?, ?, 0, ?)
+      `).run(
+        req.user.id,
         'Emisión de expensas realizada',
         `Se emitieron ${createdCount} liquidaciones de expensas correspondientes a ${cleanPeriod}.`,
         now
       );
+
+      // Audit log
+      if (typeof db.logActivity === 'function') {
+        db.logActivity(
+          req.user.id,
+          `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+          req.user.role,
+          'EMISION_EXPENSAS',
+          `Emisión de ${createdCount} liquidaciones para periodo ${cleanPeriod} por $ ${numAmount.toLocaleString('es-AR')}`,
+          req.ip || ''
+        );
+      }
     }
 
     res.status(201).json({
