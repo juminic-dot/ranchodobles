@@ -158,9 +158,9 @@
   * un boton para supervicion y control de canchas ok
   * un boton para avisos y alertas masivas inmediatas ok
   * Al registrarse un nuevo vecino, al administrador le debe permitir agregar el identificador de lote manzana y tambien modificar los datos del vecino, pero nunca modificar o visualizar su contraseña. ok
-  * las novedades para administrador no deben poder verlas los vecinos, el vecino solo debe ver notificaciones masivas, y sus propias notificaciones de sus acciones en la app,   no debe ver por ejemplo que otro vecino pago expensas, que llego una visita para otro vecino, ni nada de eso. ok
+  * las novedades para administrador no deben poder verlas los vecinos, el vecino solo debe ver notificaciones masivas, y sus propias notificaciones de sus acciones en la app no debe ver por ejemplo que otro vecino pago expensas, que llego una visita para otro vecino, ni nada de eso. ok
   ---------------------------------------------------
   
   * Backup de base de datos, averiguar que hacer para no perder datos de la app en ningun momento, o reponerlos en caso qeu se rompan y haya que migrar.
   * Poner sonido a las notificaciones, que le suenen al cliente cuando le llegan.
-   
+  * quitar del cuadro de texto del login las palabras, solo poner ej: usuario@tumail.com

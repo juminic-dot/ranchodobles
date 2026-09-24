@@ -915,7 +915,7 @@ async function getInvitationUrl() {
   }
   const base = cachedInviteBaseUrl || window.location.origin;
   const path = window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
-  return `${base}${path}/i/${encodeURIComponent(cachedInviteCode)}`;
+  return `${base}${path}/invitacion.html?c=${encodeURIComponent(cachedInviteCode)}`;
 }
 
 async function openGmailInvite() {

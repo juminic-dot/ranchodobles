@@ -52,6 +52,18 @@ app.get(['/descarga.jfif', '/ranchos/descarga.jfif'], (req, res) => {
   res.sendFile(path.join(__dirname, 'descarga.jfif'));
 });
 
+// Function to get public application prefix (/ranchos on production, empty on dev)
+function getAppPrefix(req) {
+  const forwardedPrefix = req.get('x-forwarded-prefix');
+  if (forwardedPrefix) return forwardedPrefix.replace(/\/$/, '');
+  if (req.originalUrl && req.originalUrl.startsWith('/ranchos')) return '/ranchos';
+  if (req.baseUrl && req.baseUrl.startsWith('/ranchos')) return '/ranchos';
+  if (req.path && req.path.startsWith('/ranchos')) return '/ranchos';
+  const host = req.get('host') || '';
+  if (host.includes('gestechnoclient.com')) return '/ranchos';
+  return '';
+}
+
 // Guest invite page
 app.get(['/invitacion.html', '/ranchos/invitacion.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'invitacion.html'));
@@ -60,7 +72,7 @@ app.get(['/invitacion.html', '/ranchos/invitacion.html'], (req, res) => {
 // Short invite link redirect: /i/:code -> /invitacion.html?c=:code
 app.get(['/i/:code', '/ranchos/i/:code'], (req, res) => {
   const code = encodeURIComponent(req.params.code);
-  const prefix = req.path.startsWith('/ranchos') ? '/ranchos' : '';
+  const prefix = getAppPrefix(req);
   res.redirect(`${prefix}/invitacion.html?c=${code}`);
 });
 

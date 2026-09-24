@@ -8,7 +8,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="🎟️ Pase de Ingreso — Rancho Doble S" />
     <meta property="og:description" content="Hacé click para autorizar tu visita y obtener tu código QR de acceso a la guardia." />
-    <meta property="og:image" content="assets/img/logo.png" />
+    <meta property="og:image" content="https://gestechnoclient.com/ranchos/assets/img/logo.png" />
     <link rel="icon" type="image/png" href="assets/img/logo.png" />
     <link rel="apple-touch-icon" href="assets/img/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -284,7 +284,10 @@
       let verifiedHostName = '';
 
       const parts = window.location.pathname.split('/').filter(Boolean);
-      const apiBase = (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') ? `/${parts[0]}` : '';
+      let apiBase = (parts.length > 0 && !parts[0].includes('.') && parts[0] !== 'api') ? `/${parts[0]}` : '';
+      if (!apiBase && (window.location.hostname.includes('gestechnoclient.com') || window.location.pathname.startsWith('/ranchos'))) {
+        apiBase = '/ranchos';
+      }
 
       async function verifyInvitation() {
         if (!inviteParam) {
