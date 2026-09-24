@@ -122,13 +122,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Ocurrió un error inesperado en el servidor.' });
 });
 
+const { getMailerStatus } = require('./server/mailer');
+
 let server = null;
 if (require.main === module) {
   server = app.listen(PORT, () => {
+    const mailerStatus = getMailerStatus();
     console.log(`=========================================`);
     console.log(` Rancho Doble S - Servidor en ejecución`);
     console.log(` URL Local: http://localhost:${PORT}`);
     console.log(` Modo: ${process.env.NODE_ENV || 'development'}`);
+    if (mailerStatus.configured) {
+      console.log(` 📧 Correo activo: ${mailerStatus.type.toUpperCase()} (${mailerStatus.from})`);
+    } else {
+      console.log(` ⚠️ Correo no configurado (blanqueo de clave simulará o avisará en .env)`);
+    }
     console.log(`=========================================`);
   });
 }

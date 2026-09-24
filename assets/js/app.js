@@ -358,9 +358,7 @@ const dismissAdminResetLinkBtn = document.getElementById('dismissAdminResetLinkB
 const adminResetTargetName = document.getElementById('adminResetTargetName');
 const adminResetTargetUser = document.getElementById('adminResetTargetUser');
 const adminResetTargetEmail = document.getElementById('adminResetTargetEmail');
-const adminResetLinkInput = document.getElementById('adminResetLinkInput');
-const copyAdminResetLinkBtn = document.getElementById('copyAdminResetLinkBtn');
-const shareAdminResetWhatsAppBtn = document.getElementById('shareAdminResetWhatsAppBtn');
+const adminResetStatusBox = document.getElementById('adminResetStatusBox');
 const sendAdminResetEmailBtn = document.getElementById('sendAdminResetEmailBtn');
 
 // Admin Court Management DOM
@@ -706,6 +704,7 @@ async function handleChangePassword(e) {
     });
     showToast(res.message || 'Contraseña actualizada con éxito.');
     if (profilePasswordForm) profilePasswordForm.reset();
+    closeProfileModalFn(false);
     loadNotifications();
   } catch (err) {
     showToast(err.message || 'Error al actualizar contraseña.');
@@ -3187,35 +3186,79 @@ async function openAdminResetModalForUser(userId) {
     return;
   }
 
-  try {
-    showToast('Generando enlace seguro...');
-    const res = await API.admin.generateResetToken(userId, false);
+  if (!user.email || !user.email.includes('@')) {
+    showToast('El vecino no tiene un correo electrónico válido registrado.');
+    return;
+  }
 
-    let finalResetLink = res.resetLink;
-    if (finalResetLink && window.location.pathname.startsWith('/ranchos') && !finalResetLink.includes('/ranchos')) {
-      const appBase = window.location.origin + window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
-      const match = finalResetLink.match(/token=([a-f0-9]+)/i);
-      if (match) {
-        finalResetLink = `${appBase}/#restablecer-clave?token=${match[1]}`;
-      }
+  const userName = `${user.nombre || ''} ${user.apellido || ''}`.trim() || 'Vecino';
+  const userIdent = user.username || `Lote ${user.lote || ''}`;
+
+  const confirmReset = confirm(
+    `¿Deseás blanquear la clave de ${userName} (${userIdent})?\n\nSe enviará un correo seguro con el enlace de restablecimiento directamente a su email:\n${user.email}\n\nPor seguridad, la administración no tendrá acceso al enlace.`
+  );
+  if (!confirmReset) return;
+
+  state.adminResetContext = {
+    userId,
+    name: userName,
+    username: userIdent,
+    email: user.email
+  };
+
+  if (adminResetTargetName) adminResetTargetName.textContent = state.adminResetContext.name;
+  if (adminResetTargetUser) adminResetTargetUser.textContent = state.adminResetContext.username;
+  if (adminResetTargetEmail) adminResetTargetEmail.textContent = state.adminResetContext.email;
+
+  if (adminResetStatusBox) {
+    adminResetStatusBox.style.display = 'block';
+    adminResetStatusBox.style.background = 'rgba(247, 199, 109, 0.1)';
+    adminResetStatusBox.style.border = '1px solid rgba(247, 199, 109, 0.3)';
+    adminResetStatusBox.style.color = 'var(--gold)';
+    adminResetStatusBox.innerHTML = '⏳ Generando solicitud y enviando correo al vecino...';
+  }
+
+  adminResetLinkModal.style.display = 'grid';
+
+  try {
+    showToast('Enviando correo al vecino...');
+    if (sendAdminResetEmailBtn) {
+      sendAdminResetEmailBtn.disabled = true;
+      sendAdminResetEmailBtn.textContent = 'Enviando...';
     }
 
-    state.adminResetContext = {
-      userId,
-      name: `${user.nombre} ${user.apellido}`,
-      username: user.username || `Lote ${user.lote || ''}`,
-      email: user.email,
-      resetLink: finalResetLink
-    };
+    const res = await API.admin.generateResetToken(userId);
 
-    if (adminResetTargetName) adminResetTargetName.textContent = state.adminResetContext.name;
-    if (adminResetTargetUser) adminResetTargetUser.textContent = state.adminResetContext.username;
-    if (adminResetTargetEmail) adminResetTargetEmail.textContent = state.adminResetContext.email;
-    if (adminResetLinkInput) adminResetLinkInput.value = finalResetLink;
-
-    adminResetLinkModal.style.display = 'grid';
+    if (res.emailSent) {
+      if (adminResetStatusBox) {
+        adminResetStatusBox.style.background = 'rgba(105, 210, 166, 0.12)';
+        adminResetStatusBox.style.border = '1px solid rgba(105, 210, 166, 0.35)';
+        adminResetStatusBox.style.color = '#a3e6cb';
+        adminResetStatusBox.innerHTML = `✅ <strong>Correo enviado con éxito</strong> a <strong>${escapeHTML(user.email)}</strong>.<br><span style="font-size: 0.78rem; opacity: 0.9; margin-top: 4px; display: inline-block;">El vecino dispone de 60 minutos para abrir el correo y definir su nueva contraseña.</span>`;
+      }
+      showToast(`✅ Correo de restablecimiento enviado a ${user.email}.`, 6000);
+    } else {
+      if (adminResetStatusBox) {
+        adminResetStatusBox.style.background = 'rgba(255, 107, 107, 0.12)';
+        adminResetStatusBox.style.border = '1px solid rgba(255, 107, 107, 0.35)';
+        adminResetStatusBox.style.color = '#ff9999';
+        adminResetStatusBox.innerHTML = `⚠️ <strong>No se pudo entregar el correo</strong> a <strong>${escapeHTML(user.email)}</strong>.<br><span style="font-size: 0.78rem; opacity: 0.9; margin-top: 4px; display: inline-block;">Motivo: ${escapeHTML(res.emailError || 'Verificá el servicio SMTP en el servidor.')}</span>`;
+      }
+      showToast(`⚠️ No se pudo enviar el correo: ${res.emailError || 'Error de envío'}`, 7000);
+    }
   } catch (err) {
-    showToast(err.message || 'Error al generar enlace de restablecimiento.');
+    if (adminResetStatusBox) {
+      adminResetStatusBox.style.background = 'rgba(255, 107, 107, 0.12)';
+      adminResetStatusBox.style.border = '1px solid rgba(255, 107, 107, 0.35)';
+      adminResetStatusBox.style.color = '#ff9999';
+      adminResetStatusBox.innerHTML = `⚠️ Error al procesar solicitud: ${escapeHTML(err.message)}`;
+    }
+    showToast(err.message || 'Error al procesar el blanqueamiento.');
+  } finally {
+    if (sendAdminResetEmailBtn) {
+      sendAdminResetEmailBtn.disabled = false;
+      sendAdminResetEmailBtn.textContent = '📧 Reenviar Correo al Vecino';
+    }
   }
 }
 
@@ -5525,52 +5568,37 @@ function attachEventListeners() {
       if (e.target === adminResetLinkModal) closeAdminResetLinkModalFn(false);
     });
   }
-  if (copyAdminResetLinkBtn) {
-    copyAdminResetLinkBtn.addEventListener('click', async () => {
-      const link = adminResetLinkInput?.value;
-      if (!link) return;
-      try {
-        await navigator.clipboard.writeText(link);
-        const originalText = copyAdminResetLinkBtn.textContent;
-        copyAdminResetLinkBtn.textContent = '✅ ¡Copiado!';
-        setTimeout(() => {
-          copyAdminResetLinkBtn.textContent = originalText;
-        }, 2200);
-        showToast('Enlace copiado al portapapeles.');
-      } catch (e) {
-        if (adminResetLinkInput) {
-          adminResetLinkInput.select();
-          document.execCommand('copy');
-          showToast('Enlace copiado al portapapeles.');
-        }
-      }
-    });
-  }
-  if (shareAdminResetWhatsAppBtn) {
-    shareAdminResetWhatsAppBtn.addEventListener('click', () => {
-      if (!state.adminResetContext) return;
-      const { name, resetLink } = state.adminResetContext;
-      const text = `Hola ${name},\nTe comparto tu enlace seguro y oficial para restablecer tu contraseña en el portal de Rancho Doble S:\n\n${resetLink}\n\n(Este enlace es de uso único y tiene validez de 60 minutos).`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    });
-  }
   if (sendAdminResetEmailBtn) {
     sendAdminResetEmailBtn.addEventListener('click', async () => {
       if (!state.adminResetContext?.userId) return;
+      const userEmail = state.adminResetContext.email || 'el vecino';
       try {
         sendAdminResetEmailBtn.disabled = true;
-        sendAdminResetEmailBtn.textContent = 'Enviando...';
-        const res = await API.admin.generateResetToken(state.adminResetContext.userId, true);
+        sendAdminResetEmailBtn.textContent = 'Reenviando...';
+        showToast('Reenviando correo...');
+        const res = await API.admin.generateResetToken(state.adminResetContext.userId);
         if (res.emailSent) {
-          showToast(`✅ ${res.message || 'Correo de restablecimiento enviado con éxito.'}`, 5000);
+          if (adminResetStatusBox) {
+            adminResetStatusBox.style.background = 'rgba(105, 210, 166, 0.12)';
+            adminResetStatusBox.style.border = '1px solid rgba(105, 210, 166, 0.35)';
+            adminResetStatusBox.style.color = '#a3e6cb';
+            adminResetStatusBox.innerHTML = `✅ <strong>Correo reenviado con éxito</strong> a <strong>${escapeHTML(userEmail)}</strong>.`;
+          }
+          showToast(`✅ Correo de restablecimiento reenviado con éxito a ${userEmail}.`, 5000);
         } else {
-          showToast(`⚠️ ${res.message || 'No se pudo entregar por correo. Podés compartir el enlace por WhatsApp o copiarlo.'}`, 7000);
+          if (adminResetStatusBox) {
+            adminResetStatusBox.style.background = 'rgba(255, 107, 107, 0.12)';
+            adminResetStatusBox.style.border = '1px solid rgba(255, 107, 107, 0.35)';
+            adminResetStatusBox.style.color = '#ff9999';
+            adminResetStatusBox.innerHTML = `⚠️ <strong>No se pudo entregar el correo</strong>.<br><span style="font-size: 0.78rem; opacity: 0.85; margin-top: 4px; display: inline-block;">Motivo: ${escapeHTML(res.emailError || 'Verificá el servicio SMTP en el servidor.')}</span>`;
+          }
+          showToast(`⚠️ No se pudo reenviar: ${res.emailError || 'Error de entrega'}`, 7000);
         }
       } catch (err) {
         showToast('Error al enviar correo: ' + err.message, 6000);
       } finally {
         sendAdminResetEmailBtn.disabled = false;
-        sendAdminResetEmailBtn.textContent = '📧 Reenviar por Correo';
+        sendAdminResetEmailBtn.textContent = '📧 Reenviar Correo al Vecino';
       }
     });
   }

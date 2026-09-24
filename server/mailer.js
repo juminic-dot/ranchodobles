@@ -1,62 +1,101 @@
 const nodemailer = require('nodemailer');
 
 function getTransporter() {
+  // 1. Gmail credentials (direct GMAIL_USER or SMTP_USER ending in @gmail.com)
+  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER && process.env.SMTP_USER.includes('@gmail.com') ? process.env.SMTP_USER : null);
+  const gmailPass = process.env.GMAIL_APP_PASS || (gmailUser ? process.env.SMTP_PASS : null);
+
+  if (gmailUser && gmailPass) {
+    const cleanPass = String(gmailPass).replace(/\s+/g, '');
+    return {
+      transporter: nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser.trim(),
+          pass: cleanPass
+        }
+      }),
+      type: 'gmail',
+      defaultFrom: gmailUser.trim()
+    };
+  }
+
+  // 2. Custom remote SMTP credentials
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER || process.env.GMAIL_USER;
-  const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
-  // 1. Explicit remote SMTP credentials
   if (host && user && pass) {
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      tls: { rejectUnauthorized: false }
-    });
+    return {
+      transporter: nodemailer.createTransport({
+        host: host.trim(),
+        port,
+        secure,
+        auth: {
+          user: user.trim(),
+          pass: String(pass)
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      }),
+      type: 'smtp',
+      defaultFrom: user.trim()
+    };
   }
 
-  // 2. Gmail service
-  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASS) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASS
-      }
-    });
-  }
-
-  // 3. Local MTA (Postfix on VPS 127.0.0.1:25) in production
-  if (process.env.NODE_ENV === 'production' || host === 'localhost' || host === '127.0.0.1') {
-    return nodemailer.createTransport({
-      host: '127.0.0.1',
-      port: 25,
-      secure: false,
-      ignoreTLS: true
-    });
+  // 3. Local MTA only if explicitly allowed via env
+  if (process.env.ALLOW_LOCAL_MTA === 'true') {
+    return {
+      transporter: nodemailer.createTransport({
+        host: '127.0.0.1',
+        port: 25,
+        secure: false,
+        ignoreTLS: true
+      }),
+      type: 'local_mta',
+      defaultFrom: 'notificaciones@gestechnoclient.com'
+    };
   }
 
   return null;
 }
 
+function getMailerStatus() {
+  const tInfo = getTransporter();
+  if (!tInfo) return { configured: false, type: 'none' };
+  return { configured: true, type: tInfo.type, from: tInfo.defaultFrom };
+}
+
 async function sendPasswordResetEmail({ to, name, resetLink, expiresMinutes = 60 }) {
-  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'notificaciones@gestechnoclient.com';
-  const transporter = getTransporter();
+  const tInfo = getTransporter();
+  const rawFrom = process.env.SMTP_FROM || (tInfo ? tInfo.defaultFrom : null) || 'notificaciones@gestechnoclient.com';
+
+  // If using Gmail, From address must match authenticated Gmail account to prevent rejection/spam marking
+  let fromAddress = rawFrom;
+  let replyToAddress = rawFrom;
+  if (tInfo && tInfo.type === 'gmail') {
+    fromAddress = tInfo.defaultFrom;
+    replyToAddress = rawFrom;
+  }
+
+  const fromHeader = fromAddress.includes('<') ? fromAddress : `"Rancho Doble S" <${fromAddress}>`;
 
   const subject = 'Rancho Doble S — Restablecimiento de contraseña';
-  const textContent = `Hola ${name || 'Vecino'},\n\nRecibimos una solicitud para restablecer la contraseña de tu cuenta en el Portal Rancho Doble S.\n\nHacé clic en el siguiente enlace para ingresar tu nueva contraseña (válido por ${expiresMinutes} minutos):\n${resetLink}\n\nSi no realizaste esta solicitud, podés desestimar este mensaje de forma segura. Tu contraseña actual no ha sido modificada.\n\nAdministración Rancho Doble S`;
+  const textContent = `Hola ${name || 'Vecino'},\n\nRecibimos una solicitud para restablecer la contraseña de tu cuenta en el Portal Rancho Doble S.\n\nHacé clic en el siguiente enlace seguro para definir tu nueva contraseña (válido por ${expiresMinutes} minutos):\n${resetLink}\n\nSi no realizaste esta solicitud, podés desestimar este mensaje de forma segura. Tu contraseña actual no ha sido modificada.\n\nAdministración Rancho Doble S`;
 
   const htmlContent = `
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Restablecimiento de Contraseña - Rancho Doble S</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1512; color: #e2e8f0; margin: 0; padding: 20px; }
-        .card { max-width: 540px; margin: 0 auto; background: #13221c; border: 1px solid rgba(247, 199, 109, 0.3); border-radius: 16px; padding: 32px; }
+        .card { max-width: 540px; margin: 0 auto; background: #13221c; border: 1px solid rgba(247, 199, 109, 0.3); border-radius: 16px; padding: 32px; box-sizing: border-box; }
         .header { text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 20px; margin-bottom: 24px; }
         .brand { font-size: 22px; font-weight: 700; color: #f7c76d; letter-spacing: 0.5px; }
         .subtitle { font-size: 13px; color: #94a3b8; margin-top: 4px; }
@@ -97,30 +136,43 @@ async function sendPasswordResetEmail({ to, name, resetLink, expiresMinutes = 60
     </html>
   `;
 
-  if (transporter) {
+  if (tInfo) {
     try {
-      const info = await transporter.sendMail({
-        from: `"Rancho Doble S" <${fromAddress}>`,
+      const info = await tInfo.transporter.sendMail({
+        from: fromHeader,
         to,
+        replyTo: replyToAddress,
         subject,
         text: textContent,
-        html: htmlContent
+        html: htmlContent,
+        headers: {
+          'X-Priority': '1',
+          'Importance': 'high'
+        }
       });
-      console.log(`[MAILER] Correo de recuperación enviado con éxito a ${to} (MessageId: ${info.messageId})`);
-      return { sent: true, mode: 'smtp', messageId: info.messageId };
+      console.log(`[MAILER] Correo de recuperación enviado con éxito a ${to} (MessageId: ${info.messageId}) vía ${tInfo.type}`);
+      return { sent: true, mode: tInfo.type, messageId: info.messageId };
     } catch (err) {
-      console.error('[MAILER] Error al enviar email vía SMTP:', err.message);
-      // Fallback to simulated delivery so users aren't locked out in dev
-      return { sent: false, error: err.message, mode: 'fallback' };
+      console.error(`[MAILER] Error al enviar email vía ${tInfo.type}:`, err.message);
+      return { sent: false, error: err.message, mode: tInfo.type };
     }
   } else {
     console.log('========================================================================');
-    console.log('[MAILER] 📧 SIMULACIÓN DE CORREO (Configurá variables SMTP en .env para envío real)');
+    console.log('[MAILER] ⚠️ ATENCIÓN: SERVICIO DE CORREO NO CONFIGURADO EN .env');
     console.log(`Destinatario: ${to}`);
     console.log(`Asunto: ${subject}`);
     console.log(`Enlace de restablecimiento generado: ${resetLink}`);
+    console.log('Para enviar correos reales (a Gmail y otros), configurá en el archivo .env:');
+    console.log('  GMAIL_USER=tucorreo@gmail.com');
+    console.log('  GMAIL_APP_PASS=xxxx xxxx xxxx xxxx');
+    console.log('  o el servidor SMTP de tu proveedor.');
     console.log('========================================================================');
-    return { sent: false, mode: 'simulated', resetLink, error: 'Servicio SMTP no configurado en el servidor' };
+    return {
+      sent: false,
+      mode: 'unconfigured',
+      resetLink,
+      error: 'Servicio de correo no configurado. Configurá GMAIL_USER y GMAIL_APP_PASS (o SMTP) en el archivo .env del servidor.'
+    };
   }
 }
 
@@ -136,5 +188,6 @@ function escapeHtml(str) {
 
 module.exports = {
   sendPasswordResetEmail,
-  getTransporter
+  getTransporter,
+  getMailerStatus
 };

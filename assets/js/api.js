@@ -333,10 +333,10 @@ const API = {
         body: { role }
       });
     },
-    generateResetToken(id, sendEmail = false) {
+    generateResetToken(id) {
       return API.request(`/api/admin/users/${id}/reset-token`, {
         method: 'POST',
-        body: { sendEmail }
+        body: { sendEmail: true }
       });
     },
     getStats() {

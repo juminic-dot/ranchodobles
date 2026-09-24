@@ -1652,7 +1652,7 @@
 
           <div style="margin-top: 0.6rem; display: flex; justify-content: flex-start;">
             <button type="button" class="btn-inline-action" id="editUserGenerateResetLinkBtn" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);">
-              🔑 Generar Enlace para Restablecer Clave
+              🔑 Blanquear clave (Enviar correo al vecino)
             </button>
           </div>
 
@@ -1981,9 +1981,9 @@
       <div class="modal-card glass-card" style="max-width: 520px; width: 95%;">
         <div class="modal-header">
           <div>
-            <h4>🔑 Enlace de Restablecimiento para Vecino</h4>
+            <h4>🔑 Blanqueamiento de Clave de Usuario</h4>
             <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">
-              Facilitá este enlace seguro al propietario para que establezca su clave.
+              Envío de enlace de restablecimiento seguro al correo del vecino.
             </p>
           </div>
           <button type="button" class="icon-btn" id="closeAdminResetLinkModal">✕</button>
@@ -1991,29 +1991,19 @@
         <div class="modal-body" style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.9rem;">
           <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.75rem 0.9rem; font-size: 0.85rem;">
             <div>Vecino: <strong id="adminResetTargetName" style="color: #fff;">-</strong> (<strong id="adminResetTargetUser" style="color: var(--gold);">-</strong>)</div>
-            <div style="color: var(--muted); margin-top: 0.2rem;">Email: <span id="adminResetTargetEmail">-</span></div>
+            <div style="color: var(--muted); margin-top: 0.2rem;">Email destinatario: <strong id="adminResetTargetEmail" style="color: #e2e8f0;">-</strong></div>
           </div>
 
-          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #a3e6cb;">
-            🔒 <strong>Privacidad estricta:</strong> La administración nunca elige ni ve la clave. El vecino debe ingresar al enlace para definir su contraseña.
+          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 10px; padding: 0.75rem 0.9rem; font-size: 0.82rem; color: #a3e6cb; line-height: 1.5;">
+            🔒 <strong>Privacidad y Seguridad Estricta:</strong> La administración nunca elige ni ve la clave, ni tiene acceso al enlace de restablecimiento. El enlace seguro es generado y enviado exclusivamente a la casilla de correo del vecino, con una validez de 60 minutos.
           </div>
 
-          <label>
-            <span style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.3rem;">Enlace seguro de uso único (validez 60 minutos):</span>
-            <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="adminResetLinkInput" readonly style="flex: 1; font-family: monospace; font-size: 0.82rem; background: rgba(0,0,0,0.3);" />
-              <button type="button" class="secondary-btn" id="copyAdminResetLinkBtn" style="padding: 0.4rem 0.8rem; font-size: 0.82rem; white-space: nowrap;">
-                📋 Copiar
-              </button>
-            </div>
-          </label>
+          <!-- Estado de la entrega del correo -->
+          <div id="adminResetStatusBox" style="padding: 0.85rem 1rem; border-radius: 10px; font-size: 0.85rem; display: none;"></div>
 
           <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.3rem;">
-            <button type="button" class="btn-inline-action" id="shareAdminResetWhatsAppBtn" style="flex: 1; min-width: 160px; padding: 0.6rem; justify-content: center; font-size: 0.85rem; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.35); color: #25d366;">
-              📲 Enviar por WhatsApp
-            </button>
             <button type="button" class="btn-inline-action" id="sendAdminResetEmailBtn" style="flex: 1; min-width: 160px; padding: 0.6rem; justify-content: center; font-size: 0.85rem;">
-              📧 Reenviar por Correo
+              📧 Reenviar Correo al Vecino
             </button>
           </div>
 
@@ -2297,7 +2287,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="assets/js/html5-qrcode.min.js"></script>
-    <script src="assets/js/api.js?v=2.8"></script>
-    <script src="assets/js/app.js?v=2.8"></script>
+    <script src="assets/js/api.js?v=2.9"></script>
+    <script src="assets/js/app.js?v=2.9"></script>
   </body>
 </html>

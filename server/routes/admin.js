@@ -426,6 +426,10 @@ router.post('/users/:id/reset-token', async (req, res) => {
       return res.status(404).json({ error: 'Vecino no encontrado.' });
     }
 
+    if (!user.email || !user.email.includes('@')) {
+      return res.status(400).json({ error: 'El vecino no tiene un correo electrónico válido registrado para recibir el enlace.' });
+    }
+
     // Invalidate any previous unused tokens
     db.prepare('UPDATE password_resets SET used = 1 WHERE userId = ? AND used = 0').run(targetUserId);
 
@@ -451,24 +455,25 @@ router.post('/users/:id/reset-token', async (req, res) => {
     const baseUrl = `${protocol}://${host}${prefix}`;
     const resetLink = `${baseUrl}/#restablecer-clave?token=${token}`;
 
-    let emailSent = false;
-    let emailError = null;
-    if (req.body.sendEmail) {
-      const emailResult = await sendPasswordResetEmail({
-        to: user.email,
-        name: `${user.nombre} ${user.apellido}`,
-        resetLink,
-        expiresMinutes: 60
-      });
-      emailSent = emailResult.sent;
-      emailError = emailResult.error || null;
-    }
+    // Always send the reset email directly to the neighbor
+    const emailResult = await sendPasswordResetEmail({
+      to: user.email,
+      name: `${user.nombre} ${user.apellido}`,
+      resetLink,
+      expiresMinutes: 60
+    });
+    const emailSent = Boolean(emailResult.sent);
+    const emailError = emailResult.error || null;
 
+    // Security & privacy requirement: NEVER return resetLink to the administrator.
+    // The link is strictly personal to the resident and delivered only to their email inbox.
     res.json({
+      success: true,
+      emailSent,
+      emailError,
       message: emailSent
         ? `Enlace de restablecimiento generado y enviado por correo a ${user.email}.`
-        : (emailError ? `Enlace generado. No se pudo entregar por correo (${emailError}). Podés enviarlo por WhatsApp o copiarlo.` : 'Enlace de restablecimiento generado con éxito.'),
-      resetLink,
+        : `No se pudo entregar el correo a ${user.email}${emailError ? `: ${emailError}` : ''}. Verificá el servicio SMTP en el servidor.`,
       expiresAt,
       user: {
         id: user.id,
@@ -476,9 +481,7 @@ router.post('/users/:id/reset-token', async (req, res) => {
         apellido: user.apellido,
         email: user.email,
         username: user.username
-      },
-      emailSent,
-      emailError
+      }
     });
   } catch (error) {
     console.error('[Admin Generate Reset Token Error]', error);
