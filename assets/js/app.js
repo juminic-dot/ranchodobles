@@ -11,14 +11,22 @@ function escapeHTML(str) {
 }
 
 function getTodayISO() {
-  const today = new Date();
-  return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
 }
 
 function getTomorrowISO() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(tomorrow);
 }
 
 const state = {
@@ -31,6 +39,7 @@ const state = {
   validSlots: [],
   notifications: [],
   newsItems: [],
+  newsUploadedImageBase64: null,
   userVisits: [],
   adminVisits: [],
   adminExpenses: [],
@@ -123,6 +132,11 @@ const createNewsModal = document.getElementById('createNewsModal');
 const closeCreateNewsModal = document.getElementById('closeCreateNewsModal');
 const cancelCreateNewsBtn = document.getElementById('cancelCreateNewsBtn');
 const createNewsForm = document.getElementById('createNewsForm');
+const newsImageFileInput = document.getElementById('newsImageFileInput');
+const newsImagePreviewContainer = document.getElementById('newsImagePreviewContainer');
+const newsImagePreview = document.getElementById('newsImagePreview');
+const removeNewsImageBtn = document.getElementById('removeNewsImageBtn');
+const newsImageInput = document.getElementById('newsImageInput');
 
 // Admin DOM
 const pendingUsersList = document.getElementById('pendingUsersList');
@@ -879,18 +893,64 @@ function renderNews() {
   }
 }
 
+function compressImageFile(file, maxWidth = 1200, maxHeight = 900, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('El archivo seleccionado no es una imagen válida.'));
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Error al leer el archivo de imagen.'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo decodificar la imagen.'));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function resetCreateNewsModal() {
+  if (createNewsForm) createNewsForm.reset();
+  state.newsUploadedImageBase64 = null;
+  if (newsImagePreview) newsImagePreview.src = '';
+  if (newsImagePreviewContainer) newsImagePreviewContainer.style.display = 'none';
+  if (newsImageFileInput) newsImageFileInput.value = '';
+}
+
 async function handleCreateNews(event) {
   event.preventDefault();
   const formData = new FormData(createNewsForm);
   const title = String(formData.get('newsTitle') || '').trim();
   const category = String(formData.get('newsCategory') || '').trim();
   const description = String(formData.get('newsDescription') || '').trim();
-  const image = String(formData.get('newsImage') || '').trim();
+  const urlImage = String(formData.get('newsImage') || '').trim();
+  const image = state.newsUploadedImageBase64 || urlImage || './descarga.jfif';
 
   try {
+    showToast('Publicando noticia...');
     await API.news.create({ title, category, description, image });
     showToast('Noticia publicada con éxito.');
-    createNewsForm.reset();
+    resetCreateNewsModal();
     createNewsModal.style.display = 'none';
     loadNews();
   } catch (error) {
@@ -1617,8 +1677,15 @@ function renderBookingSlots() {
 
   const today = getTodayISO();
   const isToday = state.selectedBookingDate === today;
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  }).formatToParts(new Date());
+  const curHour = Number(parts.find(p => p.type === 'hour')?.value || 0);
+  const curMin = Number(parts.find(p => p.type === 'minute')?.value || 0);
+  const currentMinutes = curHour * 60 + curMin;
   const currentUserId = state.authenticatedUser?.id;
   const isAdmin = state.authenticatedUser?.role === 'admin';
 
@@ -3124,18 +3191,27 @@ async function openAdminResetModalForUser(userId) {
     showToast('Generando enlace seguro...');
     const res = await API.admin.generateResetToken(userId, false);
 
+    let finalResetLink = res.resetLink;
+    if (finalResetLink && window.location.pathname.startsWith('/ranchos') && !finalResetLink.includes('/ranchos')) {
+      const appBase = window.location.origin + window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+      const match = finalResetLink.match(/token=([a-f0-9]+)/i);
+      if (match) {
+        finalResetLink = `${appBase}/#restablecer-clave?token=${match[1]}`;
+      }
+    }
+
     state.adminResetContext = {
       userId,
       name: `${user.nombre} ${user.apellido}`,
       username: user.username || `Lote ${user.lote || ''}`,
       email: user.email,
-      resetLink: res.resetLink
+      resetLink: finalResetLink
     };
 
     if (adminResetTargetName) adminResetTargetName.textContent = state.adminResetContext.name;
     if (adminResetTargetUser) adminResetTargetUser.textContent = state.adminResetContext.username;
     if (adminResetTargetEmail) adminResetTargetEmail.textContent = state.adminResetContext.email;
-    if (adminResetLinkInput) adminResetLinkInput.value = res.resetLink;
+    if (adminResetLinkInput) adminResetLinkInput.value = finalResetLink;
 
     adminResetLinkModal.style.display = 'grid';
   } catch (err) {
@@ -4795,6 +4871,7 @@ function attachEventListeners() {
   function closeCreateNews(fromPopState = false) {
     if (!createNewsModal) return;
     createNewsModal.style.display = 'none';
+    resetCreateNewsModal();
     if (!fromPopState && window.history.state?.modal === 'createNews') {
       window.history.back();
     }
@@ -4810,6 +4887,33 @@ function attachEventListeners() {
 
   if (cancelCreateNewsBtn) {
     cancelCreateNewsBtn.addEventListener('click', () => closeCreateNews(false));
+  }
+
+  if (newsImageFileInput) {
+    newsImageFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        showToast('Procesando imagen...');
+        const dataUrl = await compressImageFile(file, 1200, 900, 0.8);
+        state.newsUploadedImageBase64 = dataUrl;
+        if (newsImagePreview) newsImagePreview.src = dataUrl;
+        if (newsImagePreviewContainer) newsImagePreviewContainer.style.display = 'block';
+        showToast('Foto cargada correctamente.');
+      } catch (err) {
+        showToast(err.message || 'Error al procesar la foto.');
+        if (newsImageFileInput) newsImageFileInput.value = '';
+      }
+    });
+  }
+
+  if (removeNewsImageBtn) {
+    removeNewsImageBtn.addEventListener('click', () => {
+      state.newsUploadedImageBase64 = null;
+      if (newsImageFileInput) newsImageFileInput.value = '';
+      if (newsImagePreview) newsImagePreview.src = '';
+      if (newsImagePreviewContainer) newsImagePreviewContainer.style.display = 'none';
+    });
   }
 
   if (createNewsForm) {
@@ -5457,9 +5561,13 @@ function attachEventListeners() {
         sendAdminResetEmailBtn.disabled = true;
         sendAdminResetEmailBtn.textContent = 'Enviando...';
         const res = await API.admin.generateResetToken(state.adminResetContext.userId, true);
-        showToast(res.message || 'Correo enviado al vecino con éxito.', 5000);
+        if (res.emailSent) {
+          showToast(`✅ ${res.message || 'Correo de restablecimiento enviado con éxito.'}`, 5000);
+        } else {
+          showToast(`⚠️ ${res.message || 'No se pudo entregar por correo. Podés compartir el enlace por WhatsApp o copiarlo.'}`, 7000);
+        }
       } catch (err) {
-        showToast(err.message || 'Error al enviar correo.');
+        showToast('Error al enviar correo: ' + err.message, 6000);
       } finally {
         sendAdminResetEmailBtn.disabled = false;
         sendAdminResetEmailBtn.textContent = '📧 Reenviar por Correo';

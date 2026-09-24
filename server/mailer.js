@@ -7,15 +7,18 @@ function getTransporter() {
   const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS;
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
+  // 1. Explicit remote SMTP credentials
   if (host && user && pass) {
     return nodemailer.createTransport({
       host,
       port,
       secure,
-      auth: { user, pass }
+      auth: { user, pass },
+      tls: { rejectUnauthorized: false }
     });
   }
 
+  // 2. Gmail service
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASS) {
     return nodemailer.createTransport({
       service: 'gmail',
@@ -26,11 +29,21 @@ function getTransporter() {
     });
   }
 
+  // 3. Local MTA (Postfix on VPS 127.0.0.1:25) in production
+  if (process.env.NODE_ENV === 'production' || host === 'localhost' || host === '127.0.0.1') {
+    return nodemailer.createTransport({
+      host: '127.0.0.1',
+      port: 25,
+      secure: false,
+      ignoreTLS: true
+    });
+  }
+
   return null;
 }
 
 async function sendPasswordResetEmail({ to, name, resetLink, expiresMinutes = 60 }) {
-  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@ranchodobles.com';
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'notificaciones@gestechnoclient.com';
   const transporter = getTransporter();
 
   const subject = 'Rancho Doble S — Restablecimiento de contraseña';
@@ -107,7 +120,7 @@ async function sendPasswordResetEmail({ to, name, resetLink, expiresMinutes = 60
     console.log(`Asunto: ${subject}`);
     console.log(`Enlace de restablecimiento generado: ${resetLink}`);
     console.log('========================================================================');
-    return { sent: true, mode: 'simulated', resetLink };
+    return { sent: false, mode: 'simulated', resetLink, error: 'Servicio SMTP no configurado en el servidor' };
   }
 }
 

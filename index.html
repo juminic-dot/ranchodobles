@@ -1142,9 +1142,22 @@
               <input type="text" name="newsCategory" required placeholder="Ej: Deportes, Seguridad, Infraestructura" />
             </label>
             <label>
-              <span>URL de Imagen</span>
-              <input type="text" name="newsImage" placeholder="https://ejemplo.com/foto.jpg o ./descarga.jfif" />
+              <span>URL de Imagen (opcional)</span>
+              <input type="text" name="newsImage" id="newsImageInput" placeholder="https://ejemplo.com/foto.jpg o ./descarga.jfif" />
             </label>
+          </div>
+
+          <label style="display: block; margin-top: 0.25rem;">
+            <span>📷 Cargar foto desde tu equipo o celular</span>
+            <input type="file" id="newsImageFileInput" accept="image/*" style="display: block; width: 100%; margin-top: 0.35rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border: 1px dashed var(--border); border-radius: 8px; color: var(--text); font-size: 0.85rem;" />
+          </label>
+
+          <div id="newsImagePreviewContainer" style="display: none; margin-top: 0.5rem; text-align: center; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem;">Vista previa de la imagen seleccionada:</div>
+            <img id="newsImagePreview" src="" alt="Vista previa de noticia" style="max-height: 180px; max-width: 100%; border-radius: 8px; object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" />
+            <div style="margin-top: 0.4rem;">
+              <button type="button" class="text-btn" id="removeNewsImageBtn" style="color: var(--danger); font-size: 0.8rem; padding: 0.2rem 0.6rem;">✕ Quitar foto seleccionada</button>
+            </div>
           </div>
           <label>
             <span>Descripción del comunicado</span>
@@ -2284,7 +2297,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="assets/js/html5-qrcode.min.js"></script>
-    <script src="assets/js/api.js?v=2.7"></script>
-    <script src="assets/js/app.js?v=2.7"></script>
+    <script src="assets/js/api.js?v=2.8"></script>
+    <script src="assets/js/app.js?v=2.8"></script>
   </body>
 </html>

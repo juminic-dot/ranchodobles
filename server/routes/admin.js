@@ -441,10 +441,18 @@ router.post('/users/:id/reset-token', async (req, res) => {
 
     const host = req.get('host') || 'localhost:3000';
     const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const baseUrl = `${protocol}://${host}`;
+    const forwardedPrefix = req.get('x-forwarded-prefix');
+    let prefix = '';
+    if (forwardedPrefix) {
+      prefix = forwardedPrefix.replace(/\/$/, '');
+    } else if (host.includes('gestechnoclient.com')) {
+      prefix = '/ranchos';
+    }
+    const baseUrl = `${protocol}://${host}${prefix}`;
     const resetLink = `${baseUrl}/#restablecer-clave?token=${token}`;
 
     let emailSent = false;
+    let emailError = null;
     if (req.body.sendEmail) {
       const emailResult = await sendPasswordResetEmail({
         to: user.email,
@@ -453,12 +461,13 @@ router.post('/users/:id/reset-token', async (req, res) => {
         expiresMinutes: 60
       });
       emailSent = emailResult.sent;
+      emailError = emailResult.error || null;
     }
 
     res.json({
       message: emailSent
         ? `Enlace de restablecimiento generado y enviado por correo a ${user.email}.`
-        : 'Enlace de restablecimiento generado con éxito.',
+        : (emailError ? `Enlace generado. No se pudo entregar por correo (${emailError}). Podés enviarlo por WhatsApp o copiarlo.` : 'Enlace de restablecimiento generado con éxito.'),
       resetLink,
       expiresAt,
       user: {
@@ -468,7 +477,8 @@ router.post('/users/:id/reset-token', async (req, res) => {
         email: user.email,
         username: user.username
       },
-      emailSent
+      emailSent,
+      emailError
     });
   } catch (error) {
     console.error('[Admin Generate Reset Token Error]', error);

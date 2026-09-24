@@ -10,10 +10,31 @@ const validSlots = [
   '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00'
 ];
 
+function getArgentinaDate(d = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+}
+
+function getArgentinaMinutes(d = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  }).formatToParts(d);
+  const hour = Number(parts.find(p => p.type === 'hour')?.value || 0);
+  const minute = Number(parts.find(p => p.type === 'minute')?.value || 0);
+  return hour * 60 + minute;
+}
+
 // GET /api/bookings?date=YYYY-MM-DD
 router.get('/', authenticateToken, (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getArgentinaDate();
     const date = req.query.date || today;
 
     const bookings = db.prepare(`
@@ -49,23 +70,20 @@ router.post('/', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Horario no válido.' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getArgentinaDate();
     if (date < today) {
       return res.status(400).json({ error: 'No se pueden realizar reservas en fechas pasadas.' });
     }
 
     // Horizon limit: reservations allowed up to 7 days in advance for residents
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 7);
-    const maxDateStr = maxDate.toISOString().split('T')[0];
+    const maxDateStr = getArgentinaDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
     if (date > maxDateStr && req.user.role !== 'admin') {
       return res.status(400).json({ error: 'Las reservas solo están habilitadas con hasta 7 días de anticipación.' });
     }
 
     // If date is today, verify slot has not expired
     if (date === today) {
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentMinutes = getArgentinaMinutes();
       const [startHour, , endHour] = slot.split(/[:\s-]+/).filter(Boolean);
       const endMinutes = Number(endHour) * 60;
       if (endMinutes <= currentMinutes) {

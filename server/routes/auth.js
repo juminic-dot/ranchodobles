@@ -384,7 +384,14 @@ router.post('/forgot-password', loginLimiter, async (req, res) => {
     // Construct reset link
     const host = req.get('host') || 'localhost:3000';
     const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const baseUrl = `${protocol}://${host}`;
+    const forwardedPrefix = req.get('x-forwarded-prefix');
+    let prefix = '';
+    if (forwardedPrefix) {
+      prefix = forwardedPrefix.replace(/\/$/, '');
+    } else if (host.includes('gestechnoclient.com')) {
+      prefix = '/ranchos';
+    }
+    const baseUrl = `${protocol}://${host}${prefix}`;
     const resetLink = `${baseUrl}/#restablecer-clave?token=${token}`;
 
     // Send email (via SMTP or dev simulation)
