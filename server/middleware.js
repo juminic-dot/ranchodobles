@@ -21,7 +21,7 @@ function authenticateToken(req, res, next) {
     }
 
     const stmt = db.prepare(`
-      SELECT id, apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, role, approved
+      SELECT id, username, apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, lote, manzana, role, approved
       FROM users
       WHERE id = ?
     `);

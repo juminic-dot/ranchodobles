@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const os = require('os');
 const { db, logActivity } = require('../db');
 const { authenticateToken, JWT_SECRET } = require('../middleware');
+const { sendWhatsAppQrPass } = require('../whatsapp');
 
 function getLocalIp() {
   const nets = os.networkInterfaces();
@@ -23,15 +24,18 @@ function getLocalIp() {
 // Authenticated endpoint: allows a resident to generate a short, clean, secure invitation code (valid for 48 hours)
 router.get('/invite-token', authenticateToken, (req, res) => {
   try {
+    if (req.user.role === 'admin' || (req.user.username && req.user.username.toLowerCase() === 'superadmin')) {
+      return res.status(403).json({ error: 'El Administrador General no tiene permisos para generar invitaciones o visitas particulares.' });
+    }
     const hostFullName = `${req.user.nombre} ${req.user.apellido}`.trim();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
-    // 6-character alphanumeric short code, e.g. "8F2B1A"
-    const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+    // 8-character unique hexadecimal code, e.g. "8F2B1A04"
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
 
     db.prepare(`
-      INSERT INTO invites (code, hostId, hostName, expiresAt, createdAt)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO invites (code, hostId, hostName, expiresAt, used, createdAt)
+      VALUES (?, ?, ?, ?, 0, ?)
     `).run(code, req.user.id, hostFullName, expiresAt, now.toISOString());
 
     const hostHeader = req.get('host') || 'localhost:3000';
@@ -65,7 +69,15 @@ router.get('/verify-invite', (req, res) => {
       const cleanCode = String(code).trim().toUpperCase();
       const invite = db.prepare('SELECT * FROM invites WHERE code = ?').get(cleanCode);
       if (!invite) {
-        return res.status(400).json({ valid: false, error: 'El código de invitación no es válido o ha expirado.' });
+        return res.status(400).json({ valid: false, error: 'El código o enlace de invitación no es válido o no existe.' });
+      }
+
+      if (invite.used) {
+        return res.status(400).json({
+          valid: false,
+          used: true,
+          error: 'Este enlace de invitación ya ha sido utilizado para acreditar una visita y ha quedado deshabilitado.'
+        });
       }
 
       if (new Date(invite.expiresAt) < new Date()) {
@@ -105,12 +117,45 @@ router.get('/verify-invite', (req, res) => {
   }
 });
 
+// GET /api/visits/:id/qr OR /api/visits/:id/qr.png
+// Public endpoint to view / serve the QR code image for a registered visit
+router.get(['/:id/qr', '/:id/qr.png'], (req, res) => {
+  try {
+    const visitId = Number(req.params.id);
+    if (!visitId) {
+      return res.status(400).send('ID de visita no válido.');
+    }
+
+    const visit = db.prepare('SELECT id, qrCode, visitorName FROM visits WHERE id = ?').get(visitId);
+    if (!visit || !visit.qrCode) {
+      return res.status(404).send('Código QR no encontrado.');
+    }
+
+    const matches = visit.qrCode.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(500).send('Formato de imagen QR no válido.');
+    }
+
+    const mimeType = matches[1];
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Content-Disposition', `inline; filename="qr-visita-${visitId}.png"`);
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error('[Get QR Image Error]', error);
+    res.status(500).send('Error al obtener imagen del código QR.');
+  }
+});
+
 // POST /api/visits/guest-register
 // Public endpoint for guest self-registration: REQUIRES a valid invitation code or token
 router.post('/guest-register', async (req, res) => {
   try {
-    const { code, c, token, apellido, nombre, dni, vehiclePlate, guestEmail, date, time } = req.body;
+    const { code, c, token, apellido, nombre, dni, vehiclePlate, guestEmail, visitorPhone, guestPhone, phone, date, time } = req.body;
     const inviteCode = code || c;
+    const cleanPhone = visitorPhone || guestPhone || phone ? String(visitorPhone || guestPhone || phone).trim() : null;
 
     let hostId = null;
 
@@ -119,6 +164,10 @@ router.post('/guest-register', async (req, res) => {
       const invite = db.prepare('SELECT * FROM invites WHERE code = ?').get(cleanCode);
       if (!invite) {
         return res.status(401).json({ error: 'El código de invitación no es válido.' });
+      }
+
+      if (invite.used) {
+        return res.status(401).json({ error: 'Este enlace de invitación ya ha sido utilizado para acreditar una visita y ha quedado deshabilitado.' });
       }
 
       if (new Date(invite.expiresAt) < new Date()) {
@@ -173,8 +222,8 @@ router.post('/guest-register', async (req, res) => {
     });
 
     const insertStmt = db.prepare(`
-      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
+      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, visitorPhone, qrCode, date, time, status, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
     `);
 
     const result = insertStmt.run(
@@ -184,11 +233,22 @@ router.post('/guest-register', async (req, res) => {
       cleanDni,
       cleanPlate,
       guestEmail ? String(guestEmail).trim() : null,
+      cleanPhone,
       qrCode,
       visitDate,
       visitTime,
       now
     );
+
+    // Invalidate the invitation code immediately so it cannot be shared or reused
+    if (inviteCode) {
+      const cleanCode = String(inviteCode).trim().toUpperCase();
+      db.prepare(`
+        UPDATE invites
+        SET used = 1, usedAt = ?, usedByVisitor = ?
+        WHERE code = ?
+      `).run(now, visitorFullName, cleanCode);
+    }
 
     // Notify resident (host)
     db.prepare(`
@@ -205,10 +265,29 @@ router.post('/guest-register', async (req, res) => {
       console.log(`[Email Dispatcher] Notificación enviada a ${guestEmail}: "Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso"`);
     }
 
+    let waResult = null;
+    if (cleanPhone) {
+      try {
+        waResult = await sendWhatsAppQrPass({
+          phone: cleanPhone,
+          qrCode,
+          visitId: Number(result.lastInsertRowid),
+          visitorName: visitorFullName,
+          protocol: req.protocol,
+          reqHost: req.get('host')
+        });
+      } catch (waErr) {
+        console.error('[WhatsApp Dispatcher Error]', waErr);
+      }
+    }
+
     res.status(201).json({
       message: 'Acreditación completada con éxito.',
       qrText: 'Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso',
       qrCode,
+      visitorPhone: cleanPhone,
+      whatsappSent: Boolean(waResult && waResult.success),
+      whatsappSimulated: Boolean(waResult && waResult.simulated),
       guestEmail: guestEmail || null,
       emailSent: Boolean(guestEmail),
       visit: {
@@ -216,6 +295,7 @@ router.post('/guest-register', async (req, res) => {
         visitorName: visitorFullName,
         visitorDni: cleanDni,
         vehiclePlate: cleanPlate,
+        visitorPhone: cleanPhone,
         residentName: hostFullName,
         date: visitDate,
         time: visitTime,
@@ -238,40 +318,48 @@ router.get('/', authenticateToken, (req, res) => {
     const { date, all, search } = req.query;
 
     let query = `
-      SELECT id, userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, qrCode, date, time, status, entryAt, exitAt, createdAt
-      FROM visits
+      SELECT v.id, v.userId, v.residentName, v.visitorName, v.visitorDni, v.vehiclePlate, v.visitorPhone, v.guestEmail, v.qrCode, v.date, v.time, v.status, v.entryAt, v.exitAt, v.createdAt,
+             COALESCE(u.lote, '') AS hostLote,
+             COALESCE(u.manzana, '') AS hostManzana,
+             COALESCE(u.nombre, '') AS hostNombre,
+             COALESCE(u.apellido, '') AS hostApellido
+      FROM visits v
+      LEFT JOIN users u ON v.userId = u.id
     `;
     const params = [];
     const conditions = [];
 
     if (!canSeeAll || (all !== 'true' && !isGuard)) {
       if (!canSeeAll) {
-        conditions.push('userId = ?');
+        conditions.push('v.userId = ?');
         params.push(req.user.id);
       }
     }
 
     if (date) {
-      conditions.push('date = ?');
+      conditions.push('v.date = ?');
       params.push(date);
     }
 
     if (search && search.trim()) {
       const s = `%${search.trim().toLowerCase()}%`;
       conditions.push(`(
-        LOWER(visitorName) LIKE ? OR
-        LOWER(visitorDni) LIKE ? OR
-        LOWER(COALESCE(vehiclePlate, '')) LIKE ? OR
-        LOWER(residentName) LIKE ?
+        LOWER(v.visitorName) LIKE ? OR
+        LOWER(v.visitorDni) LIKE ? OR
+        LOWER(COALESCE(v.vehiclePlate, '')) LIKE ? OR
+        LOWER(COALESCE(v.visitorPhone, '')) LIKE ? OR
+        LOWER(v.residentName) LIKE ? OR
+        LOWER(COALESCE(u.lote, '')) LIKE ? OR
+        LOWER(COALESCE(u.manzana, '')) LIKE ?
       )`);
-      params.push(s, s, s, s);
+      params.push(s, s, s, s, s, s, s);
     }
 
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' ORDER BY date DESC, time DESC, id DESC';
+    query += ' ORDER BY v.date DESC, v.time DESC, v.id DESC';
 
     const visits = db.prepare(query).all(...params);
     res.json(visits);
@@ -284,7 +372,10 @@ router.get('/', authenticateToken, (req, res) => {
 // POST /api/visits (manual resident registration)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { visitorName, visitorDni, vehiclePlate, date, time } = req.body;
+    if (req.user.role === 'admin' || (req.user.username && req.user.username.toLowerCase() === 'superadmin')) {
+      return res.status(403).json({ error: 'El Administrador General no tiene permisos para generar invitaciones o visitas particulares.' });
+    }
+    const { visitorName, visitorDni, vehiclePlate, visitorPhone, visitPhone, phone, date, time } = req.body;
 
     if (!visitorName || !visitorDni || !date || !time) {
       return res.status(400).json({ error: 'Nombre, DNI, fecha y horario son requeridos.' });
@@ -293,6 +384,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const now = new Date().toISOString();
     const residentFullName = `${req.user.nombre} ${req.user.apellido}`;
     const cleanPlate = vehiclePlate && String(vehiclePlate).trim() ? String(vehiclePlate).trim().toUpperCase() : 'Sin vehículo';
+    const cleanPhone = visitorPhone || visitPhone || phone ? String(visitorPhone || visitPhone || phone).trim() : null;
 
     // Generate QR Code
     const qrTextPayload = `RDS-PASS|VISITANTE:${visitorName.trim()}|DNI:${visitorDni.trim()}|PATENTE:${cleanPlate}|DESTINO:${residentFullName}|FECHA:${date.trim()}`;
@@ -306,8 +398,8 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     const insertStmt = db.prepare(`
-      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, qrCode, date, time, status, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
+      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, visitorPhone, qrCode, date, time, status, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
     `);
 
     const result = insertStmt.run(
@@ -316,6 +408,7 @@ router.post('/', authenticateToken, async (req, res) => {
       visitorName.trim(),
       visitorDni.trim(),
       cleanPlate,
+      cleanPhone,
       qrCode,
       date.trim(),
       time.trim(),
@@ -333,10 +426,28 @@ router.post('/', authenticateToken, async (req, res) => {
       now
     );
 
+    let waResult = null;
+    if (cleanPhone) {
+      try {
+        waResult = await sendWhatsAppQrPass({
+          phone: cleanPhone,
+          qrCode,
+          visitId: Number(result.lastInsertRowid),
+          visitorName: visitorName.trim(),
+          protocol: req.protocol,
+          reqHost: req.get('host')
+        });
+      } catch (waErr) {
+        console.error('[WhatsApp Dispatcher Error]', waErr);
+      }
+    }
+
     res.status(201).json({
       message: 'Visita registrada con éxito.',
       qrCode,
       qrText: 'Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso',
+      whatsappSent: Boolean(waResult && waResult.success),
+      whatsappSimulated: Boolean(waResult && waResult.simulated),
       visit: {
         id: Number(result.lastInsertRowid),
         userId: req.user.id,
@@ -344,6 +455,7 @@ router.post('/', authenticateToken, async (req, res) => {
         visitorName: visitorName.trim(),
         visitorDni: visitorDni.trim(),
         vehiclePlate: cleanPlate,
+        visitorPhone: cleanPhone,
         date: date.trim(),
         time: time.trim(),
         status: 'Confirmada',

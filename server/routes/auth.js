@@ -130,16 +130,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       `).get(`${inputLower}@guardia`, `${inputLower}@guardia`);
     }
 
-    // If not found and input is 'admin', match admin@admin
-    if (!user && inputLower === 'admin') {
+    // If not found and input is 'admin' or 'superadmin', match admin role
+    if (!user && (inputLower === 'admin' || inputLower === 'superadmin')) {
       user = db.prepare(`
         SELECT * FROM users
-        WHERE (LOWER(email) = 'admin@admin' OR LOWER(COALESCE(username, '')) = 'admin@admin' OR LOWER(COALESCE(username, '')) = 'admin') AND role = 'admin'
+        WHERE (LOWER(COALESCE(username, '')) = 'superadmin' OR LOWER(COALESCE(username, '')) = 'admin' OR LOWER(email) = 'admin@admin' OR LOWER(email) = 'superadmin@ranchodobles.com') AND role = 'admin'
       `).get();
     }
 
     if (!user) {
-      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: l2m2, admin@admin o jorgecabral@guardia).' });
+      return res.status(401).json({ error: 'Usuario no encontrado. Ingrese su usuario (ej: l2m2, SuperAdmin o jorgecabral@guardia).' });
     }
 
     const passwordMatch = await bcrypt.compare(password.trim(), user.passwordHash);

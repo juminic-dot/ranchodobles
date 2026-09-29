@@ -16,7 +16,7 @@
     />
     <link rel="icon" type="image/png" href="assets/img/logo.png" />
     <link rel="apple-touch-icon" href="assets/img/logo.png" />
-    <link rel="stylesheet" href="assets/css/styles.css?v=2.6" />
+    <link rel="stylesheet" href="assets/css/styles.css?v=3.0" />
   </head>
   <body>
     <div id="app">
@@ -184,7 +184,8 @@
                 <p class="home-subtitle">Seleccioná un servicio para gestionar en el predio:</p>
               </div>
 
-              <div class="main-menu-stack">
+              <!-- Menú Principal para Propietarios / Vecinos -->
+              <div class="main-menu-stack" id="residentMenuStack">
                 <!-- a. Novedades -->
                 <button type="button" class="menu-big-btn btn-news" data-target-view="news">
                   <div class="menu-btn-left">
@@ -244,21 +245,91 @@
                   </div>
                   <div class="menu-btn-arrow">➔</div>
                 </button>
+              </div>
 
-                <button type="button" class="menu-big-btn btn-admin" id="homeAdminBtn" data-target-view="admin" style="display: none;">
+              <!-- Menú Principal para Administrador General (SuperAdmin) -->
+              <div class="main-menu-stack" id="superAdminMenuStack" style="display: none;">
+                <!-- 1. Padrón de usuarios -->
+                <button type="button" class="menu-big-btn btn-admin-padron" data-admin-view-tab="vecinos">
                   <div class="menu-btn-left">
-                    <div class="menu-btn-icon">🛡️</div>
+                    <div class="menu-btn-icon">👥</div>
                     <div class="menu-btn-text">
                       <div class="title-with-badge">
-                        <h4>Administración</h4>
-                        <span class="badge soft" id="homeAdminPendingBadge" style="display: none;">0 pendientes</span>
+                        <h4>Padrón de usuarios</h4>
+                        <span class="badge soft" id="superAdminPendingBadge" style="display: none;">0 pendientes</span>
                       </div>
-                      <p>Aprobación de solicitudes de vecinos, métricas y control de guardia.</p>
+                      <p>Vecinos activos, solicitudes de registro, alta y directorio de propietarios.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
                 </button>
 
+                <!-- 2. Control de guardia -->
+                <button type="button" class="menu-big-btn btn-admin-guardia" data-admin-view-tab="guardia">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🛡️</div>
+                    <div class="menu-btn-text">
+                      <div class="title-with-badge">
+                        <h4>Control de guardia</h4>
+                        <span class="badge soft" id="superAdminGuardBadge" style="display: none;">0 en predio</span>
+                      </div>
+                      <p>Monitoreo de ingresos y egresos, directivas a garita y detalle de visitas.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- 3. Gestión de expensas -->
+                <button type="button" class="menu-big-btn btn-admin-expensas" data-admin-view-tab="expensas">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">💳</div>
+                    <div class="menu-btn-text">
+                      <h4>Gestión de expensas</h4>
+                      <p>Emisión de liquidaciones, seguimiento de cobranzas y verificación de pagos.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- 4. Control de canchas -->
+                <button type="button" class="menu-big-btn btn-admin-canchas" data-admin-view-tab="canchas">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🎾</div>
+                    <div class="menu-btn-text">
+                      <h4>Control de canchas</h4>
+                      <p>Supervisión de turnos de tenis y gestión de bloqueos de horarios.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- 5. Avisos y alertas -->
+                <button type="button" class="menu-big-btn btn-admin-alertas" data-admin-view-tab="alertas">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">📢</div>
+                    <div class="menu-btn-text">
+                      <h4>Avisos y alertas</h4>
+                      <p>Publicación de novedades, comunicados generales y notificaciones a vecinos.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- 6. Auditoría general -->
+                <button type="button" class="menu-big-btn btn-admin-auditoria" data-admin-view-tab="auditoria">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">📋</div>
+                    <div class="menu-btn-text">
+                      <h4>Auditoría general</h4>
+                      <p>Registro histórico completo de actividades, accesos y eventos de seguridad.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+              </div>
+
+              <!-- Acceso a Perfil común -->
+              <div class="main-menu-stack" style="margin-top: 0.6rem;">
                 <button type="button" class="menu-big-btn btn-profile" id="homeProfileBtn">
                   <div class="menu-btn-left">
                     <div class="menu-btn-icon">👤</div>
@@ -387,39 +458,17 @@
                   <h4>Invitar a tus visitas</h4>
                   <span class="badge soft">Acceso Rápido</span>
                 </div>
-                <p class="panel-subtext">Seleccioná cómo deseas enviar la invitación a tu contacto para que complete sus datos y obtenga su código QR de ingreso:</p>
+                <p class="panel-subtext">Seleccioná cómo deseas gestionar el acceso de tus visitas o generar su código QR de ingreso:</p>
 
-                <!-- Las 2 opciones de invitación -->
+                <!-- Opciones de invitación y registro -->
                 <div class="invite-methods-grid">
-                  <!-- Opción 1: Enviar invitación por Gmail / Email -->
-                  <div class="invite-method-card gmail-card">
-                    <div class="invite-card-header">
-                      <div class="invite-card-icon gmail-icon">✉️</div>
-                      <div>
-                        <h5>1. Enviar invitación por Email (Gmail)</h5>
-                        <p>Abre tu Gmail para seleccionar a tus contactos y enviarles el enlace personal de registro.</p>
-                      </div>
-                    </div>
-                    <div class="invite-card-actions">
-                      <button type="button" class="primary-btn invite-action-btn gmail-btn" id="openGmailInviteBtn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
-                          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                        </svg>
-                        Abrir Gmail para invitar
-                      </button>
-                      <button type="button" class="btn-inline-action" id="copyInviteLinkEmailBtn" title="Copiar enlace de invitación">
-                        📋 Copiar enlace
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Opción 2: Invitación por WhatsApp -->
+                  <!-- Invitación por WhatsApp -->
                   <div class="invite-method-card whatsapp-card">
                     <div class="invite-card-header">
                       <div class="invite-card-icon whatsapp-icon">💬</div>
                       <div>
-                        <h5>2. Invitación por WhatsApp</h5>
-                        <p>Abre WhatsApp para seleccionar a varios contactos o grupos y enviarles el enlace de acreditación directa.</p>
+                        <h5>Invitación por WhatsApp</h5>
+                        <p>Abre WhatsApp para seleccionar uno o mas contactos y enviarles el enlace de acreditación directa.</p>
                       </div>
                     </div>
                     <div class="invite-card-actions">
@@ -427,20 +476,32 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
                           <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/>
                         </svg>
-                        Abrir WhatsApp (Varios contactos)
+                        Abrir WhatsApp
                       </button>
                       <button type="button" class="btn-inline-action" id="copyInviteLinkWhatsappBtn" title="Copiar enlace de invitación">
                         📋 Copiar enlace
                       </button>
                     </div>
                   </div>
-                </div>
 
-                <!-- Botón para desplegar / alternar formulario manual -->
-                <div class="manual-visit-toggle-wrap">
-                  <button type="button" class="text-btn" id="toggleManualVisitFormBtn">
-                    ➕ O bien, registrar visita manualmente aquí
-                  </button>
+                  <!-- Registro manual de visitas -->
+                  <div class="invite-method-card manual-card">
+                    <div class="invite-card-header">
+                      <div class="invite-card-icon manual-icon">📝</div>
+                      <div>
+                        <h5>Registro manual de visitas</h5>
+                        <p>Cargá los datos de tu visita directamente desde el portal y generá su código QR de ingreso al instante.</p>
+                      </div>
+                    </div>
+                    <div class="invite-card-actions">
+                      <button type="button" class="primary-btn invite-action-btn manual-btn" id="toggleManualVisitFormBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+                          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Registrar visita manualmente
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Formulario manual (oculto inicialmente) -->
@@ -474,6 +535,10 @@
                     <label>
                       <span>Horario estimado</span>
                       <input type="time" name="visitTime" id="visitTimeField" required />
+                    </label>
+                    <label>
+                      <span>WhatsApp de la visita (opcional)</span>
+                      <input type="tel" name="visitPhone" placeholder="Ej: 11 2345-6789" />
                     </label>
                   </div>
 
@@ -685,7 +750,7 @@
               <!-- Botones de Navegación del Panel de Administración (Sin Scroll Masivo) -->
               <div class="admin-nav-buttons" role="tablist" aria-label="Módulos de administración">
                 <button type="button" class="admin-nav-btn active" data-admin-tab="vecinos">
-                  👥 Padrón de Vecinos
+                  👥 Padrón de Usuarios
                   <span class="badge soft mini" id="adminNavPendingBadge" style="display: none; background: rgba(247, 199, 109, 0.25); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4); margin-left: 0.3rem;">0</span>
                 </button>
                 <button type="button" class="admin-nav-btn" data-admin-tab="guardia">
@@ -708,12 +773,12 @@
 
               <!-- CONTENIDO MODULAR POR BOTONES -->
               <div class="admin-views-container">
-                <!-- MÓDULO 1: Padrón de Vecinos (Vecinos Activos y Solicitudes de Registro) -->
+                <!-- MÓDULO 1: Padrón de Usuarios (Vecinos Activos y Solicitudes de Registro) -->
                 <div class="admin-tab-view active" id="adminTabVecinos">
                   <div class="glass-card panel-block">
                     <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                       <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <h4>👥 Padrón de Vecinos</h4>
+                        <h4>👥 Padrón de Usuarios</h4>
                       </div>
                       <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                         <button type="button" class="primary-btn" id="openCreateUserModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: var(--primary-deep); color: #fff; border: none; font-weight: 600;">
@@ -764,30 +829,27 @@
                   <div class="glass-card panel-block">
                     <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                       <div>
-                        <h4>🛡️ Control de guardia (Ingresos y Egresos)</h4>
+                        <h4>🛡️ Control de Guardia (Ingresos y Egresos)</h4>
                         <span class="badge soft" id="adminGuardInsideBadge">0 en predio</span>
                       </div>
                       <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="primary-btn" id="openScanQrModalBtn" style="padding: 0.42rem 0.85rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
-                          📷 Escanear QR
-                        </button>
-                        <button type="button" class="text-btn" id="refreshAdminVisitsBtn">Actualizar</button>
+                        <button type="button" class="text-btn" id="refreshAdminVisitsBtn">🔄 Actualizar</button>
                       </div>
                     </div>
                     <!-- Control de accesos -->
                     <div id="adminGuardAccesosSubpanel" style="margin-top: 0.85rem;">
                       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
-                          <button type="button" class="btn-inline-action" id="adminNotifyGuardFromGuardBtn" style="font-size: 0.8rem;">
+                        <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+                          <button type="button" class="btn-inline-action" id="adminNotifyGuardFromGuardBtn" style="font-size: 0.82rem; padding: 0.4rem 0.8rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
                             🛡️ Notificar a Guardia
                           </button>
-                          <button type="button" class="btn-inline-action" id="adminGoToAuditFromGuardBtn" style="font-size: 0.8rem;">
+                          <button type="button" class="btn-inline-action" id="adminGoToAuditFromGuardBtn" style="font-size: 0.82rem; padding: 0.4rem 0.8rem;">
                             📋 Ver Auditoría General
                           </button>
                         </div>
                       </div>
 
-                      <!-- Buscador en tiempo real y filtros -->
+                      <!-- Buscador en tiempo real y filtros (esperadas, en predio, egresadas, todas) -->
                       <div class="guard-search-bar" style="margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
                         <input
                           type="search"
@@ -797,10 +859,10 @@
                           autocomplete="off"
                         />
                         <div class="guard-filter-tabs" style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-                          <button type="button" class="btn-inline-action active guard-filter-tab" data-filter="all">Todas</button>
+                          <button type="button" class="btn-inline-action active guard-filter-tab" data-filter="expected">⏳ Esperadas</button>
                           <button type="button" class="btn-inline-action guard-filter-tab" data-filter="inside">🟢 En predio</button>
-                          <button type="button" class="btn-inline-action guard-filter-tab" data-filter="expected">⏳ Esperadas</button>
                           <button type="button" class="btn-inline-action guard-filter-tab" data-filter="exited">🚪 Egresadas</button>
+                          <button type="button" class="btn-inline-action guard-filter-tab" data-filter="all">Todas</button>
                         </div>
                       </div>
 
@@ -853,6 +915,7 @@
                         <input
                           type="date"
                           id="adminCourtDateInput"
+                          class="booking-date-input"
                           style="padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;"
                         />
                         <button type="button" class="primary-btn" id="openBlockCourtModalBtn" style="padding: 0.42rem 0.9rem; font-size: 0.85rem; width: auto; background: rgba(255, 122, 122, 0.25); color: #ff9e9e; border: 1px solid rgba(255, 122, 122, 0.4); font-weight: 600;">
@@ -1117,8 +1180,11 @@
         <button type="button" class="btn-inline-action notif-role-filter" data-role-filter="user">👤 Personal</button>
       </div>
 
-      <div class="notification-toolbar">
+      <div class="notification-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
         <button type="button" class="text-btn" id="markAllRead">Marcar todo como leído</button>
+        <button type="button" class="btn-inline-action" id="notificationPermissionBtn" style="font-size: 0.76rem; padding: 0.28rem 0.6rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);" title="Configurar avisos en el teléfono y probar sonido">
+          🔔 Probar sonido / Activar móvil
+        </button>
       </div>
 
       <ul id="notificationList" class="notification-list"></ul>
@@ -2023,7 +2089,7 @@
             <div>
               <h4 style="margin: 0;">Notificar a un Vecino Específico</h4>
               <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">
-                Envío directo al centro de alertas del vecino. Acción 100% auditada.
+                Envío directo al centro de alertas y al WhatsApp del vecino.
               </p>
             </div>
           </div>
@@ -2081,14 +2147,10 @@
             ></textarea>
           </label>
 
-          <div style="padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); background: rgba(247, 199, 109, 0.1); border: 1px solid rgba(247, 199, 109, 0.25); font-size: 0.8rem; color: var(--gold); line-height: 1.4;">
-            🛡️ <strong>Auditoría obligatoria:</strong> Esta notificación se registrará de inmediato con tu usuario de operador, fecha, hora, vecino y contenido íntegro en el Registro de Actividad.
-          </div>
-
           <div class="modal-actions" style="margin-top: 0.9rem;">
             <button type="button" class="text-btn" id="cancelGuardNotifyBtn">Cancelar</button>
             <button type="submit" class="primary-btn" id="submitGuardNotifyBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
-              📨 Enviar Notificación Auditada
+              📨 Enviar Notificación
             </button>
           </div>
         </form>
@@ -2285,6 +2347,25 @@
 
     <!-- Mensaje flotante Toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- Banner flotante de Notificación Entrante (In-App) -->
+    <div id="incomingNotificationBanner" class="incoming-notif-banner" role="alert">
+      <div class="incoming-notif-content">
+        <div class="incoming-notif-header">
+          <img src="assets/img/logo.png" alt="Logo" class="incoming-notif-logo" />
+          <span class="incoming-notif-appname">Rancho Doble S</span>
+          <span class="incoming-notif-time">Ahora</span>
+          <button type="button" class="incoming-notif-close" id="closeIncomingNotifBtn" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="incoming-notif-body">
+          <strong id="incomingNotifTitle">Nueva Notificación</strong>
+          <p id="incomingNotifText">Contenido de la notificación...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Elemento de Audio para Notificaciones -->
+    <audio id="notificationAudio" preload="auto" src="assets/audio/notification.wav"></audio>
 
     <script src="assets/js/html5-qrcode.min.js"></script>
     <script src="assets/js/api.js?v=2.9"></script>

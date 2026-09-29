@@ -29,6 +29,29 @@ function getTomorrowISO() {
   }).format(tomorrow);
 }
 
+function formatWhatsAppPhone(phone) {
+  if (!phone) return '';
+  let clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('0')) {
+    clean = clean.substring(1);
+  }
+  if (clean.length === 12 && clean.startsWith('1115')) {
+    clean = '11' + clean.substring(4);
+  }
+  if (clean.length === 10 && clean.startsWith('15')) {
+    clean = '11' + clean.substring(2);
+  }
+  if (clean.length === 14 && clean.startsWith('5491115')) {
+    clean = '54911' + clean.substring(7);
+  }
+  if (clean.length === 10) {
+    clean = '549' + clean;
+  } else if (clean.startsWith('54') && !clean.startsWith('549') && clean.length === 12) {
+    clean = '549' + clean.substring(2);
+  }
+  return clean;
+}
+
 const state = {
   authenticatedUser: null,
   activeAuthView: 'login',
@@ -46,7 +69,7 @@ const state = {
   pendingUsers: [],
   approvedUsers: [],
   guardSearchQuery: '',
-  guardFilter: 'all',
+  guardFilter: 'expected',
   activeUsersSearchQuery: '',
   adminCourtDate: '',
   adminCourtBookings: [],
@@ -74,7 +97,9 @@ const state = {
   selectedNotifyResidentId: null,
   adminExpensesSearchQuery: '',
   adminNotifyResidentsSearchQuery: '',
-  adminNotifySelectedResidents: new Set()
+  adminNotifySelectedResidents: new Set(),
+  knownNotificationIds: new Set(),
+  notificationsInitialized: false
 };
 
 // DOM Elements
@@ -103,6 +128,12 @@ const notificationsToggle = document.getElementById('notificationsToggle');
 const closeNotifications = document.getElementById('closeNotifications');
 const markAllRead = document.getElementById('markAllRead');
 const notificationRoleFilterBar = document.getElementById('notificationRoleFilterBar');
+const notificationPermissionBtn = document.getElementById('notificationPermissionBtn');
+const notificationAudio = document.getElementById('notificationAudio');
+const incomingNotificationBanner = document.getElementById('incomingNotificationBanner');
+const incomingNotifTitle = document.getElementById('incomingNotifTitle');
+const incomingNotifText = document.getElementById('incomingNotifText');
+const closeIncomingNotifBtn = document.getElementById('closeIncomingNotifBtn');
 const toast = document.getElementById('toast');
 
 // Bookings DOM
@@ -116,8 +147,6 @@ const visitForm = document.getElementById('visitForm');
 const visitDateField = document.getElementById('visitDateField');
 const visitTimeField = document.getElementById('visitTimeField');
 const userVisitsList = document.getElementById('userVisitsList');
-const openGmailInviteBtn = document.getElementById('openGmailInviteBtn');
-const copyInviteLinkEmailBtn = document.getElementById('copyInviteLinkEmailBtn');
 const openWhatsAppInviteBtn = document.getElementById('openWhatsAppInviteBtn');
 const copyInviteLinkWhatsappBtn = document.getElementById('copyInviteLinkWhatsappBtn');
 const toggleManualVisitFormBtn = document.getElementById('toggleManualVisitFormBtn');
@@ -500,10 +529,15 @@ function setDashboardView(view, pushHistory = true) {
       view = 'home';
     }
     // Prevent unauthorized view access
-    if (view === 'admin' && state.authenticatedUser?.role !== 'admin') {
+    const isAdmin = state.authenticatedUser?.role === 'admin';
+    if (view === 'admin' && !isAdmin) {
       view = 'home';
     }
     if (view === 'guard') {
+      view = 'home';
+    }
+    if (view === 'visits' && isAdmin) {
+      showToast('El Administrador General gestiona visitas desde Control de Guardia.');
       view = 'home';
     }
   }
@@ -572,7 +606,7 @@ function renderUserProfile() {
       userRoleBadge.textContent = '🛡️ Personal de Guardia';
       userRoleBadge.style.color = 'var(--gold)';
     } else if (isAdmin) {
-      userRoleBadge.textContent = 'Administrador';
+      userRoleBadge.textContent = 'Administrador General';
       userRoleBadge.style.color = 'var(--gold)';
     } else {
       userRoleBadge.textContent = 'Propietario';
@@ -581,8 +615,23 @@ function renderUserProfile() {
   }
 
   const homeWelcomeTitle = document.getElementById('homeWelcomeTitle');
-  if (homeWelcomeTitle) {
-    homeWelcomeTitle.textContent = `¡Hola, ${user.nombre}!`;
+  const homeSubtitle = document.querySelector('.home-subtitle');
+  const homeHeroEyebrow = document.querySelector('.home-hero .eyebrow');
+  const residentMenuStack = document.getElementById('residentMenuStack');
+  const superAdminMenuStack = document.getElementById('superAdminMenuStack');
+
+  if (isAdmin) {
+    if (homeWelcomeTitle) homeWelcomeTitle.textContent = `¡Hola, ${user.nombre || 'Administrador'}!`;
+    if (homeSubtitle) homeSubtitle.textContent = 'Seleccioná un módulo para gestionar en el predio:';
+    if (homeHeroEyebrow) homeHeroEyebrow.textContent = 'Administración General';
+    if (residentMenuStack) residentMenuStack.style.display = 'none';
+    if (superAdminMenuStack) superAdminMenuStack.style.display = 'flex';
+  } else {
+    if (homeWelcomeTitle) homeWelcomeTitle.textContent = `¡Hola, ${user.nombre}!`;
+    if (homeSubtitle) homeSubtitle.textContent = 'Seleccioná un servicio para gestionar en el predio:';
+    if (homeHeroEyebrow) homeHeroEyebrow.textContent = 'Portal Vecinal';
+    if (residentMenuStack) residentMenuStack.style.display = 'flex';
+    if (superAdminMenuStack) superAdminMenuStack.style.display = 'none';
   }
 
   if (guardOperatorName) guardOperatorName.textContent = `${user.nombre} ${user.apellido}`;
@@ -590,7 +639,7 @@ function renderUserProfile() {
 
   // Show or hide admin controls
   if (adminNewsActions) adminNewsActions.style.display = isAdmin ? 'block' : 'none';
-  if (homeAdminBtn) homeAdminBtn.style.display = isAdmin ? 'flex' : 'none';
+  if (homeAdminBtn) homeAdminBtn.style.display = 'none';
 
   // For guards: hide user profile button
   const openProfileModalBtn = document.getElementById('openProfileModalBtn');
@@ -734,15 +783,301 @@ function toggleNotificationsPanel(forceOpen, updateHistory = true) {
   }
 }
 
-// ----------------- NOTIFICATIONS ----------------- //
+// ----------------- NOTIFICATIONS & SOUND SYSTEM ----------------- //
 
-async function loadNotifications() {
+let appAudioContext = null;
+let serviceWorkerRegistration = null;
+let notificationPollInterval = null;
+let incomingNotifTimeout = null;
+
+// Initialize or get Web Audio Context safely
+function getAudioContext() {
+  try {
+    if (!appAudioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        appAudioContext = new AudioContextClass();
+      }
+    }
+    if (appAudioContext && appAudioContext.state === 'suspended') {
+      appAudioContext.resume().catch(() => {});
+    }
+  } catch (e) {
+    console.warn('AudioContext error:', e);
+  }
+  return appAudioContext;
+}
+
+// Unlock audio playback on initial user gesture (compliant with browser autoplay policies)
+function unlockAppAudio() {
+  getAudioContext();
+  const audioEl = document.getElementById('notificationAudio');
+  if (audioEl) {
+    const origVolume = audioEl.volume;
+    audioEl.volume = 0.001;
+    audioEl.play().then(() => {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      audioEl.volume = origVolume;
+    }).catch(() => {});
+  }
+  document.removeEventListener('click', unlockAppAudio);
+  document.removeEventListener('touchstart', unlockAppAudio);
+  document.removeEventListener('keydown', unlockAppAudio);
+}
+document.addEventListener('click', unlockAppAudio, { passive: true });
+document.addEventListener('touchstart', unlockAppAudio, { passive: true });
+document.addEventListener('keydown', unlockAppAudio, { passive: true });
+
+// Harmonious dual-tone notification chime synthesizer (E5 659.25Hz + A5 880Hz)
+function playSynthesizedChime() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Note 1: E5 (659.25 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now);
+    gain1.gain.setValueAtTime(0.001, now);
+    gain1.gain.exponentialRampToValueAtTime(0.3, now + 0.03);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.23);
+
+    // Note 2: A5 (880 Hz) - resonant chime
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(880, now + 0.12);
+    gain2.gain.setValueAtTime(0.001, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.35, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.62);
+  } catch (err) {
+    console.warn('Synthesized chime error:', err);
+  }
+}
+
+// Play notification sound (Audio element first, fallback to Web Audio synthesizer)
+function playNotificationSound() {
+  const audioEl = document.getElementById('notificationAudio');
+  if (audioEl) {
+    audioEl.currentTime = 0;
+    audioEl.volume = 0.9;
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        // If HTML5 audio blocked or failed, synthesize directly via Web Audio API
+        playSynthesizedChime();
+      });
+    }
+  } else {
+    playSynthesizedChime();
+  }
+}
+
+// Register service worker for reliable mobile system notifications
+async function registerAppServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    try {
+      const appBase = (typeof API_BASE !== 'undefined') ? API_BASE : '';
+      const swPath = `${appBase}/sw.js`;
+      serviceWorkerRegistration = await navigator.serviceWorker.register(swPath, {
+        scope: `${appBase}/` || '/'
+      });
+    } catch (err) {
+      console.warn('ServiceWorker registration error:', err);
+    }
+  }
+}
+
+// Request permission for system notifications on device
+async function requestDeviceNotificationPermission() {
+  if (!('Notification' in window)) {
+    return 'unsupported';
+  }
+  if (Notification.permission === 'granted') {
+    updateNotificationPermissionButton();
+    return 'granted';
+  }
+  if (Notification.permission !== 'denied') {
+    try {
+      const res = await Notification.requestPermission();
+      updateNotificationPermissionButton();
+      return res;
+    } catch (e) {
+      return 'default';
+    }
+  }
+  return Notification.permission;
+}
+
+// Update permission button label & state
+function updateNotificationPermissionButton() {
+  const btn = document.getElementById('notificationPermissionBtn');
+  if (!btn) return;
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 Probar sonido / móvil';
+    btn.title = 'Avisos en teléfono activos. Clic para probar sonido y vibración.';
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = '🔕 Avisos bloqueados en navegador';
+    btn.title = 'Los avisos están bloqueados en los permisos del navegador.';
+  } else {
+    btn.textContent = '🔔 Activar avisos en teléfono';
+    btn.title = 'Permitir notificaciones emergentes y con sonido en este dispositivo.';
+  }
+}
+
+// Show native device notification on phone / computer with vibration
+async function showDeviceNotification(notification) {
+  if (!notification) return;
+  const title = notification.title || 'Rancho Doble S';
+  const body = notification.text || 'Tienes una nueva notificación en el predio.';
+
+  // 1. Device Vibration (supported on Android devices)
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate([200, 100, 200]);
+    } catch (e) {}
+  }
+
+  // 2. System Push / Pop Notification
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const appBase = (typeof API_BASE !== 'undefined') ? API_BASE : '';
+    const iconUrl = `${appBase}/assets/img/logo.png`;
+    const options = {
+      body,
+      icon: iconUrl,
+      badge: iconUrl,
+      tag: `ranchos-notif-${notification.id || Date.now()}`,
+      renotify: true,
+      data: {
+        url: window.location.href,
+        notifId: notification.id
+      }
+    };
+
+    // Service Worker notification is required on Android Chrome
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = serviceWorkerRegistration || (await navigator.serviceWorker.ready);
+        if (reg && reg.showNotification) {
+          await reg.showNotification(title, options);
+          return;
+        }
+      } catch (swErr) {
+        console.warn('SW showNotification error, attempting desktop fallback:', swErr);
+      }
+    }
+
+    // Fallback desktop window Notification constructor
+    try {
+      const desktopNotif = new Notification(title, options);
+      desktopNotif.onclick = () => {
+        window.focus();
+        toggleNotificationsPanel(true);
+        desktopNotif.close();
+      };
+    } catch (err) {
+      console.warn('Desktop Notification error:', err);
+    }
+  }
+}
+
+// Show floating incoming notification banner inside the application
+function showIncomingNotificationBanner(notification) {
+  const banner = document.getElementById('incomingNotificationBanner');
+  const titleEl = document.getElementById('incomingNotifTitle');
+  const textEl = document.getElementById('incomingNotifText');
+  if (!banner || !titleEl || !textEl) return;
+
+  titleEl.textContent = notification.title || 'Nueva Notificación';
+  textEl.textContent = notification.text || '';
+
+  banner.style.display = 'block';
+  requestAnimationFrame(() => {
+    banner.classList.add('show');
+  });
+
+  if (incomingNotifTimeout) clearTimeout(incomingNotifTimeout);
+  incomingNotifTimeout = setTimeout(() => {
+    banner.classList.remove('show');
+    setTimeout(() => {
+      if (!banner.classList.contains('show')) banner.style.display = 'none';
+    }, 400);
+  }, 6500);
+}
+
+// Background polling for notifications
+function startNotificationPolling() {
+  stopNotificationPolling();
+  // Poll every 6 seconds while authenticated
+  notificationPollInterval = setInterval(() => {
+    if (state.authenticatedUser) {
+      loadNotifications(true);
+    }
+  }, 6000);
+}
+
+function stopNotificationPolling() {
+  if (notificationPollInterval) {
+    clearInterval(notificationPollInterval);
+    notificationPollInterval = null;
+  }
+}
+
+async function loadNotifications(isPolling = false) {
+  if (!state.authenticatedUser) return;
   try {
     const notifications = await API.notifications.get();
+    const prevIds = state.knownNotificationIds || new Set();
+
+    if (!state.notificationsInitialized) {
+      // First load upon logging in / session restore:
+      // Store existing IDs so we do NOT trigger alert sounds for historical notifications
+      state.knownNotificationIds = new Set(notifications.map((n) => n.id));
+      state.notificationsInitialized = true;
+    } else {
+      // Look for new unread notifications that arrived since last fetch
+      const newUnreadNotifs = notifications.filter((n) => !n.read && !prevIds.has(n.id));
+
+      if (newUnreadNotifs.length > 0) {
+        // 1. Play audible sound chime
+        playNotificationSound();
+
+        // 2. Trigger native phone notification and vibration
+        const newest = newUnreadNotifs[0];
+        showDeviceNotification(newest);
+
+        // 3. Show floating in-app banner
+        showIncomingNotificationBanner(newest);
+
+        // Record all new notifications in known set
+        newUnreadNotifs.forEach((n) => state.knownNotificationIds.add(n.id));
+      } else {
+        // Keep known IDs updated with any additional read items
+        notifications.forEach((n) => state.knownNotificationIds.add(n.id));
+      }
+    }
+
     state.notifications = notifications;
     renderNotifications();
   } catch (error) {
-    console.error('Error loading notifications:', error);
+    if (!isPolling) {
+      console.error('Error loading notifications:', error);
+    }
   }
 }
 
@@ -959,22 +1294,13 @@ async function handleCreateNews(event) {
 
 // ----------------- VISITAS & INVITACIONES ----------------- //
 
-let cachedInviteCode = null;
-let cachedInviteBaseUrl = null;
-let cachedInviteCodeExpiry = 0;
-
+// Genera un enlace de invitación único y de uso exclusivo cada vez
 async function getInvitationUrl() {
-  const now = Date.now();
-  if (!cachedInviteCode || now >= cachedInviteCodeExpiry) {
-    const data = await API.visits.getInviteToken();
-    cachedInviteCode = data.code || data.token;
-    cachedInviteBaseUrl = data.baseUrl || window.location.origin;
-    // Cache for 30 minutes in frontend memory
-    cachedInviteCodeExpiry = now + 30 * 60 * 1000;
-  }
-  const base = cachedInviteBaseUrl || window.location.origin;
+  const data = await API.visits.getInviteToken();
+  const code = data.code || data.token;
+  const base = data.baseUrl || window.location.origin;
   const path = window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
-  return `${base}${path}/invitacion.html?c=${encodeURIComponent(cachedInviteCode)}`;
+  return `${base}${path}/invitacion.html?c=${encodeURIComponent(code)}`;
 }
 
 async function openGmailInvite() {
@@ -1052,11 +1378,23 @@ function toggleManualVisitForm() {
   const isHidden = visitForm.style.display === 'none' || !visitForm.style.display;
   if (isHidden) {
     visitForm.style.display = 'grid';
-    toggleManualVisitFormBtn.textContent = '✖️ Ocultar formulario de carga manual';
+    toggleManualVisitFormBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
+      Ocultar formulario
+    `;
     visitForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const firstInput = visitForm.querySelector('input[name="visitName"]');
+    if (firstInput) firstInput.focus();
   } else {
     visitForm.style.display = 'none';
-    toggleManualVisitFormBtn.textContent = '➕ O bien, registrar visita manualmente aquí';
+    toggleManualVisitFormBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      Registrar visita manualmente
+    `;
   }
 }
 
@@ -1102,9 +1440,34 @@ function showQrPassModal(visit) {
   }
 
   if (shareModalQrWhatsAppBtn) {
-    shareModalQrWhatsAppBtn.onclick = () => {
-      const msg = `Hola ${visit.visitorName}! Este es tu pase de acceso a Rancho Doble S para el ${visit.date} a las ${visit.time} hs.\n\n“Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    shareModalQrWhatsAppBtn.onclick = async () => {
+      const captionText = 'Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso.';
+
+      if (visit.qrCode) {
+        try {
+          const res = await fetch(visit.qrCode);
+          const blob = await res.blob();
+          const qrFile = new File([blob], 'codigo-qr-ingreso.png', { type: 'image/png' });
+
+          if (navigator.canShare && navigator.canShare({ files: [qrFile] })) {
+            await navigator.share({
+              files: [qrFile],
+              title: 'Código QR de Ingreso — Rancho Doble S',
+              text: captionText
+            });
+            return;
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('[Modal WebShare direct image fallback]', err);
+        }
+      }
+
+      const cleanPhone = formatWhatsAppPhone(visit.visitorPhone);
+      const waUrl = cleanPhone
+        ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(captionText)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(captionText)}`;
+      window.open(waUrl, '_blank');
     };
   }
 
@@ -1198,6 +1561,7 @@ async function handleVisitSubmit(event) {
   const visitorName = String(formData.get('visitName') || '').trim();
   const visitorDni = String(formData.get('visitDni') || '').trim();
   const vehiclePlate = String(formData.get('visitPlate') || '').trim() || 'Sin vehículo';
+  const visitorPhone = String(formData.get('visitPhone') || '').trim();
   const date = String(formData.get('visitDate') || '').trim();
   const time = String(formData.get('visitTime') || '').trim();
 
@@ -1207,7 +1571,7 @@ async function handleVisitSubmit(event) {
   }
 
   try {
-    const res = await API.visits.create({ visitorName, visitorDni, vehiclePlate, date, time });
+    const res = await API.visits.create({ visitorName, visitorDni, vehiclePlate, visitorPhone, date, time });
     showToast('Visita registrada con éxito. Pase QR generado.');
     visitForm.reset();
     if (visitDateField) visitDateField.value = getTodayISO();
@@ -1216,9 +1580,11 @@ async function handleVisitSubmit(event) {
 
     if (res && res.qrCode) {
       showQrPassModal({
+        id: res.visit?.id,
         visitorName,
         visitorDni,
         vehiclePlate,
+        visitorPhone,
         date,
         time,
         status: 'Confirmada',
@@ -1925,6 +2291,11 @@ function renderAdminPanel() {
     homeAdminPendingBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
     homeAdminPendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
   }
+  const superAdminPendingBadge = document.getElementById('superAdminPendingBadge');
+  if (superAdminPendingBadge) {
+    superAdminPendingBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+    superAdminPendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+  }
   if (adminPendingStatusCount) {
     adminPendingStatusCount.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
   }
@@ -2191,8 +2562,13 @@ function renderAdminPanel() {
       adminNavGuardBadge.textContent = insideCount;
       adminNavGuardBadge.style.display = insideCount > 0 ? 'inline-block' : 'none';
     }
+    const superAdminGuardBadge = document.getElementById('superAdminGuardBadge');
+    if (superAdminGuardBadge) {
+      superAdminGuardBadge.textContent = `${insideCount} en predio`;
+      superAdminGuardBadge.style.display = insideCount > 0 ? 'inline-block' : 'none';
+    }
 
-    // Filter by tab
+    // Filter by tab: esperadas, inside, exited, all
     if (state.guardFilter === 'inside') {
       visits = visits.filter((v) => v.status === 'Ingresado');
     } else if (state.guardFilter === 'expected') {
@@ -2208,7 +2584,11 @@ function renderAdminPanel() {
         (v.visitorName && v.visitorName.toLowerCase().includes(q)) ||
         (v.visitorDni && v.visitorDni.toLowerCase().includes(q)) ||
         (v.vehiclePlate && v.vehiclePlate.toLowerCase().includes(q)) ||
-        (v.residentName && v.residentName.toLowerCase().includes(q))
+        (v.residentName && v.residentName.toLowerCase().includes(q)) ||
+        (v.hostNombre && v.hostNombre.toLowerCase().includes(q)) ||
+        (v.hostApellido && v.hostApellido.toLowerCase().includes(q)) ||
+        (v.hostLote && String(v.hostLote).toLowerCase().includes(q)) ||
+        (v.hostManzana && String(v.hostManzana).toLowerCase().includes(q))
       );
     }
 
@@ -2224,34 +2604,141 @@ function renderAdminPanel() {
       `;
     } else {
       adminVisitsList.innerHTML = visits
-        .slice(0, 40)
-        .map((visit) => `
-          <li class="visit-item">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-              <div>
-                <strong>${escapeHTML(visit.visitorName)} <small>(Visita a ${escapeHTML(visit.residentName)})</small></strong>
-                <small>DNI ${escapeHTML(visit.visitorDni)} · Patente: <strong>${escapeHTML(visit.vehiclePlate || 'Sin vehículo')}</strong></small>
-                ${visit.entryAt ? `<small style="display: block; color: var(--gold); font-size: 0.8rem; margin-top: 0.15rem;">🟢 Ingresó: ${new Date(visit.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>` : ''}
-                ${visit.exitAt ? `<small style="display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem;">🚪 Egresó: ${new Date(visit.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>` : ''}
+        .slice(0, 50)
+        .map((visit) => {
+          // a. Día
+          let visitDay = 'Sin fecha';
+          if (visit.date) {
+            try {
+              const parts = String(visit.date).split('-');
+              if (parts.length === 3) {
+                visitDay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+              } else {
+                visitDay = visit.date;
+              }
+            } catch (e) {
+              visitDay = visit.date;
+            }
+          }
+          if (visit.time) {
+            visitDay += ` (${visit.time} hs)`;
+          }
+
+          // b. Hora de ingreso
+          let entryDisplay = 'Aún no ingresó';
+          let entryClass = 'pending-text';
+          if (visit.entryAt) {
+            const entryD = new Date(visit.entryAt);
+            const timeStr = entryD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            entryDisplay = `${timeStr} hs`;
+            entryClass = 'highlight-green';
+          } else if (visit.status === 'Ingresado') {
+            entryDisplay = 'Ingresado';
+            entryClass = 'highlight-green';
+          }
+
+          // c. Hora de egreso
+          let exitDisplay = '—';
+          let exitClass = 'pending-text';
+          if (visit.exitAt) {
+            const exitD = new Date(visit.exitAt);
+            const timeStr = exitD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            exitDisplay = `${timeStr} hs`;
+            exitClass = 'highlight-muted';
+          } else if (visit.status === 'Ingresado') {
+            exitDisplay = 'Actualmente en predio';
+            exitClass = 'inside-text';
+          }
+
+          // d. Lote y manzana al cual ingresó
+          let loteManzanaDisplay = 'No especificado';
+          if (visit.hostLote || visit.hostManzana) {
+            const parts = [];
+            if (visit.hostLote) parts.push(`Lote ${visit.hostLote}`);
+            if (visit.hostManzana) parts.push(`Manzana ${visit.hostManzana}`);
+            loteManzanaDisplay = parts.join(' · ');
+          }
+
+          // e. Nombre y apellido del propietario
+          let ownerFullName = '';
+          if (visit.hostNombre || visit.hostApellido) {
+            ownerFullName = `${visit.hostNombre || ''} ${visit.hostApellido || ''}`.trim();
+          } else if (visit.residentName) {
+            ownerFullName = visit.residentName.trim();
+          } else {
+            ownerFullName = 'No especificado';
+          }
+
+          // Status Badge
+          const statusText = visit.status === 'Ingresado' ? '🟢 En predio' : (visit.status === 'Egresado' ? '🚪 Egresó' : (visit.status === 'Confirmada' ? '⏳ Esperada' : escapeHTML(visit.status)));
+          const statusBadgeClass = visit.status === 'Ingresado' ? 'confirmed' : (visit.status === 'Egresado' ? 'neutral' : 'pending');
+
+          return `
+            <li class="admin-visit-card">
+              <div class="admin-visit-header">
+                <div class="admin-visit-who">
+                  <span class="visitor-avatar">🚗</span>
+                  <div>
+                    <strong class="visitor-fullname">${escapeHTML(visit.visitorName)}</strong>
+                    <div class="visitor-badges-row">
+                      <span class="visitor-dni-badge">🪪 DNI: ${escapeHTML(visit.visitorDni || 'S/D')}</span>
+                      ${visit.vehiclePlate ? `<span class="visitor-plate-badge">🚘 ${escapeHTML(visit.vehiclePlate)}</span>` : '<span class="visitor-dni-badge">🚶 Peatonal</span>'}
+                    </div>
+                  </div>
+                </div>
+                <div class="visit-status-badge-wrap">
+                  <em class="visit-status ${statusBadgeClass}">${statusText}</em>
+                </div>
               </div>
-              <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR">📱 Ver QR</button>
-                ${visit.status !== 'Ingresado' && visit.status !== 'Egresado' ? `
-                  <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}">Marcar Ingreso</button>
-                ` : ''}
-                ${visit.status === 'Ingresado' ? `
-                  <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida">Marcar Salida</button>
-                ` : ''}
+
+              <!-- Detalle de la visita requerido en Control de Guardia (Responsive) -->
+              <div class="admin-visit-details-grid">
+                <!-- a. Día -->
+                <div class="visit-detail-item">
+                  <span class="detail-label">📅 Día de Visita</span>
+                  <span class="detail-value">${escapeHTML(visitDay)}</span>
+                </div>
+
+                <!-- b. Hora de ingreso -->
+                <div class="visit-detail-item">
+                  <span class="detail-label">🟢 Hora de Ingreso</span>
+                  <span class="detail-value ${entryClass}">${escapeHTML(entryDisplay)}</span>
+                </div>
+
+                <!-- c. Hora de egreso -->
+                <div class="visit-detail-item">
+                  <span class="detail-label">🚪 Hora de Egreso</span>
+                  <span class="detail-value ${exitClass}">${escapeHTML(exitDisplay)}</span>
+                </div>
+
+                <!-- d. Lote y manzana al cual ingresó -->
+                <div class="visit-detail-item">
+                  <span class="detail-label">🏡 Destino (Lote / Mz)</span>
+                  <span class="detail-value highlight-gold">${escapeHTML(loteManzanaDisplay)}</span>
+                </div>
+
+                <!-- e. Nombre y apellido del propietario -->
+                <div class="visit-detail-item full-width-detail">
+                  <span class="detail-label">👤 Propietario / Anfitrión</span>
+                  <span class="detail-value" style="color: #fff; font-size: 0.94rem;">${escapeHTML(ownerFullName)}</span>
+                </div>
               </div>
-            </div>
-            <div class="visit-meta">
-              <span>📅 ${escapeHTML(visit.date)} a las ${escapeHTML(visit.time)} hs</span>
-              <em class="visit-status ${visit.status === 'Ingresado' ? 'confirmed' : visit.status === 'Egresado' ? 'neutral' : 'pending'}">
-                ${visit.status === 'Ingresado' ? '🟢 En predio' : visit.status === 'Egresado' ? '🚪 Egresó' : escapeHTML(visit.status)}
-              </em>
-            </div>
-          </li>
-        `)
+
+              <!-- Acciones de control -->
+              <div class="admin-visit-footer">
+                <div class="admin-visit-actions">
+                  <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR">📱 Ver QR</button>
+                  ${visit.status !== 'Ingresado' && visit.status !== 'Egresado' ? `
+                    <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}">🟢 Marcar Ingreso</button>
+                  ` : ''}
+                  ${visit.status === 'Ingresado' ? `
+                    <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida">🚪 Marcar Salida</button>
+                  ` : ''}
+                </div>
+              </div>
+            </li>
+          `;
+        })
         .join('');
 
       adminVisitsList.querySelectorAll('.admin-view-visit-qr-btn').forEach((btn) => {
@@ -4709,6 +5196,8 @@ async function handleLogin(event) {
     loginForm.reset();
     showToast(`Bienvenido ${data.user.nombre} ${data.user.apellido}.`);
     enterDashboard();
+    // Prompt notification permissions upon direct user interaction
+    requestDeviceNotificationPermission().catch(() => {});
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -4770,6 +5259,9 @@ async function handleRegister(event) {
 }
 
 function handleLogout() {
+  stopNotificationPolling();
+  state.knownNotificationIds.clear();
+  state.notificationsInitialized = false;
   API.clearToken();
   state.authenticatedUser = null;
   authScreen.classList.remove('hidden');
@@ -4798,7 +5290,11 @@ function enterDashboard() {
   setDashboardView(initialView, false);
   window.history.replaceState({ view: state.activeDashboardView }, '', window.location.hash || window.location.pathname);
 
+  // Background notifications, mobile service worker, and polling
+  registerAppServiceWorker();
+  updateNotificationPermissionButton();
   loadNotifications();
+  startNotificationPolling();
 
   if (state.authenticatedUser?.role === 'admin') {
     loadAdminData();
@@ -4829,10 +5325,20 @@ function attachEventListeners() {
   }
   if (visitForm) visitForm.addEventListener('submit', handleVisitSubmit);
 
-  // Big menu buttons on main home screen
+  // Big menu buttons on main home screen (Residents)
   document.querySelectorAll('[data-target-view]').forEach((button) => {
     button.addEventListener('click', () => {
       setDashboardView(button.dataset.targetView);
+    });
+  });
+
+  // Big menu buttons on main home screen (SuperAdmin)
+  document.querySelectorAll('[data-admin-view-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tab = button.dataset.adminViewTab;
+      state.activeAdminTab = tab;
+      setDashboardView('admin');
+      setAdminTab(tab);
     });
   });
 
@@ -4888,10 +5394,49 @@ function attachEventListeners() {
   }
 
   // Notifications drawer
-  if (notificationsToggle) notificationsToggle.addEventListener('click', () => toggleNotificationsPanel());
+  if (notificationsToggle) {
+    notificationsToggle.addEventListener('click', () => {
+      toggleNotificationsPanel();
+      updateNotificationPermissionButton();
+    });
+  }
   if (closeNotifications) closeNotifications.addEventListener('click', () => toggleNotificationsPanel(false));
   if (notificationBackdrop) notificationBackdrop.addEventListener('click', () => toggleNotificationsPanel(false));
   if (markAllRead) markAllRead.addEventListener('click', handleMarkAllNotificationsRead);
+
+  // Sound test and device notification permission trigger
+  if (notificationPermissionBtn) {
+    notificationPermissionBtn.addEventListener('click', async () => {
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        await requestDeviceNotificationPermission();
+      }
+      playNotificationSound();
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([200, 100, 200]); } catch (e) {}
+      }
+      showDeviceNotification({
+        id: 'test-' + Date.now(),
+        title: 'Rancho Doble S 🔔',
+        text: '¡Aviso sonoro y notificación en el teléfono funcionando correctamente!'
+      });
+      showToast('🔔 Prueba de sonido y alerta en teléfono ejecutada.');
+      updateNotificationPermissionButton();
+    });
+  }
+
+  // Incoming notification banner click
+  if (incomingNotificationBanner) {
+    incomingNotificationBanner.addEventListener('click', (e) => {
+      if (e.target.closest('#closeIncomingNotifBtn')) {
+        incomingNotificationBanner.classList.remove('show');
+        setTimeout(() => { incomingNotificationBanner.style.display = 'none'; }, 400);
+        return;
+      }
+      incomingNotificationBanner.classList.remove('show');
+      incomingNotificationBanner.style.display = 'none';
+      toggleNotificationsPanel(true);
+    });
+  }
 
   // Notification role filters (Admin only)
   document.querySelectorAll('.notif-role-filter').forEach((btn) => {
@@ -5350,7 +5895,7 @@ function attachEventListeners() {
       } finally {
         if (submitGuardNotifyBtn) {
           submitGuardNotifyBtn.disabled = false;
-          submitGuardNotifyBtn.textContent = '📨 Enviar Notificación Auditada';
+          submitGuardNotifyBtn.textContent = '📨 Enviar Notificación';
         }
       }
     });
@@ -5435,9 +5980,7 @@ function attachEventListeners() {
     });
   });
 
-  // Invitations (Gmail & WhatsApp) & Manual form toggle
-  if (openGmailInviteBtn) openGmailInviteBtn.addEventListener('click', openGmailInvite);
-  if (copyInviteLinkEmailBtn) copyInviteLinkEmailBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkEmailBtn));
+  // Invitations (WhatsApp) & Manual form toggle
   if (openWhatsAppInviteBtn) openWhatsAppInviteBtn.addEventListener('click', openWhatsAppInvite);
   if (copyInviteLinkWhatsappBtn) copyInviteLinkWhatsappBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkWhatsappBtn));
   if (toggleManualVisitFormBtn) toggleManualVisitFormBtn.addEventListener('click', toggleManualVisitForm);
@@ -6003,6 +6546,7 @@ function attachEventListeners() {
 async function initApp() {
   attachEventListeners();
   updateDateControls();
+  registerAppServiceWorker();
 
   if (visitDateField) visitDateField.value = getTodayISO();
 

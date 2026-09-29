@@ -52,6 +52,13 @@ app.get(['/descarga.jfif', '/ranchos/descarga.jfif'], (req, res) => {
   res.sendFile(path.join(__dirname, 'descarga.jfif'));
 });
 
+// Service Worker for mobile background notifications
+app.get(['/sw.js', '/ranchos/sw.js'], (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
 // Function to get public application prefix (/ranchos on production, empty on dev)
 function getAppPrefix(req) {
   const forwardedPrefix = req.get('x-forwarded-prefix');

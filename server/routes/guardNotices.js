@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, logActivity } = require('../db');
 const { authenticateToken, requireAdminOrGuard } = require('../middleware');
+const { sendWhatsAppTextMessage } = require('../whatsapp');
 
 const VALID_CATEGORIES = [
   'Delivery',
@@ -175,6 +176,20 @@ router.patch('/:id/status', authenticateToken, requireAdminOrGuard, (req, res) =
       VALUES (?, 'user', 'Aviso atendido por guardia', ?, 0, ?)
     `).run(notice.userId, residentNotifText, now);
 
+    // Deliver to resident's WhatsApp
+    try {
+      const residentUser = db.prepare('SELECT telefono, nombre, apellido FROM users WHERE id = ?').get(notice.userId);
+      if (residentUser && residentUser.telefono) {
+        sendWhatsAppTextMessage({
+          phone: residentUser.telefono,
+          title: `Aviso de ${notice.category} — ${status}`,
+          message: residentNotifText,
+          senderName: guardName,
+          recipientName: `${residentUser.nombre} ${residentUser.apellido}`
+        }).catch(err => console.error('[WhatsApp Notice Response Error]', err));
+      }
+    } catch (e) {}
+
     // Audit activity in activity_logs
     logActivity(
       req.user.id,
@@ -224,7 +239,7 @@ router.get('/residents', authenticateToken, requireAdminOrGuard, (req, res) => {
 
 // POST /api/guard-notices/notify-resident
 // Guard sends notification to a specific resident with a free text field. Fully audited!
-router.post('/notify-resident', authenticateToken, requireAdminOrGuard, (req, res) => {
+router.post('/notify-resident', authenticateToken, requireAdminOrGuard, async (req, res) => {
   try {
     const { residentId, title, message } = req.body;
 
@@ -266,9 +281,25 @@ router.post('/notify-resident', authenticateToken, requireAdminOrGuard, (req, re
       cleanTitle,
       cleanMessage,
       req.user.id,
-      `${guardFullName} (Guardia)`,
+      `${guardFullName} (${req.user.role === 'admin' ? 'Administración' : 'Guardia'})`,
       now
     );
+
+    // Deliver to neighbor's WhatsApp directly
+    let waResult = null;
+    if (targetUser.telefono) {
+      try {
+        waResult = await sendWhatsAppTextMessage({
+          phone: targetUser.telefono,
+          title: cleanTitle,
+          message: cleanMessage,
+          senderName: `${guardFullName} (${req.user.role === 'admin' ? 'Administración' : 'Guardia'})`,
+          recipientName: `${targetUser.nombre} ${targetUser.apellido}`
+        });
+      } catch (waErr) {
+        console.error('[WhatsApp Guard Dispatch Error]', waErr);
+      }
+    }
 
     // AUDIT LOG (Strict requirement: "Todo debe quedar auditado")
     const auditAction = 'NOTIFICACION_GUARDIA_VECINO';
@@ -284,7 +315,10 @@ router.post('/notify-resident', authenticateToken, requireAdminOrGuard, (req, re
     );
 
     res.status(201).json({
-      message: `Notificación enviada al vecino ${targetUser.nombre} ${targetUser.apellido}. Registro auditado.`,
+      message: `Notificación enviada al vecino ${targetUser.nombre} ${targetUser.apellido}.` + (waResult && waResult.success ? ' Se envió también a su WhatsApp.' : ''),
+      whatsappSent: Boolean(waResult && waResult.success),
+      whatsappSimulated: Boolean(waResult && waResult.simulated),
+      recipientPhone: targetUser.telefono || null,
       notification: {
         id: Number(notifResult.lastInsertRowid),
         residentId: targetUser.id,

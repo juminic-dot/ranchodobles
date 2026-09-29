@@ -54,6 +54,7 @@ db.exec(`
     visitorDni TEXT NOT NULL,
     vehiclePlate TEXT,
     guestEmail TEXT,
+    visitorPhone TEXT,
     qrCode TEXT,
     date TEXT NOT NULL,
     time TEXT NOT NULL,
@@ -106,6 +107,9 @@ db.exec(`
     hostId INTEGER NOT NULL,
     hostName TEXT NOT NULL,
     expiresAt TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    usedAt TEXT,
+    usedByVisitor TEXT,
     createdAt TEXT NOT NULL
   );
 
@@ -184,6 +188,7 @@ try {
 } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN vehiclePlate TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN guestEmail TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE visits ADD COLUMN visitorPhone TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN qrCode TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN entryAt TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN exitAt TEXT;"); } catch (e) {}
@@ -200,6 +205,9 @@ try { db.exec("ALTER TABLE bookings ADD COLUMN blockReason TEXT;"); } catch (e) 
 try { db.exec("ALTER TABLE notifications ADD COLUMN targetRole TEXT DEFAULT 'user';"); } catch (e) {}
 try { db.exec("ALTER TABLE notifications ADD COLUMN senderId INTEGER;"); } catch (e) {}
 try { db.exec("ALTER TABLE notifications ADD COLUMN senderName TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN used INTEGER DEFAULT 0;"); } catch (e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN usedAt TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN usedByVisitor TEXT;"); } catch (e) {}
 
 // Retroactively classify legacy notifications (only if targetRole is NULL)
 try {
@@ -281,13 +289,16 @@ function ensureOfficialUsers() {
   try {
     const saltRounds = 10;
     const defaultHash = bcrypt.hashSync('vecinos2026', saltRounds);
+    const superAdminHash = bcrypt.hashSync('ranchADss2026.', saltRounds);
     const now = new Date().toISOString();
 
-    // 1. Delete all users that are NOT the official 3
+    // 1. Delete old admin@admin account and any unauthorized accounts
+    db.prepare("DELETE FROM users WHERE LOWER(email) = 'admin@admin' OR LOWER(username) = 'admin@admin' OR LOWER(username) = 'admin'").run();
+
     const usersToDelete = db.prepare(`
       SELECT id FROM users
-      WHERE LOWER(email) NOT IN ('admin@admin', 'jorgecabral@guardia', 'jorgesuarez@ranchodobles.com')
-        AND LOWER(COALESCE(username, '')) NOT IN ('admin@admin', 'admin', 'l2m2', 'jorgecabral@guardia')
+      WHERE LOWER(email) NOT IN ('superadmin@ranchodobles.com', 'superadmin', 'jorgecabral@guardia', 'jorgesuarez@ranchodobles.com')
+        AND LOWER(COALESCE(username, '')) NOT IN ('superadmin', 'l2m2', 'jorgecabral@guardia')
     `).all();
 
     if (usersToDelete.length > 0) {
@@ -302,16 +313,16 @@ function ensureOfficialUsers() {
       console.log(`[DB] Se eliminaron ${usersToDelete.length} usuarios anteriores.`);
     }
 
-    // 2. Ensure Admin: admin@admin (Password: vecinos2026)
-    const admin = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@admin' OR LOWER(username) = 'admin@admin' OR LOWER(username) = 'admin'").get();
-    if (!admin) {
+    // 2. Ensure Administrador General: Usuario SuperAdmin (Password: ranchADss2026.)
+    const superAdmin = db.prepare("SELECT id FROM users WHERE LOWER(username) = 'superadmin' OR LOWER(email) = 'superadmin' OR LOWER(email) = 'superadmin@ranchodobles.com'").get();
+    if (!superAdmin) {
       db.prepare(`
         INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-      `).run('Admin', 'Administrador', 'DNI', '00000000', '1100000000', 'admin@admin', 'admin@admin', null, null, defaultHash, 'admin', now);
-      console.log('[DB] Usuario Administrador oficial creado: admin@admin');
+      `).run('General', 'Administrador', 'DNI', '00000001', '1100000000', 'superadmin@ranchodobles.com', 'SuperAdmin', null, null, superAdminHash, 'admin', now);
+      console.log('[DB] Usuario Administrador General oficial creado: SuperAdmin');
     } else {
-      db.prepare("UPDATE users SET email = 'admin@admin', username = 'admin@admin', passwordHash = ?, role = 'admin', approved = 1 WHERE id = ?").run(defaultHash, admin.id);
+      db.prepare("UPDATE users SET email = 'superadmin@ranchodobles.com', username = 'SuperAdmin', nombre = 'Administrador', apellido = 'General', passwordHash = ?, role = 'admin', approved = 1 WHERE id = ?").run(superAdminHash, superAdmin.id);
     }
 
     // 3. Ensure Vecino: Jorge Suarez (Usuario: l2m2, Password: vecinos2026)

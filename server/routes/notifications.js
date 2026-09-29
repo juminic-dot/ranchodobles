@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, logActivity } = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrGuard } = require('../middleware');
+const { sendWhatsAppTextMessage } = require('../whatsapp');
 
 // GET /api/notifications
 // Retrieves notifications filtered strictly by user role and ownership
@@ -113,8 +114,24 @@ router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
       VALUES (NULL, 'all', ?, ?, 0, ?)
     `).run(title.trim(), text.trim(), now);
 
+    // Deliver broadcast notification to active residents on WhatsApp
+    try {
+      const activeResidents = db.prepare('SELECT id, nombre, apellido, telefono FROM users WHERE approved = 1 AND role = "user" AND telefono IS NOT NULL').all();
+      for (const resUser of activeResidents) {
+        if (resUser.telefono) {
+          sendWhatsAppTextMessage({
+            phone: resUser.telefono,
+            title: title.trim(),
+            message: text.trim(),
+            senderName: `${req.user.nombre} ${req.user.apellido} (Administración)`,
+            recipientName: `${resUser.nombre} ${resUser.apellido}`
+          }).catch(err => console.error('[WhatsApp Broadcast Error]', err));
+        }
+      }
+    } catch (e) {}
+
     res.status(201).json({
-      message: 'Alerta comunitaria emitida a toda la comunidad.',
+      message: 'Alerta comunitaria emitida a toda la comunidad (enviada también a WhatsApp).',
       alert: {
         id: Number(result.lastInsertRowid),
         title: title.trim(),
@@ -253,7 +270,7 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
       VALUES (?, 'user', ?, ?, 0, ?, ?, ?)
     `);
 
-    const selectUserStmt = db.prepare('SELECT id, nombre, apellido, lote, manzana FROM users WHERE id = ? AND approved = 1');
+    const selectUserStmt = db.prepare('SELECT id, nombre, apellido, lote, manzana, telefono FROM users WHERE id = ? AND approved = 1');
 
     let sentCount = 0;
     const recipientNames = [];
@@ -268,6 +285,17 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
       sentCount++;
       const loc = user.lote ? ` (L${user.lote})` : '';
       recipientNames.push(`${user.nombre} ${user.apellido}${loc}`);
+
+      // Deliver to resident's WhatsApp
+      if (user.telefono) {
+        sendWhatsAppTextMessage({
+          phone: user.telefono,
+          title: cleanTitle,
+          message: cleanText,
+          senderName,
+          recipientName: `${user.nombre} ${user.apellido}`
+        }).catch(err => console.error('[WhatsApp Admin Notify Error]', err));
+      }
     }
 
     if (sentCount === 0) {
@@ -285,7 +313,7 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
     );
 
     res.status(201).json({
-      message: `Notificación enviada exitosamente a ${sentCount} vecino${sentCount === 1 ? '' : 's'}.`,
+      message: `Notificación enviada exitosamente a ${sentCount} vecino${sentCount === 1 ? '' : 's'} (enviada también a su WhatsApp).`,
       sentCount,
       recipients: recipientNames
     });
