@@ -341,6 +341,33 @@ const API = {
     },
     getStats() {
       return API.request('/api/admin/stats');
+    },
+    getSettings() {
+      return API.request('/api/admin/settings');
+    },
+    updateSettings(settingsData) {
+      return API.request('/api/admin/settings', {
+        method: 'PUT',
+        body: settingsData
+      });
+    },
+    testEmail(data = {}) {
+      return API.request('/api/admin/settings/test-email', {
+        method: 'POST',
+        body: data
+      });
+    },
+    testWhatsApp(data = {}) {
+      return API.request('/api/admin/settings/test-whatsapp', {
+        method: 'POST',
+        body: data
+      });
+    },
+    sendEmailToOwners(data) {
+      return API.request('/api/admin/send-email', {
+        method: 'POST',
+        body: data
+      });
     }
   },
 
@@ -382,6 +409,26 @@ const API = {
     notifyResident(data) {
       return API.request('/api/guard-notices/notify-resident', {
         method: 'POST',
+        body: data
+      });
+    }
+  },
+
+  // Admin Notices (Avisos de propietarios a Administración y respuestas oficiales)
+  adminNotices: {
+    get(status) {
+      const query = status ? `?status=${encodeURIComponent(status)}` : '';
+      return API.request(`/api/admin-notices${query}`);
+    },
+    create(data) {
+      return API.request('/api/admin-notices', {
+        method: 'POST',
+        body: data
+      });
+    },
+    updateStatus(id, data) {
+      return API.request(`/api/admin-notices/${id}/status`, {
+        method: 'PATCH',
         body: data
       });
     }

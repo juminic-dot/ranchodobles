@@ -245,6 +245,18 @@
                   </div>
                   <div class="menu-btn-arrow">➔</div>
                 </button>
+
+                <!-- f. Avisos a administración -->
+                <button type="button" class="menu-big-btn btn-admin-notices" data-target-view="adminNotices">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">🏛️</div>
+                    <div class="menu-btn-text">
+                      <h4>Avisos a administración</h4>
+                      <p>Consultas, comprobantes de pago, mantenimiento general o reclamos directos.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
               </div>
 
               <!-- Menú Principal para Administrador General (SuperAdmin) -->
@@ -322,6 +334,21 @@
                     <div class="menu-btn-text">
                       <h4>Auditoría general</h4>
                       <p>Registro histórico completo de actividades, accesos y eventos de seguridad.</p>
+                    </div>
+                  </div>
+                  <div class="menu-btn-arrow">➔</div>
+                </button>
+
+                <!-- 7. Configuración avanzada -->
+                <button type="button" class="menu-big-btn btn-admin-config" data-admin-view-tab="config">
+                  <div class="menu-btn-left">
+                    <div class="menu-btn-icon">⚙️</div>
+                    <div class="menu-btn-text">
+                      <div class="title-with-badge">
+                        <h4>Configuración avanzada</h4>
+                        <span class="badge soft" id="superAdminConfigBadge">Ajustes</span>
+                      </div>
+                      <p>Asignación de cuenta de email para envíos a propietarios y configuración de WhatsApp oficial.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -732,6 +759,140 @@
               </div>
             </section>
 
+            <!-- Sección Avisos a Administración (Residentes / Propietarios) -->
+            <section id="adminNoticesSection" class="content-section">
+              <div class="section-top-nav">
+                <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                  ← Volver al Menú Principal
+                </button>
+              </div>
+
+              <div class="panel-heading" style="margin-bottom: 1.25rem;">
+                <p class="eyebrow">🏛️ Comunicación con Administración</p>
+                <h3>Avisos a Administración</h3>
+                <p class="panel-subtext">
+                  Canal directo oficial para enviar consultas sobre expensas, comprobantes de pago, solicitudes de mantenimiento, trámites o reclamos.
+                </p>
+              </div>
+
+              <!-- Selector interactivo de categorías -->
+              <div class="glass-card panel-block" style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 0.35rem;">1. Seleccioná el motivo de tu comunicación</h4>
+                <p class="panel-subtext" style="margin-bottom: 1rem;">Elegí el rubro correspondiente para que tu aviso sea atendido por la administración:</p>
+
+                <div class="guard-notice-options-grid" id="adminNoticeCategoriesGrid">
+                  <!-- Opción a: Expensas y Pagos -->
+                  <button type="button" class="notice-option-card active" data-admin-notice-cat="Expensas y Pagos">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">💳</span>
+                      <span class="option-card-tag">Pagos</span>
+                    </div>
+                    <strong class="option-card-title">Expensas y Pagos</strong>
+                    <p class="option-card-desc">Envío de comprobantes de transferencia, consultas sobre saldos, libre deudas o liquidaciones.</p>
+                  </button>
+
+                  <!-- Opción b: Mantenimiento y Obras -->
+                  <button type="button" class="notice-option-card" data-admin-notice-cat="Mantenimiento y Obras">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">🛠️</span>
+                      <span class="option-card-tag">Infraestructura</span>
+                    </div>
+                    <strong class="option-card-title">Mantenimiento y Obras</strong>
+                    <p class="option-card-desc">Luminarias rotas, baches en calles internas, corte de pasto en áreas comunes o reparaciones.</p>
+                  </button>
+
+                  <!-- Opción c: Convivencia y Normas -->
+                  <button type="button" class="notice-option-card" data-admin-notice-cat="Convivencia y Normas">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">⚖️</span>
+                      <span class="option-card-tag">Reglamento</span>
+                    </div>
+                    <strong class="option-card-title">Convivencia y Normas</strong>
+                    <p class="option-card-desc">Ruidos molestos, exceso de velocidad, mascotas en espacios públicos o normas de convivencia.</p>
+                  </button>
+
+                  <!-- Opción d: Trámites y Permisos -->
+                  <button type="button" class="notice-option-card" data-admin-notice-cat="Trámites y Permisos">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">📋</span>
+                      <span class="option-card-tag">Gestión</span>
+                    </div>
+                    <strong class="option-card-title">Trámites y Permisos</strong>
+                    <p class="option-card-desc">Permisos para obras particulares, mudanzas, autorizaciones especiales o trámites catastrales.</p>
+                  </button>
+
+                  <!-- Opción e: Consulta General -->
+                  <button type="button" class="notice-option-card" data-admin-notice-cat="Consulta General">
+                    <div class="option-card-top">
+                      <span class="option-card-icon">💬</span>
+                      <span class="option-card-tag">Institucional</span>
+                    </div>
+                    <strong class="option-card-title">Consulta General</strong>
+                    <p class="option-card-desc">Sugerencias, consultas administrativas generales o cualquier otra comunicación para el consorcio.</p>
+                  </button>
+                </div>
+
+                <!-- Formulario de envío del aviso a administración -->
+                <form id="residentAdminNoticeForm" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 0.9rem; color: var(--muted);">Motivo seleccionado:</span>
+                      <span class="badge soft" id="selectedAdminNoticeCategoryBadge" style="background: rgba(247, 199, 109, 0.15); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.3); font-weight: 700; font-size: 0.88rem;">
+                        💳 Expensas y Pagos
+                      </span>
+                    </div>
+                    <input type="hidden" id="residentAdminNoticeCategoryInput" value="Expensas y Pagos" />
+                  </div>
+
+                  <div style="margin-bottom: 0.85rem;">
+                    <label style="display: block; margin-bottom: 0;">
+                      <span style="font-weight: 600; font-size: 0.88rem;">Asunto / Título del Aviso *</span>
+                      <input
+                        type="text"
+                        id="residentAdminNoticeSubjectInput"
+                        required
+                        placeholder="Ej: Envío comprobante expensas mes actual / Consulta luminaria calle 4"
+                        style="width: 100%; box-sizing: border-box; margin-top: 0.3rem;"
+                      />
+                    </label>
+                  </div>
+
+                  <label style="margin-top: 0.8rem; display: block;">
+                    <span style="font-weight: 600; font-size: 0.88rem;">Detalle del Mensaje para la Administración *</span>
+                    <textarea
+                      id="residentAdminNoticeDetailsInput"
+                      rows="4"
+                      required
+                      placeholder="Escribí de manera detallada tu consulta, reclamo o solicitud..."
+                      style="width: 100%; box-sizing: border-box; margin-top: 0.3rem;"
+                    ></textarea>
+                  </label>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.1rem; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="font-size: 0.8rem; color: var(--muted);">
+                      🏛️ El aviso se registrará con tu nombre, lote y manzana, y recibirás la respuesta de la administración en tu portal.
+                    </div>
+                    <button type="submit" class="primary-btn" id="submitResidentAdminNoticeBtn" style="padding: 0.65rem 1.6rem; font-weight: 700; width: auto; background: var(--primary-deep); color: #fff;">
+                      🏛️ Enviar Aviso a Administración
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Historial de avisos enviados a administración por este residente -->
+              <div class="glass-card panel-block">
+                <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h4>📋 Mis Avisos Enviados a Administración</h4>
+                    <span class="badge soft" id="residentAdminNoticesCountBadge">0 avisos</span>
+                  </div>
+                  <button type="button" class="text-btn" id="refreshResidentAdminNoticesBtn">Actualizar</button>
+                </div>
+                <p class="panel-subtext">Historial de consultas y reclamos enviados y estado de respuesta oficial del consorcio.</p>
+                <div id="residentAdminNoticesList" style="display: grid; gap: 0.75rem; margin-top: 0.85rem;"></div>
+              </div>
+            </section>
+
             <!-- Sección Administración (Sólo rol Admin) -->
             <section id="adminSection" class="content-section">
               <div class="section-top-nav">
@@ -742,36 +903,12 @@
 
               <div class="section-header">
                 <div>
-                  <p class="eyebrow">Gestión Central</p>
-                  <h3>Panel de Administración y Guardia</h3>
+                  <p class="eyebrow" id="adminSectionEyebrow">Gestión Central</p>
+                  <h3 id="adminSectionTitle">Padrón de Usuarios</h3>
                 </div>
               </div>
 
-              <!-- Botones de Navegación del Panel de Administración (Sin Scroll Masivo) -->
-              <div class="admin-nav-buttons" role="tablist" aria-label="Módulos de administración">
-                <button type="button" class="admin-nav-btn active" data-admin-tab="vecinos">
-                  👥 Padrón de Usuarios
-                  <span class="badge soft mini" id="adminNavPendingBadge" style="display: none; background: rgba(247, 199, 109, 0.25); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4); margin-left: 0.3rem;">0</span>
-                </button>
-                <button type="button" class="admin-nav-btn" data-admin-tab="guardia">
-                  🛡️ Control de Guardia
-                  <span class="badge soft mini" id="adminNavGuardBadge" style="display: none; background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); margin-left: 0.3rem;">0</span>
-                </button>
-                <button type="button" class="admin-nav-btn" data-admin-tab="expensas">
-                  💳 Gestión de Expensas
-                </button>
-                <button type="button" class="admin-nav-btn" data-admin-tab="canchas">
-                  🎾 Control de Canchas
-                </button>
-                <button type="button" class="admin-nav-btn" data-admin-tab="alertas">
-                  📢 Avisos y Alertas
-                </button>
-                <button type="button" class="admin-nav-btn" data-admin-tab="auditoria">
-                  📋 Auditoría General
-                </button>
-              </div>
-
-              <!-- CONTENIDO MODULAR POR BOTONES -->
+              <!-- CONTENIDO MODULAR POR BOTONES (El contenido solicitado aparece arriba) -->
               <div class="admin-views-container">
                 <!-- MÓDULO 1: Padrón de Usuarios (Vecinos Activos y Solicitudes de Registro) -->
                 <div class="admin-tab-view active" id="adminTabVecinos">
@@ -858,7 +995,7 @@
                           style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
                           autocomplete="off"
                         />
-                        <div class="guard-filter-tabs" style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                        <div class="guard-filter-tabs">
                           <button type="button" class="btn-inline-action active guard-filter-tab" data-filter="expected">⏳ Esperadas</button>
                           <button type="button" class="btn-inline-action guard-filter-tab" data-filter="inside">🟢 En predio</button>
                           <button type="button" class="btn-inline-action guard-filter-tab" data-filter="exited">🚪 Egresadas</button>
@@ -866,7 +1003,8 @@
                         </div>
                       </div>
 
-                      <ul id="adminVisitsList" class="list-stack visit-list"></ul>
+                      <!-- Lista interactiva de visitas en administración -->
+                      <div id="adminVisitsList" style="display: grid; gap: 0.75rem;"></div>
                     </div>
                   </div>
                 </div>
@@ -935,6 +1073,25 @@
 
                 <!-- MÓDULO 5: Avisos y Alertas -->
                 <div class="admin-tab-view" id="adminTabAlertas">
+                  <!-- Subpanel 1: Avisos Recibidos de Propietarios -->
+                  <div class="glass-card panel-block" id="adminReceivedNoticesPanel" style="margin-bottom: 1.25rem;">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <h4>🏛️ Avisos Recibidos de Propietarios</h4>
+                        <span class="badge soft" id="adminReceivedNoticesCountBadge">0 avisos</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn-inline-action active admin-notice-filter-btn" data-admin-filter="all">Todos</button>
+                        <button type="button" class="btn-inline-action admin-notice-filter-btn" data-admin-filter="Pendiente">⏳ Pendientes</button>
+                        <button type="button" class="btn-inline-action admin-notice-filter-btn" data-admin-filter="Respondido">✅ Respondidos</button>
+                        <button type="button" class="text-btn" id="refreshAdminReceivedNoticesBtn">🔄 Actualizar</button>
+                      </div>
+                    </div>
+                    <p class="panel-subtext">Consultas, reclamos, comprobantes de pago y solicitudes enviadas por los propietarios en tiempo real.</p>
+                    <div id="adminReceivedResidentNoticesList" style="display: grid; gap: 0.75rem; margin-top: 0.85rem;"></div>
+                  </div>
+
+                  <!-- Subpanel 2: Avisos y Alertas Masivas Inmediatas -->
                   <div class="glass-card panel-block" id="adminAlertsPanel">
                     <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                       <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
@@ -994,6 +1151,417 @@
                     <!-- Lista de registros de auditoría -->
                     <div id="adminGlobalAuditLogsList" class="activity-logs-container" style="display: grid; gap: 0.5rem; max-height: 550px; overflow-y: auto;"></div>
                   </div>
+                </div>
+
+                <!-- MÓDULO 7: Configuración Avanzada -->
+                <div class="admin-tab-view" id="adminTabConfig">
+                  <div class="glass-card panel-block" id="adminConfigPanel">
+                    <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                        <h4>⚙️ Configuración Avanzada del Sistema</h4>
+                        <span class="badge soft" id="adminSettingsActiveStatusBadge">Servicios de Envío</span>
+                      </div>
+                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="text-btn" id="refreshAdminSettingsBtn">🔄 Actualizar</button>
+                      </div>
+                    </div>
+                    <p class="panel-subtext">Asigná una cuenta de correo electrónico para el envío de comunicados y notificaciones a propietarios, y configurá el número oficial de WhatsApp de guardia/administración para la emisión de pases QR y mensajería en vivo.</p>
+
+                    <!-- Banner de Estado de Integraciones -->
+                    <div class="config-status-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin: 1rem 0;">
+                      <div class="config-service-badge-card" id="configEmailStatusCard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; display: flex; gap: 0.85rem; align-items: center;">
+                        <div class="config-badge-icon" style="font-size: 2rem;">📧</div>
+                        <div class="config-badge-info" style="flex: 1;">
+                          <div class="config-badge-title" style="font-size: 0.95rem; font-weight: 700; color: #fff;">Servicio de Email</div>
+                          <div class="config-badge-status" id="configEmailStatusText" style="font-size: 0.84rem; font-weight: 600; color: var(--gold); margin: 0.2rem 0;">Verificando...</div>
+                          <small class="config-badge-desc" id="configEmailSenderText" style="color: var(--muted); font-size: 0.78rem; display: block;">Remitente: No configurado</small>
+                        </div>
+                      </div>
+                      <div class="config-service-badge-card" id="configWhatsAppStatusCard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem; display: flex; gap: 0.85rem; align-items: center;">
+                        <div class="config-badge-icon" style="font-size: 2rem;">📱</div>
+                        <div class="config-badge-info" style="flex: 1;">
+                          <div class="config-badge-title" style="font-size: 0.95rem; font-weight: 700; color: #fff;">Servicio de WhatsApp</div>
+                          <div class="config-badge-status" id="configWhatsAppStatusText" style="font-size: 0.84rem; font-weight: 600; color: var(--gold); margin: 0.2rem 0;">Verificando...</div>
+                          <small class="config-badge-desc" id="configWhatsAppPhoneText" style="color: var(--muted); font-size: 0.78rem; display: block;">Teléfono oficial: No configurado</small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Pestañas internas de Configuración Avanzada -->
+                    <div class="vecinos-subnav" role="tablist" style="margin: 1.2rem 0 0.8rem 0;">
+                      <button type="button" class="vecinos-subnav-btn active" data-config-subtab="email">
+                        📧 Cuenta de Email
+                      </button>
+                      <button type="button" class="vecinos-subnav-btn" data-config-subtab="whatsapp">
+                        📱 Teléfono / WhatsApp
+                      </button>
+                      <button type="button" class="vecinos-subnav-btn" data-config-subtab="send">
+                        ✉️ Enviar Email a Propietarios
+                      </button>
+                    </div>
+
+                    <!-- SUBPANEL 1: Cuenta de Email -->
+                    <div class="config-subpanel active" id="configEmailSubpanel">
+                      <form id="adminEmailConfigForm" class="config-form" style="display: grid; gap: 1rem;">
+                        <div class="config-card-inner" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem;">
+                          <div class="config-section-title" style="margin-bottom: 0.85rem;">
+                            <h5 style="margin: 0; font-size: 1rem; color: var(--gold);">Tipo de Proveedor de Correo</h5>
+                            <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--muted);">Seleccioná si utilizarás una cuenta Gmail o un servidor SMTP personalizado para enviar correos a los vecinos.</p>
+                          </div>
+
+                          <div class="config-provider-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="emailProvider" value="gmail" id="emailProviderGmail" checked style="display: none;" />
+                              <div class="config-provider-box active" data-provider-box="gmail" style="border: 1px solid var(--primary); background: rgba(105, 210, 166, 0.08); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Gmail (Recomendado)</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Entrega garantizada usando una Contraseña de Aplicación de Google.</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="emailProvider" value="smtp" id="emailProviderSmtp" style="display: none;" />
+                              <div class="config-provider-box" data-provider-box="smtp" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Servidor SMTP</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Para cuentas de dominio propio (DonWeb, Brevo, SendGrid, etc.).</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="emailProvider" value="none" id="emailProviderNone" style="display: none;" />
+                              <div class="config-provider-box" data-provider-box="none" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Desactivado</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Los correos se registrarán en la consola sin enviarse.</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          <!-- Bloque Gmail -->
+                          <div id="emailGmailFields" class="config-fields-block" style="display: grid; gap: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem;">
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Correo de Gmail Emisor *</span>
+                                <input type="email" id="cfgGmailUser" placeholder="ejemplo@gmail.com" autocomplete="username" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600;">
+                                  <span>Contraseña de Aplicación Google *</span>
+                                  <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-size: 0.76rem;">Generar en Google ↗</a>
+                                </span>
+                                <input type="password" id="cfgGmailPass" placeholder="••••••••••••••••" autocomplete="current-password" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                            </div>
+                            <div style="background: rgba(247, 199, 109, 0.08); border: 1px solid rgba(247, 199, 109, 0.25); border-radius: 8px; padding: 0.75rem 0.95rem; font-size: 0.8rem; color: var(--gold); line-height: 1.45;">
+                              💡 <strong>¿Cómo obtener la contraseña de aplicación de 16 letras?</strong><br>
+                              1. Ingresá a tu cuenta de Google en <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" style="color: #fff; text-decoration: underline;">myaccount.google.com/apppasswords</a>.<br>
+                              2. Si tenés verificación en dos pasos activa, creá una contraseña de aplicación con el nombre "Rancho Doble S".<br>
+                              3. Google te dará un código de 16 letras (ej: <code>abcd efgh ijkl mnop</code>). Pegalo aquí.
+                            </div>
+                          </div>
+
+                          <!-- Bloque SMTP Personalizado -->
+                          <div id="emailSmtpFields" class="config-fields-block" style="display: none; gap: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;">
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Servidor Host SMTP *</span>
+                                <input type="text" id="cfgSmtpHost" placeholder="smtp.tudominio.com" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Puerto SMTP *</span>
+                                <input type="number" id="cfgSmtpPort" placeholder="587" value="587" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Usuario SMTP *</span>
+                                <input type="text" id="cfgSmtpUser" placeholder="notificaciones@tudominio.com" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Contraseña SMTP *</span>
+                                <input type="password" id="cfgSmtpPass" placeholder="••••••••" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                            </div>
+                            <div style="margin-top: 0.4rem;">
+                              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #cbd5e1; cursor: pointer;">
+                                <input type="checkbox" id="cfgSmtpSecure" />
+                                <span>Usar conexión segura SSL/TLS directa (activar para puerto 465)</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <!-- Remitente personalizado común -->
+                          <div style="margin-top: 0.85rem;" id="emailCommonFields">
+                            <label>
+                              <span style="font-size: 0.85rem; font-weight: 600;">Nombre para Mostrar y Casilla Remitente</span>
+                              <input type="text" id="cfgSmtpFrom" placeholder="Administración Rancho Doble S &lt;notificaciones@ranchodobles.com&gt;" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              <small style="color: var(--muted); font-size: 0.78rem; display: block; margin-top: 0.2rem;">Opcional. Si se deja en blanco se utilizará el correo emisor registrado arriba.</small>
+                            </label>
+                          </div>
+
+                          <div style="margin-top: 1.1rem; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="primary-btn" id="saveEmailConfigBtn" style="padding: 0.55rem 1.4rem; font-weight: 700; width: auto; background: var(--primary-deep); color: #fff;">
+                              💾 Guardar Configuración de Email
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+
+                      <!-- Bloque Prueba de Envío de Email -->
+                      <div class="config-card-inner test-box" style="margin-top: 1rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem;">
+                        <div class="config-section-title" style="margin-bottom: 0.75rem;">
+                          <h5 style="margin: 0; font-size: 0.98rem; color: #fff;">🧪 Probar Envío de Correo Electrónico</h5>
+                          <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--muted);">Enviá un correo de prueba para verificar en tiempo real que las credenciales funcionan y los mensajes llegan a la casilla de destino.</p>
+                        </div>
+                        <div style="display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap;">
+                          <label style="flex: 1; min-width: 240px; margin-bottom: 0;">
+                            <span style="font-size: 0.85rem; font-weight: 600;">Casilla destino para la prueba:</span>
+                            <input type="email" id="testEmailTargetInput" placeholder="tu-email@ejemplo.com" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                          </label>
+                          <button type="button" class="btn-inline-action" id="runTestEmailBtn" style="padding: 0.6rem 1.2rem; font-weight: 600; font-size: 0.88rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
+                            📨 Enviar Correo de Prueba
+                          </button>
+                        </div>
+                        <div id="testEmailResultStatus" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem;"></div>
+                      </div>
+                    </div>
+
+                    <!-- SUBPANEL 2: Teléfono / WhatsApp -->
+                    <div class="config-subpanel" id="configWhatsAppSubpanel" style="display: none;">
+                      <form id="adminWhatsAppConfigForm" class="config-form" style="display: grid; gap: 1rem;">
+                        <div class="config-card-inner" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem;">
+                          <div class="config-section-title" style="margin-bottom: 0.85rem;">
+                            <h5 style="margin: 0; font-size: 1rem; color: #69d2a6;">Número Oficial y Proveedor de WhatsApp</h5>
+                            <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--muted);">Configurá el teléfono oficial de WhatsApp para la guardia/administración y el motor de envío de pases QR a visitantes y alertas a propietarios.</p>
+                          </div>
+
+                          <!-- Teléfono Oficial de WhatsApp -->
+                          <div style="margin-bottom: 1.1rem; background: rgba(105, 210, 166, 0.06); border: 1px solid rgba(105, 210, 166, 0.2); border-radius: 10px; padding: 1rem;">
+                            <label style="margin-bottom: 0;">
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #a3e6cb;">📱 Teléfono WhatsApp Oficial de Garita / Administración *</span>
+                              <input type="tel" id="cfgWhatsAppPhone" placeholder="Ej: 11 2345-6789 o +54 9 11 2345-6789" style="width: 100%; padding: 0.6rem 0.9rem; font-size: 1rem; font-weight: 600; margin-top: 0.35rem; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(105, 210, 166, 0.35); color: #fff;" />
+                              <small style="color: var(--muted); font-size: 0.8rem; display: block; margin-top: 0.3rem;">Este número será el remitente oficial de todos los avisos y el contacto directo para vecinos y visitantes.</small>
+                            </label>
+                          </div>
+
+                          <!-- Selector de Proveedor WhatsApp -->
+                          <div class="config-section-title" style="margin-top: 0.85rem; margin-bottom: 0.65rem;">
+                            <h5 style="margin: 0; font-size: 0.95rem; color: #fff;">Motor de Integración de WhatsApp</h5>
+                            <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--muted);">Seleccioná la integración que utilizarás para la salida de mensajes automáticos:</p>
+                          </div>
+
+                          <div class="config-provider-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="whatsappProvider" value="meta_cloud" id="waProviderMeta" checked style="display: none;" />
+                              <div class="config-provider-box active" data-wa-provider-box="meta_cloud" style="border: 1px solid var(--primary); background: rgba(105, 210, 166, 0.08); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Meta Cloud API (Oficial)</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Graph API de Meta/Facebook para envíos de alta confiabilidad y QR directo.</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="whatsappProvider" value="evolution_gateway" id="waProviderEvolution" style="display: none;" />
+                              <div class="config-provider-box" data-wa-provider-box="evolution_gateway" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Evolution API / Baileys</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Servidor de WhatsApp autohosteado para conectar por código QR / instancia.</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="whatsappProvider" value="twilio" id="waProviderTwilio" style="display: none;" />
+                              <div class="config-provider-box" data-wa-provider-box="twilio" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Twilio WhatsApp</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">API de mensajería empresarial de Twilio.</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="whatsappProvider" value="phone_direct" id="waProviderDirect" style="display: none;" />
+                              <div class="config-provider-box" data-wa-provider-box="phone_direct" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Teléfono Directo / wa.me</div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Utiliza el número oficial configurado para links directos y registro del sistema.</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          <!-- Bloque Meta Cloud API -->
+                          <div id="waMetaFields" class="config-fields-block" style="display: grid; gap: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem;">
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Phone Number ID (Meta) *</span>
+                                <input type="text" id="cfgWaPhoneId" placeholder="Ej: 104928374829102" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Token de Acceso Permanente (System User Token) *</span>
+                                <input type="password" id="cfgWaToken" placeholder="EAAG...••••••••" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                            </div>
+                            <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 8px; padding: 0.75rem 0.95rem; font-size: 0.8rem; color: #a3e6cb; line-height: 1.45;">
+                              💡 Obtené tu <strong>Phone Number ID</strong> y <strong>Token</strong> en el panel de desarrolladores de Meta (<em>developers.facebook.com ➔ WhatsApp ➔ API Setup</em>).
+                            </div>
+                          </div>
+
+                          <!-- Bloque Evolution API -->
+                          <div id="waEvolutionFields" class="config-fields-block" style="display: none; gap: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;">
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">URL del Servidor Evolution API *</span>
+                                <input type="url" id="cfgWaApiUrl" placeholder="http://localhost:8080 o https://wa.tudominio.com" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">API Key de Evolution *</span>
+                                <input type="password" id="cfgWaApiKey" placeholder="••••••••" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Nombre de Instancia</span>
+                                <input type="text" id="cfgWaInstance" placeholder="ranchodobles" value="ranchodobles" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                            </div>
+                          </div>
+
+                          <!-- Bloque Twilio -->
+                          <div id="waTwilioFields" class="config-fields-block" style="display: none; gap: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem;">
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Twilio Account SID *</span>
+                                <input type="text" id="cfgTwilioSid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Twilio Auth Token *</span>
+                                <input type="password" id="cfgTwilioToken" placeholder="••••••••" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                              <label>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Número WhatsApp Twilio (From) *</span>
+                                <input type="text" id="cfgTwilioPhone" placeholder="+14155238886" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                              </label>
+                            </div>
+                          </div>
+
+                          <!-- Leyenda QR Personalizada -->
+                          <div style="margin-top: 1rem;">
+                            <label>
+                              <span style="font-size: 0.85rem; font-weight: 600;">Texto que acompaña al Código QR de Ingreso</span>
+                              <textarea id="cfgWaQrCaption" rows="2" placeholder="Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso." style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem; box-sizing: border-box;"></textarea>
+                              <small style="color: var(--muted); font-size: 0.78rem;">Mensaje que recibirá cada visita junto a la imagen de su pase QR.</small>
+                            </label>
+                          </div>
+
+                          <div style="margin-top: 1.1rem; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="primary-btn" id="saveWhatsAppConfigBtn" style="padding: 0.55rem 1.4rem; font-weight: 700; width: auto; background: var(--primary-deep); color: #fff;">
+                              💾 Guardar Configuración de WhatsApp
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+
+                      <!-- Bloque Prueba de WhatsApp -->
+                      <div class="config-card-inner test-box" style="margin-top: 1rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem;">
+                        <div class="config-section-title" style="margin-bottom: 0.75rem;">
+                          <h5 style="margin: 0; font-size: 0.98rem; color: #fff;">🧪 Probar Envío de Mensaje por WhatsApp</h5>
+                          <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--muted);">Enviá un mensaje de prueba para comprobar que los avisos y pases QR se envían correctamente sin errores.</p>
+                        </div>
+                        <div style="display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap;">
+                          <label style="flex: 1; min-width: 240px; margin-bottom: 0;">
+                            <span style="font-size: 0.85rem; font-weight: 600;">Teléfono destino para la prueba:</span>
+                            <input type="tel" id="testWhatsAppTargetInput" placeholder="Ej: 11 2345-6789 o 5491123456789" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                          </label>
+                          <button type="button" class="btn-inline-action" id="runTestWhatsAppBtn" style="padding: 0.6rem 1.2rem; font-weight: 600; font-size: 0.88rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
+                            📲 Enviar WhatsApp de Prueba
+                          </button>
+                        </div>
+                        <div id="testWhatsAppResultStatus" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem;"></div>
+                      </div>
+                    </div>
+
+                    <!-- SUBPANEL 3: Enviar Email a Propietarios -->
+                    <div class="config-subpanel" id="configSendEmailSubpanel" style="display: none;">
+                      <form id="adminDirectSendEmailForm" class="config-form" style="display: grid; gap: 1rem;">
+                        <div class="config-card-inner" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.2rem;">
+                          <div class="config-section-title" style="margin-bottom: 0.85rem;">
+                            <h5 style="margin: 0; font-size: 1rem; color: var(--gold);">✉️ Emisión de Correo Oficial a Propietarios</h5>
+                            <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--muted);">Redactá y enviá un comunicado directo por correo electrónico a las casillas de los vecinos habilitados en el sistema.</p>
+                          </div>
+
+                          <!-- Selección de Destinatarios -->
+                          <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.88rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">Destinatarios del Correo *</label>
+                            <div style="display: flex; gap: 1.2rem; flex-wrap: wrap;">
+                              <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; color: #fff; font-size: 0.88rem;">
+                                <input type="radio" name="emailSendTarget" value="all" id="emailSendTargetAll" checked />
+                                <span>Todos los propietarios activos</span>
+                              </label>
+                              <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; color: #fff; font-size: 0.88rem;">
+                                <input type="radio" name="emailSendTarget" value="selected" id="emailSendTargetSelected" />
+                                <span>Seleccionar propietarios específicos</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <!-- Selector de Propietarios específicos -->
+                          <div id="emailSelectedResidentsBox" style="display: none; margin-bottom: 1rem; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+                              <span style="font-size: 0.84rem; font-weight: 600;">Propietarios con correo registrado:</span>
+                              <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <span class="badge soft" id="emailSelectedResidentsCount" style="font-size: 0.76rem;">0 seleccionados</span>
+                                <button type="button" class="text-btn" id="emailSelectAllBtn" style="font-size: 0.76rem; padding: 0.1rem 0.35rem;">Marcar todos</button>
+                                <button type="button" class="text-btn" id="emailDeselectAllBtn" style="font-size: 0.76rem; padding: 0.1rem 0.35rem;">Desmarcar</button>
+                              </div>
+                            </div>
+                            <input type="search" id="emailResidentsSearchInput" placeholder="🔍 Filtrar lista de propietarios..." style="width: 100%; padding: 0.45rem 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 0.84rem; margin-bottom: 0.5rem;" autocomplete="off" />
+                            <div id="emailResidentsCheckboxesList" style="max-height: 180px; overflow-y: auto; display: grid; gap: 0.35rem;"></div>
+                          </div>
+
+                          <!-- Asunto -->
+                          <label style="margin-bottom: 0.85rem;">
+                            <span style="font-size: 0.85rem; font-weight: 600;">Asunto del Correo Electrónico *</span>
+                            <input type="text" id="adminSendEmailSubject" required placeholder="Ej: Comunicado de Administración: Actualización de expensas y obras" style="width: 100%; padding: 0.55rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;" />
+                          </label>
+
+                          <!-- Mensaje -->
+                          <label style="margin-bottom: 0.85rem;">
+                            <span style="font-size: 0.85rem; font-weight: 600;">Cuerpo del Mensaje *</span>
+                            <textarea id="adminSendEmailMessage" rows="5" required placeholder="Escribí detalladamente el comunicado o mensaje para los propietarios..." style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem; box-sizing: border-box;"></textarea>
+                          </label>
+
+                          <div style="margin-top: 1.1rem; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="primary-btn" id="submitAdminSendEmailBtn" style="padding: 0.6rem 1.6rem; font-weight: 700; width: auto; background: var(--primary-deep); color: #fff;">
+                              🚀 Enviar Correo a Propietarios
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones de Navegación del Panel de Administración (Ubicados debajo del contenido solicitado) -->
+              <div class="admin-bottom-nav-container">
+                <div class="admin-bottom-nav-header">
+                  <p class="eyebrow" style="margin-bottom: 0.25rem;">Navegación General</p>
+                  <h4 style="margin: 0; font-size: 1.05rem; color: #fff;">Otros Módulos de Administración</h4>
+                </div>
+                <div class="admin-nav-buttons" role="tablist" aria-label="Módulos de administración">
+                  <button type="button" class="admin-nav-btn active" data-admin-tab="vecinos">
+                    👥 Padrón de Usuarios
+                    <span class="badge soft mini" id="adminNavPendingBadge" style="display: none; background: rgba(247, 199, 109, 0.25); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4); margin-left: 0.3rem;">0</span>
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="guardia">
+                    🛡️ Control de Guardia
+                    <span class="badge soft mini" id="adminNavGuardBadge" style="display: none; background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); margin-left: 0.3rem;">0</span>
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="expensas">
+                    💳 Gestión de Expensas
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="canchas">
+                    🎾 Control de Canchas
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="alertas">
+                    📢 Avisos y Alertas
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="auditoria">
+                    📋 Auditoría General
+                  </button>
+                  <button type="button" class="admin-nav-btn" data-admin-tab="config">
+                    ⚙️ Configuración Avanzada
+                  </button>
+                </div>
+                <div style="margin-top: 1.1rem;">
+                  <button type="button" class="back-to-menu-btn" data-back-to-menu>
+                    ← Volver al menú principal
+                  </button>
                 </div>
               </div>
             </section>
@@ -1126,7 +1694,7 @@
                 </div>
 
                 <!-- Lista interactiva de invitados -->
-                <ul id="guardVisitsList" class="list-stack visit-list"></ul>
+                <div id="guardVisitsList" style="display: grid; gap: 0.75rem;"></div>
               </div>
 
               <!-- Subpanel: Avisos Recibidos de Vecinos (Delivery, Servicios, Animales, etc.) -->
@@ -2339,6 +2907,69 @@
             <button type="button" class="text-btn" id="cancelAdminNotifyGuardBtn">Cancelar</button>
             <button type="submit" class="primary-btn" id="submitAdminNotifyGuardBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
               📨 Enviar a Guardia
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Responder a Aviso de Propietario (Admin) -->
+    <div id="adminRespondNoticeModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-header">
+          <div>
+            <h4 style="margin: 0;">🏛️ Responder Aviso de Propietario</h4>
+            <p class="panel-subtext" style="margin: 0.2rem 0 0 0; font-size: 0.82rem;">
+              Respuesta oficial de administración enviada al portal del vecino, email y WhatsApp.
+            </p>
+          </div>
+          <button type="button" class="btn-inline-action" id="closeAdminRespondNoticeModalBtn">✕</button>
+        </div>
+
+        <form id="adminRespondNoticeForm" class="modal-form" style="display: grid; gap: 0.85rem;">
+          <input type="hidden" id="adminRespondNoticeId" />
+
+          <!-- Resumen del aviso recibido -->
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 0.85rem; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.4rem;">
+              <strong id="adminRespondResidentName" style="color: #fff;">--</strong>
+              <span class="badge soft" id="adminRespondCategoryBadge">Categoría</span>
+            </div>
+            <div id="adminRespondSubject" style="font-weight: 700; color: var(--gold); margin-bottom: 0.35rem;">--</div>
+            <p id="adminRespondDetails" style="margin: 0; color: rgba(255,255,255,0.85); line-height: 1.4; white-space: pre-wrap; font-size: 0.82rem;"></p>
+          </div>
+
+          <!-- Selección de nuevo estado -->
+          <label style="display: block;">
+            <span style="font-size: 0.88rem; font-weight: 700; color: #ffffff; display: block; margin-bottom: 0.35rem;">Estado de la Gestión *</span>
+            <select id="adminRespondStatusSelect" style="width: 100%; padding: 0.65rem 0.9rem; border-radius: 10px; background-color: #0b1520 !important; border: 1.5px solid #22c55e !important; color: #ffffff !important; font-size: 0.92rem; font-weight: 600; color-scheme: dark !important; cursor: pointer;">
+              <option value="Respondido" selected style="background-color: #0b1520 !important; color: #ffffff !important; font-weight: 600;">✅ Respondido (Aviso contestado al propietario)</option>
+              <option value="En gestión" style="background-color: #0b1520 !important; color: #ffffff !important; font-weight: 600;">⏳ En gestión (En curso / Derivado a área técnica)</option>
+              <option value="Resuelto" style="background-color: #0b1520 !important; color: #ffffff !important; font-weight: 600;">🏆 Resuelto (Trámite o reclamo completado con éxito)</option>
+              <option value="Pendiente" style="background-color: #0b1520 !important; color: #ffffff !important; font-weight: 600;">⚠️ Pendiente (Requiere revisión posterior)</option>
+            </select>
+          </label>
+
+          <!-- Respuesta oficial -->
+          <label>
+            <span style="font-size: 0.85rem; font-weight: 600;">Mensaje de Respuesta Oficial para el Propietario *</span>
+            <textarea
+              id="adminRespondMessageInput"
+              rows="4"
+              required
+              placeholder="Escribí la respuesta de la administración para el vecino..."
+              style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem; box-sizing: border-box;"
+            ></textarea>
+          </label>
+
+          <div style="font-size: 0.78rem; color: var(--muted); line-height: 1.4;">
+            💡 Al guardar, el vecino recibirá una notificación instantánea en su portal, y si tiene teléfono/email registrados, recibirá también una copia por WhatsApp y correo electrónico.
+          </div>
+
+          <div class="modal-actions" style="margin-top: 0.9rem;">
+            <button type="button" class="text-btn" id="cancelAdminRespondNoticeBtn">Cancelar</button>
+            <button type="submit" class="primary-btn" id="submitAdminRespondNoticeBtn" style="width: auto; padding: 0.55rem 1.4rem; font-weight: 700;">
+              💾 Guardar y Responder
             </button>
           </div>
         </form>

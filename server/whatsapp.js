@@ -9,7 +9,9 @@
  *  - Development simulated mode (with clean console logging when unconfigured)
  */
 
-const DEFAULT_CAPTION = process.env.WHATSAPP_QR_CAPTION || 'Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso.';
+const { getSetting } = require('./db');
+
+const DEFAULT_CAPTION = 'Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso.';
 
 /**
  * Normalizes phone numbers to standard WhatsApp format (E.164 without leading plus).
@@ -49,33 +51,71 @@ function normalizeWhatsAppNumber(phone) {
 }
 
 /**
+ * Retrieves WhatsApp credentials prioritizing database settings, then process.env
+ */
+function getWhatsAppCredentials() {
+  const provider = getSetting('whatsapp_provider');
+  const officialPhone = getSetting('whatsapp_phone') || process.env.WHATSAPP_PHONE || '';
+  const qrCaption = getSetting('whatsapp_qr_caption') || process.env.WHATSAPP_QR_CAPTION || DEFAULT_CAPTION;
+
+  // Meta Cloud API
+  const metaToken = getSetting('whatsapp_token') || process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WA_TOKEN;
+  const metaPhoneId = getSetting('whatsapp_phone_id') || process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
+
+  // Evolution API
+  const evoUrl = getSetting('whatsapp_api_url') || process.env.WHATSAPP_API_URL || process.env.EVOLUTION_API_URL;
+  const evoKey = getSetting('whatsapp_api_key') || process.env.WHATSAPP_API_KEY || process.env.EVOLUTION_API_KEY || '';
+  const evoInstance = getSetting('whatsapp_instance') || process.env.WHATSAPP_INSTANCE || process.env.EVOLUTION_INSTANCE || 'ranchodobles';
+
+  // Twilio
+  const twilioSid = getSetting('twilio_sid') || process.env.TWILIO_ACCOUNT_SID;
+  const twilioToken = getSetting('twilio_token') || process.env.TWILIO_AUTH_TOKEN;
+  const twilioPhone = getSetting('twilio_phone') || process.env.TWILIO_WHATSAPP_NUMBER;
+
+  // Webhook
+  const webhookUrl = getSetting('whatsapp_webhook_url') || process.env.WHATSAPP_WEBHOOK_URL;
+
+  let activeProvider = provider;
+  if (!activeProvider) {
+    if (metaToken && metaPhoneId) activeProvider = 'meta_cloud';
+    else if (evoUrl) activeProvider = 'evolution_gateway';
+    else if (twilioSid && twilioToken && twilioPhone) activeProvider = 'twilio';
+    else if (webhookUrl) activeProvider = 'webhook';
+    else if (officialPhone) activeProvider = 'phone_direct';
+    else activeProvider = 'simulated';
+  }
+
+  const isConfigured = (activeProvider === 'meta_cloud' && Boolean(metaToken && metaPhoneId)) ||
+                       (activeProvider === 'evolution_gateway' && Boolean(evoUrl)) ||
+                       (activeProvider === 'twilio' && Boolean(twilioSid && twilioToken && twilioPhone)) ||
+                       (activeProvider === 'webhook' && Boolean(webhookUrl)) ||
+                       (activeProvider === 'phone_direct' && Boolean(officialPhone));
+
+  return {
+    provider: activeProvider,
+    configured: isConfigured,
+    officialPhone,
+    qrCaption,
+    meta: { token: metaToken, phoneId: metaPhoneId },
+    evolution: { url: evoUrl ? evoUrl.replace(/\/+$/, '') : '', key: evoKey, instance: evoInstance },
+    twilio: { sid: twilioSid, token: twilioToken, phone: twilioPhone },
+    webhook: { url: webhookUrl }
+  };
+}
+
+/**
  * Returns configuration status of WhatsApp provider.
  */
 function getWhatsAppStatus() {
-  const metaToken = process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WA_TOKEN;
-  const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
-  if (metaToken && metaPhoneId) {
-    return { configured: true, provider: 'meta_cloud', phoneId: metaPhoneId };
-  }
-
-  const evoUrl = process.env.WHATSAPP_API_URL || process.env.EVOLUTION_API_URL;
-  if (evoUrl) {
-    return { configured: true, provider: 'evolution_gateway', url: evoUrl };
-  }
-
-  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioPhone = process.env.TWILIO_WHATSAPP_NUMBER;
-  if (twilioSid && twilioToken && twilioPhone) {
-    return { configured: true, provider: 'twilio', from: twilioPhone };
-  }
-
-  const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
-  if (webhookUrl) {
-    return { configured: true, provider: 'webhook', url: webhookUrl };
-  }
-
-  return { configured: false, provider: 'simulated' };
+  const creds = getWhatsAppCredentials();
+  return {
+    configured: creds.configured,
+    provider: creds.provider,
+    officialPhone: creds.officialPhone,
+    phoneId: creds.meta.phoneId,
+    url: creds.evolution.url,
+    from: creds.twilio.phone
+  };
 }
 
 /**
@@ -109,13 +149,14 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
     publicQrUrl = `${base}/api/visits/${visitId}/qr.png`;
   }
 
-  const status = getWhatsAppStatus();
+  const creds = getWhatsAppCredentials();
+  const effectiveCaption = caption || creds.qrCaption || DEFAULT_CAPTION;
 
   // 1. Meta WhatsApp Cloud API (Graph API)
-  if (status.provider === 'meta_cloud') {
+  if (creds.provider === 'meta_cloud') {
     try {
-      const metaToken = process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WA_TOKEN;
-      const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
+      const metaToken = creds.meta.token;
+      const metaPhoneId = creds.meta.phoneId;
 
       let mediaId = null;
 
@@ -150,9 +191,9 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
 
       // Prepare message payload: ONLY QR Image + Caption
       const imagePayload = mediaId
-        ? { id: mediaId, caption }
+        ? { id: mediaId, caption: effectiveCaption }
         : publicQrUrl
-          ? { link: publicQrUrl, caption }
+          ? { link: publicQrUrl, caption: effectiveCaption }
           : null;
 
       if (!imagePayload) {
@@ -189,11 +230,11 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
   }
 
   // 2. Evolution API / Baileys Gateway
-  if (status.provider === 'evolution_gateway') {
+  if (creds.provider === 'evolution_gateway') {
     try {
-      const evoUrl = (process.env.WHATSAPP_API_URL || process.env.EVOLUTION_API_URL).replace(/\/+$/, '');
-      const evoKey = process.env.WHATSAPP_API_KEY || process.env.EVOLUTION_API_KEY || '';
-      const evoInstance = process.env.WHATSAPP_INSTANCE || process.env.EVOLUTION_INSTANCE || 'ranchodobles';
+      const evoUrl = creds.evolution.url;
+      const evoKey = creds.evolution.key;
+      const evoInstance = creds.evolution.instance;
 
       const mediaBase64 = imageBuffer ? imageBuffer.toString('base64') : (qrCode && qrCode.includes('base64,') ? qrCode.split('base64,')[1] : null);
 
@@ -202,7 +243,7 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
         media: mediaBase64 || publicQrUrl,
         mediatype: 'image',
         mimetype: 'image/png',
-        caption,
+        caption: effectiveCaption,
         fileName: 'codigo-qr-ingreso.png'
       };
 
@@ -232,17 +273,17 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
   }
 
   // 3. Twilio WhatsApp API
-  if (status.provider === 'twilio') {
+  if (creds.provider === 'twilio') {
     try {
-      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-      const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-      const twilioPhone = process.env.TWILIO_WHATSAPP_NUMBER;
+      const twilioSid = creds.twilio.sid;
+      const twilioToken = creds.twilio.token;
+      const twilioPhone = creds.twilio.phone;
       const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
 
       const params = new URLSearchParams();
       params.append('From', twilioPhone.startsWith('whatsapp:') ? twilioPhone : `whatsapp:${twilioPhone}`);
       params.append('To', `whatsapp:+${normalizedPhone}`);
-      params.append('Body', caption);
+      params.append('Body', effectiveCaption);
       if (publicQrUrl) {
         params.append('MediaUrl', publicQrUrl);
       }
@@ -327,13 +368,13 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
   const senderHeader = senderName ? `De: ${senderName}` : 'Administración / Guardia';
   const textContent = `*Rancho Doble S — Aviso Oficial*\n_${senderHeader}_\n\n*${title}*\n${message}`;
 
-  const status = getWhatsAppStatus();
+  const creds = getWhatsAppCredentials();
 
   // 1. Meta WhatsApp Cloud API
-  if (status.provider === 'meta_cloud') {
+  if (creds.provider === 'meta_cloud') {
     try {
-      const metaToken = process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WA_TOKEN;
-      const metaPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
+      const metaToken = creds.meta.token;
+      const metaPhoneId = creds.meta.phoneId;
 
       const res = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
         method: 'POST',
@@ -368,11 +409,11 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
   }
 
   // 2. Evolution API / Baileys Gateway
-  if (status.provider === 'evolution_gateway') {
+  if (creds.provider === 'evolution_gateway') {
     try {
-      const evoUrl = (process.env.WHATSAPP_API_URL || process.env.EVOLUTION_API_URL).replace(/\/+$/, '');
-      const evoKey = process.env.WHATSAPP_API_KEY || process.env.EVOLUTION_API_KEY || '';
-      const evoInstance = process.env.WHATSAPP_INSTANCE || process.env.EVOLUTION_INSTANCE || 'ranchodobles';
+      const evoUrl = creds.evolution.url;
+      const evoKey = creds.evolution.key;
+      const evoInstance = creds.evolution.instance;
 
       const endpoint = `${evoUrl}/message/sendText/${evoInstance}`;
       const res = await fetch(endpoint, {
@@ -402,11 +443,11 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
   }
 
   // 3. Twilio WhatsApp API
-  if (status.provider === 'twilio') {
+  if (creds.provider === 'twilio') {
     try {
-      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-      const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-      const twilioPhone = process.env.TWILIO_WHATSAPP_NUMBER;
+      const twilioSid = creds.twilio.sid;
+      const twilioToken = creds.twilio.token;
+      const twilioPhone = creds.twilio.phone;
       const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
 
       const params = new URLSearchParams();
@@ -438,9 +479,9 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
   }
 
   // 4. Custom Webhook
-  if (status.provider === 'webhook') {
+  if (creds.provider === 'webhook') {
     try {
-      const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
+      const webhookUrl = creds.webhook.url;
       const res = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -461,28 +502,54 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
     }
   }
 
-  // 5. Simulated Mode (Default when credentials are not yet configured)
+  // 5. Simulated Mode / Direct Phone Link (Default when external credentials are not set)
   console.log(`----------------------------------------------------------------`);
   console.log(`[WhatsApp Service] 💬 Envío de Notificación a WhatsApp: +${normalizedPhone}`);
   console.log(`[WhatsApp Service] Vecino destinatario: ${recipientName || 'Vecino'}`);
   console.log(`[WhatsApp Service] Remitente: ${senderName || 'Administración / Guardia'}`);
   console.log(`[WhatsApp Service] Título: "${title}"`);
   console.log(`[WhatsApp Service] Mensaje: "${message}"`);
-  console.log(`[WhatsApp Service] (Para envío en vivo configure credenciales en .env)`);
+  if (creds.officialPhone) {
+    console.log(`[WhatsApp Service] Teléfono oficial de Garita/Admin: +${normalizeWhatsAppNumber(creds.officialPhone)}`);
+  }
+  console.log(`[WhatsApp Service] Modo activo: ${creds.provider}`);
   console.log(`----------------------------------------------------------------`);
 
   return {
     success: true,
-    simulated: true,
+    simulated: creds.provider === 'simulated' || creds.provider === 'phone_direct',
+    provider: creds.provider,
     phone: normalizedPhone,
     text: textContent
   };
 }
 
+/**
+ * Sends a test WhatsApp notification to verify integration
+ */
+async function sendTestWhatsAppMessage({ phone, message }) {
+  const creds = getWhatsAppCredentials();
+  const targetPhone = phone || creds.officialPhone;
+  if (!targetPhone) {
+    return { success: false, error: 'Ingresá un número de teléfono destino para enviar el mensaje de prueba.' };
+  }
+  const testText = message || '¡Hola! Este es un mensaje de prueba enviado desde la Configuración Avanzada de Rancho Doble S para verificar que la integración con WhatsApp funciona correctamente.';
+  return sendWhatsAppTextMessage({
+    phone: targetPhone,
+    title: '✅ Prueba de WhatsApp - Rancho Doble S',
+    message: testText,
+    senderName: 'Administración Rancho Doble S',
+    recipientName: 'Administrador'
+  });
+}
+
 module.exports = {
   DEFAULT_CAPTION,
   normalizeWhatsAppNumber,
+  getWhatsAppCredentials,
   getWhatsAppStatus,
   sendWhatsAppQrPass,
-  sendWhatsAppTextMessage
+  sendWhatsAppTextMessage,
+  sendTestWhatsAppMessage
 };
+

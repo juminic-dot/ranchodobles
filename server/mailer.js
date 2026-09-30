@@ -1,11 +1,21 @@
 const nodemailer = require('nodemailer');
+const { getSetting } = require('./db');
 
 function getTransporter() {
-  // 1. Gmail credentials (direct GMAIL_USER or SMTP_USER ending in @gmail.com)
-  const gmailUser = process.env.GMAIL_USER || (process.env.SMTP_USER && process.env.SMTP_USER.includes('@gmail.com') ? process.env.SMTP_USER : null);
-  const gmailPass = process.env.GMAIL_APP_PASS || (gmailUser ? process.env.SMTP_PASS : null);
+  const provider = getSetting('email_provider');
 
-  if (gmailUser && gmailPass) {
+  // If explicitly disabled
+  if (provider === 'none') {
+    return null;
+  }
+
+  // 1. Gmail credentials (direct GMAIL_USER, DB gmail_user, or SMTP_USER ending in @gmail.com)
+  const dbGmailUser = getSetting('gmail_user');
+  const dbGmailPass = getSetting('gmail_app_pass');
+  const gmailUser = dbGmailUser || process.env.GMAIL_USER || (process.env.SMTP_USER && process.env.SMTP_USER.includes('@gmail.com') ? process.env.SMTP_USER : null);
+  const gmailPass = dbGmailPass || process.env.GMAIL_APP_PASS || (gmailUser ? (getSetting('smtp_pass') || process.env.SMTP_PASS) : null);
+
+  if ((provider === 'gmail' || (!provider && (dbGmailUser || process.env.GMAIL_USER))) && gmailUser && gmailPass) {
     const cleanPass = String(gmailPass).replace(/\s+/g, '');
     return {
       transporter: nodemailer.createTransport({
@@ -21,13 +31,21 @@ function getTransporter() {
   }
 
   // 2. Custom remote SMTP credentials
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  const dbHost = getSetting('smtp_host');
+  const dbPort = getSetting('smtp_port');
+  const dbUser = getSetting('smtp_user');
+  const dbPass = getSetting('smtp_pass');
+  const dbSecure = getSetting('smtp_secure');
 
-  if (host && user && pass) {
+  const host = dbHost || process.env.SMTP_HOST;
+  const port = Number(dbPort || process.env.SMTP_PORT) || 587;
+  const user = dbUser || process.env.SMTP_USER;
+  const pass = dbPass || process.env.SMTP_PASS;
+  const secure = dbSecure !== null && dbSecure !== undefined
+    ? (dbSecure === 'true' || dbSecure === true || port === 465)
+    : (process.env.SMTP_SECURE === 'true' || port === 465);
+
+  if ((provider === 'smtp' || (!provider && (dbHost || process.env.SMTP_HOST))) && host && user && pass) {
     return {
       transporter: nodemailer.createTransport({
         host: host.trim(),
@@ -43,6 +61,22 @@ function getTransporter() {
       }),
       type: 'smtp',
       defaultFrom: user.trim()
+    };
+  }
+
+  // Fallback to gmail if available even without provider explicitly specified
+  if (gmailUser && gmailPass) {
+    const cleanPass = String(gmailPass).replace(/\s+/g, '');
+    return {
+      transporter: nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser.trim(),
+          pass: cleanPass
+        }
+      }),
+      type: 'gmail',
+      defaultFrom: gmailUser.trim()
     };
   }
 
@@ -65,13 +99,17 @@ function getTransporter() {
 
 function getMailerStatus() {
   const tInfo = getTransporter();
-  if (!tInfo) return { configured: false, type: 'none' };
+  const dbProvider = getSetting('email_provider');
+  if (dbProvider === 'none') {
+    return { configured: false, type: 'disabled', from: null };
+  }
+  if (!tInfo) return { configured: false, type: 'none', from: null };
   return { configured: true, type: tInfo.type, from: tInfo.defaultFrom };
 }
 
 async function sendPasswordResetEmail({ to, name, resetLink, expiresMinutes = 60 }) {
   const tInfo = getTransporter();
-  const rawFrom = process.env.SMTP_FROM || (tInfo ? tInfo.defaultFrom : null) || 'notificaciones@gestechnoclient.com';
+  const rawFrom = getSetting('smtp_from') || process.env.SMTP_FROM || (tInfo ? tInfo.defaultFrom : null) || 'notificaciones@gestechnoclient.com';
 
   // If using Gmail, From address must match authenticated Gmail account to prevent rejection/spam marking
   let fromAddress = rawFrom;
@@ -186,8 +224,97 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+async function sendGenericEmail({ to, subject, html, text, fromName = 'Administración Rancho Doble S' }) {
+  const tInfo = getTransporter();
+  const rawFrom = getSetting('smtp_from') || process.env.SMTP_FROM || (tInfo ? tInfo.defaultFrom : null) || 'notificaciones@gestechnoclient.com';
+
+  let fromAddress = rawFrom;
+  if (tInfo && tInfo.type === 'gmail') {
+    fromAddress = tInfo.defaultFrom;
+  }
+  const fromHeader = fromAddress.includes('<') ? fromAddress : `"${fromName}" <${fromAddress}>`;
+
+  if (tInfo) {
+    try {
+      const info = await tInfo.transporter.sendMail({
+        from: fromHeader,
+        to,
+        replyTo: fromAddress,
+        subject,
+        text: text || '',
+        html: html || (text ? `<p style="font-family:sans-serif;line-height:1.5;">${escapeHtml(text).replace(/\n/g, '<br>')}</p>` : ''),
+        headers: {
+          'X-Priority': '1',
+          'Importance': 'high'
+        }
+      });
+      console.log(`[MAILER] Correo enviado con éxito a ${to} (MessageId: ${info.messageId}) vía ${tInfo.type}`);
+      return { sent: true, mode: tInfo.type, messageId: info.messageId };
+    } catch (err) {
+      console.error(`[MAILER] Error al enviar email a ${to}:`, err.message);
+      return { sent: false, error: err.message, mode: tInfo.type };
+    }
+  } else {
+    console.log(`[MAILER] ⚠️ Correo no configurado. Intento de envío a: ${to} - Asunto: ${subject}`);
+    return {
+      sent: false,
+      mode: 'unconfigured',
+      error: 'Servicio de correo no configurado. Configurá una cuenta de Gmail o SMTP en Configuración Avanzada.'
+    };
+  }
+}
+
+async function sendTestEmail({ to }) {
+  const tInfo = getTransporter();
+  if (!tInfo) {
+    return {
+      sent: false,
+      error: 'No hay ninguna cuenta de correo configurada. Ingresá los datos de Gmail o servidor SMTP en Configuración Avanzada y guardá los cambios.'
+    };
+  }
+
+  const subject = 'Rancho Doble S — Prueba de Envío de Correo Electrónico';
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1512; color: #e2e8f0; margin: 0; padding: 24px; border-radius: 12px; max-width: 520px; border: 1px solid #2f6f57;">
+      <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 20px;">
+        <h2 style="color: #f7c76d; margin: 0; font-size: 22px;">🏡 Rancho Doble S</h2>
+        <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Portal de Propietarios y Administración</div>
+      </div>
+      <div style="background: rgba(105, 210, 166, 0.1); border: 1px solid rgba(105, 210, 166, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
+        <h3 style="color: #69d2a6; margin: 0 0 6px 0; font-size: 16px;">✅ ¡Configuración de Correo Exitosa!</h3>
+        <p style="margin: 0; font-size: 14px; color: #cbd5e1; line-height: 1.5;">
+          Este correo confirma que la cuenta de correo asignada desde <strong>Configuración Avanzada</strong> funciona correctamente para el envío de notificaciones y comunicados a propietarios.
+        </p>
+      </div>
+      <table style="width: 100%; font-size: 13px; color: #cbd5e1; margin-bottom: 20px;">
+        <tr>
+          <td style="color: #94a3b8; padding: 4px 0;">Servicio:</td>
+          <td style="font-weight: 600; text-transform: uppercase;">${tInfo.type}</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8; padding: 4px 0;">Remitente configurado:</td>
+          <td style="font-weight: 600;">${tInfo.defaultFrom}</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8; padding: 4px 0;">Fecha y hora de prueba:</td>
+          <td>${new Date().toLocaleString('es-AR')}</td>
+        </tr>
+      </table>
+      <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; font-size: 12px; color: #64748b;">
+        © ${new Date().getFullYear()} Consorcio Rancho Doble S — Sistema de Gestión Inteligente
+      </div>
+    </div>
+  `;
+  const text = `Rancho Doble S — Prueba de Envío de Correo Electrónico\n\n¡Configuración exitosa!\nEste correo confirma que la cuenta configurada en la Administración funciona correctamente para enviar comunicados a propietarios.\n\nServicio: ${tInfo.type.toUpperCase()}\nRemitente: ${tInfo.defaultFrom}\nFecha: ${new Date().toLocaleString('es-AR')}`;
+
+  return sendGenericEmail({ to, subject, html, text, fromName: 'Rancho Doble S' });
+}
+
 module.exports = {
   sendPasswordResetEmail,
+  sendGenericEmail,
+  sendTestEmail,
   getTransporter,
   getMailerStatus
 };
+

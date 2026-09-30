@@ -2,9 +2,25 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { db, logActivity } = require('../db');
+const { db, logActivity, getSetting, setSetting } = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
-const { sendPasswordResetEmail } = require('../mailer');
+const { sendPasswordResetEmail, sendGenericEmail, sendTestEmail, getMailerStatus } = require('../mailer');
+const {
+  getWhatsAppCredentials,
+  getWhatsAppStatus,
+  sendTestWhatsAppMessage,
+  normalizeWhatsAppNumber
+} = require('../whatsapp');
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 // Apply auth and admin check to all admin routes
 router.use(authenticateToken, requireAdmin);
@@ -489,4 +505,304 @@ router.post('/users/:id/reset-token', async (req, res) => {
   }
 });
 
+// GET /api/admin/settings (Get email and WhatsApp configuration)
+router.get('/settings', (req, res) => {
+  try {
+    const mailerStatus = getMailerStatus();
+    const waStatus = getWhatsAppStatus();
+    const waCreds = getWhatsAppCredentials();
+
+    const emailProvider = getSetting('email_provider') || (mailerStatus.configured ? mailerStatus.type : 'none');
+    const gmailUser = getSetting('gmail_user') || process.env.GMAIL_USER || '';
+    const hasGmailPass = Boolean(getSetting('gmail_app_pass') || process.env.GMAIL_APP_PASS);
+
+    const smtpHost = getSetting('smtp_host') || process.env.SMTP_HOST || '';
+    const smtpPort = getSetting('smtp_port') || process.env.SMTP_PORT || '587';
+    const smtpSecure = getSetting('smtp_secure') !== null ? (getSetting('smtp_secure') === 'true') : (process.env.SMTP_SECURE === 'true');
+    const smtpUser = getSetting('smtp_user') || process.env.SMTP_USER || '';
+    const hasSmtpPass = Boolean(getSetting('smtp_pass') || process.env.SMTP_PASS);
+    const smtpFrom = getSetting('smtp_from') || process.env.SMTP_FROM || '';
+
+    res.json({
+      email: {
+        provider: emailProvider,
+        configured: mailerStatus.configured,
+        activeType: mailerStatus.type,
+        activeFrom: mailerStatus.from,
+        gmailUser,
+        hasGmailPass,
+        smtpHost,
+        smtpPort: Number(smtpPort) || 587,
+        smtpSecure,
+        smtpUser,
+        hasSmtpPass,
+        smtpFrom
+      },
+      whatsapp: {
+        phone: waCreds.officialPhone,
+        normalizedPhone: normalizeWhatsAppNumber(waCreds.officialPhone),
+        provider: waCreds.provider,
+        configured: waCreds.configured,
+        hasToken: Boolean(waCreds.meta.token),
+        phoneId: waCreds.meta.phoneId || '',
+        apiUrl: waCreds.evolution.url || '',
+        hasApiKey: Boolean(waCreds.evolution.key),
+        instance: waCreds.evolution.instance || 'ranchodobles',
+        twilioSid: waCreds.twilio.sid || '',
+        hasTwilioToken: Boolean(waCreds.twilio.token),
+        twilioPhone: waCreds.twilio.phone || '',
+        qrCaption: waCreds.qrCaption
+      }
+    });
+  } catch (error) {
+    console.error('[Admin Get Settings Error]', error);
+    res.status(500).json({ error: 'Error al consultar configuraciones.' });
+  }
+});
+
+// PUT /api/admin/settings (Update email and/or WhatsApp settings)
+router.put('/settings', (req, res) => {
+  try {
+    const { email, whatsapp } = req.body;
+    const adminIdentifier = `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`;
+
+    if (email) {
+      if (email.provider !== undefined) setSetting('email_provider', email.provider);
+      if (email.gmailUser !== undefined) setSetting('gmail_user', email.gmailUser.trim());
+      if (email.gmailPass && email.gmailPass !== '••••••••') {
+        setSetting('gmail_app_pass', email.gmailPass.trim().replace(/\s+/g, ''));
+      }
+      if (email.smtpHost !== undefined) setSetting('smtp_host', email.smtpHost.trim());
+      if (email.smtpPort !== undefined) setSetting('smtp_port', String(email.smtpPort));
+      if (email.smtpSecure !== undefined) setSetting('smtp_secure', String(email.smtpSecure));
+      if (email.smtpUser !== undefined) setSetting('smtp_user', email.smtpUser.trim());
+      if (email.smtpPass && email.smtpPass !== '••••••••') {
+        setSetting('smtp_pass', email.smtpPass.trim());
+      }
+      if (email.smtpFrom !== undefined) setSetting('smtp_from', email.smtpFrom.trim());
+    }
+
+    if (whatsapp) {
+      if (whatsapp.phone !== undefined) {
+        setSetting('whatsapp_phone', whatsapp.phone.trim());
+      }
+      if (whatsapp.provider !== undefined) {
+        setSetting('whatsapp_provider', whatsapp.provider);
+      }
+      if (whatsapp.token && whatsapp.token !== '••••••••') {
+        setSetting('whatsapp_token', whatsapp.token.trim());
+      }
+      if (whatsapp.phoneId !== undefined) {
+        setSetting('whatsapp_phone_id', whatsapp.phoneId.trim());
+      }
+      if (whatsapp.apiUrl !== undefined) {
+        setSetting('whatsapp_api_url', whatsapp.apiUrl.trim());
+      }
+      if (whatsapp.apiKey && whatsapp.apiKey !== '••••••••') {
+        setSetting('whatsapp_api_key', whatsapp.apiKey.trim());
+      }
+      if (whatsapp.instance !== undefined) {
+        setSetting('whatsapp_instance', whatsapp.instance.trim());
+      }
+      if (whatsapp.twilioSid !== undefined) {
+        setSetting('twilio_sid', whatsapp.twilioSid.trim());
+      }
+      if (whatsapp.twilioToken && whatsapp.twilioToken !== '••••••••') {
+        setSetting('twilio_token', whatsapp.twilioToken.trim());
+      }
+      if (whatsapp.twilioPhone !== undefined) {
+        setSetting('twilio_phone', whatsapp.twilioPhone.trim());
+      }
+      if (whatsapp.qrCaption !== undefined) {
+        setSetting('whatsapp_qr_caption', whatsapp.qrCaption.trim());
+      }
+    }
+
+    logActivity(
+      req.user.id,
+      adminIdentifier,
+      'admin',
+      'SETTINGS_UPDATE',
+      'Actualizó la configuración avanzada de Email y WhatsApp',
+      req.ip || ''
+    );
+
+    const mailerStatus = getMailerStatus();
+    const waStatus = getWhatsAppStatus();
+
+    res.json({
+      message: 'Configuración guardada exitosamente.',
+      mailerStatus,
+      whatsappStatus: waStatus
+    });
+  } catch (error) {
+    console.error('[Admin Update Settings Error]', error);
+    res.status(500).json({ error: 'Error al guardar la configuración.' });
+  }
+});
+
+// POST /api/admin/settings/test-email (Send a test email)
+router.post('/settings/test-email', async (req, res) => {
+  try {
+    const targetEmail = (req.body.to || req.user.email || '').trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      return res.status(400).json({ error: 'Ingresá una dirección de correo válida para la prueba.' });
+    }
+
+    const result = await sendTestEmail({ to: targetEmail });
+    if (result.sent) {
+      res.json({
+        success: true,
+        message: `Correo de prueba enviado con éxito a ${targetEmail} vía ${result.mode.toUpperCase()}.`,
+        result
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'No se pudo enviar el correo de prueba. Verificá los datos ingresados.'
+      });
+    }
+  } catch (error) {
+    console.error('[Admin Test Email Error]', error);
+    res.status(500).json({ error: error.message || 'Error al ejecutar prueba de correo.' });
+  }
+});
+
+// POST /api/admin/settings/test-whatsapp (Send a test WhatsApp message)
+router.post('/settings/test-whatsapp', async (req, res) => {
+  try {
+    const { phone, message } = req.body;
+    const result = await sendTestWhatsAppMessage({ phone, message });
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.simulated
+          ? `Mensaje de prueba registrado en modo simulado para +${result.phone}.`
+          : `Mensaje de prueba de WhatsApp enviado con éxito a +${result.phone} vía ${result.provider || 'WhatsApp'}.`,
+        result
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'Error al enviar mensaje de prueba por WhatsApp.'
+      });
+    }
+  } catch (error) {
+    console.error('[Admin Test WhatsApp Error]', error);
+    res.status(500).json({ error: error.message || 'Error al ejecutar prueba de WhatsApp.' });
+  }
+});
+
+// POST /api/admin/send-email (Direct email dispatch to owners)
+router.post('/send-email', async (req, res) => {
+  try {
+    const { recipientType = 'all', residentIds, subject, message } = req.body;
+
+    if (!subject || !String(subject).trim()) {
+      return res.status(400).json({ error: 'El asunto del correo es obligatorio.' });
+    }
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ error: 'El contenido o mensaje del correo es obligatorio.' });
+    }
+
+    const mailerStatus = getMailerStatus();
+    if (!mailerStatus.configured) {
+      return res.status(400).json({
+        error: 'El servicio de correo no está configurado. Antes de enviar emails a propietarios, configurá y guardá tu cuenta en Configuración Avanzada.'
+      });
+    }
+
+    let recipients = [];
+    if (recipientType === 'selected') {
+      if (!residentIds || !Array.isArray(residentIds) || residentIds.length === 0) {
+        return res.status(400).json({ error: 'Debes seleccionar al menos un propietario destinatario.' });
+      }
+      const placeholders = residentIds.map(() => '?').join(',');
+      recipients = db.prepare(`
+        SELECT id, nombre, apellido, email, lote, manzana
+        FROM users
+        WHERE approved = 1 AND id IN (${placeholders}) AND email IS NOT NULL AND email LIKE '%@%'
+      `).all(...residentIds);
+    } else {
+      // All active owners
+      recipients = db.prepare(`
+        SELECT id, nombre, apellido, email, lote, manzana
+        FROM users
+        WHERE approved = 1 AND role = 'user' AND email IS NOT NULL AND email LIKE '%@%'
+      `).all();
+    }
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ error: 'No se encontraron propietarios habilitados con correo electrónico válido.' });
+    }
+
+    const cleanSubject = String(subject).trim();
+    const cleanMessage = String(message).trim();
+    const adminSenderName = `${req.user.nombre} ${req.user.apellido} (Administración)`;
+
+    let sentCount = 0;
+    let failedCount = 0;
+    const sentDetails = [];
+
+    for (const rec of recipients) {
+      const greeting = `Hola ${rec.nombre} ${rec.apellido}${rec.lote ? ` (Lote ${rec.lote})` : ''},`;
+      const htmlBody = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1512; color: #e2e8f0; margin: 0; padding: 24px; border-radius: 12px; max-width: 540px; margin: 0 auto; border: 1px solid rgba(247, 199, 109, 0.3);">
+          <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 18px; margin-bottom: 22px;">
+            <div style="font-size: 22px; font-weight: 700; color: #f7c76d;">🏡 Rancho Doble S</div>
+            <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Comunicado Oficial de Administración</div>
+          </div>
+          <div style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+            <p style="margin-top: 0;">${greeting}</p>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; margin: 16px 0; color: #e2e8f0; white-space: pre-wrap;">${escapeHtml(cleanMessage)}</div>
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 0;">
+              Ante cualquier consulta, podés contactarte con la Administración o a través del Portal Vecinal.
+            </p>
+          </div>
+          <div style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; text-align: center; font-size: 12px; color: #64748b;">
+            Consorcio Rancho Doble S • Portal de Propietarios
+          </div>
+        </div>
+      `;
+      const textBody = `${greeting}\n\n${cleanMessage}\n\nAtentamente,\nAdministración Rancho Doble S`;
+
+      const sendRes = await sendGenericEmail({
+        to: rec.email,
+        subject: `Rancho Doble S — ${cleanSubject}`,
+        html: htmlBody,
+        text: textBody,
+        fromName: 'Administración Rancho Doble S'
+      });
+
+      if (sendRes.sent) {
+        sentCount++;
+        sentDetails.push(`${rec.nombre} ${rec.apellido} (${rec.email})`);
+      } else {
+        failedCount++;
+      }
+    }
+
+    logActivity(
+      req.user.id,
+      `${req.user.nombre} ${req.user.apellido} (${req.user.username || req.user.email})`,
+      'admin',
+      'SEND_ADMIN_EMAIL',
+      `Envió comunicado por email a ${sentCount} propietario(s) (fallidos: ${failedCount}) - Asunto: "${cleanSubject}"`,
+      req.ip || ''
+    );
+
+    res.json({
+      success: true,
+      message: `Correo enviado exitosamente a ${sentCount} propietario${sentCount === 1 ? '' : 's'}${failedCount > 0 ? ` (${failedCount} con error)` : ''}.`,
+      sentCount,
+      failedCount,
+      recipients: sentDetails
+    });
+  } catch (error) {
+    console.error('[Admin Send Email Error]', error);
+    res.status(500).json({ error: 'Error al enviar correos a propietarios.' });
+  }
+});
+
 module.exports = router;
+

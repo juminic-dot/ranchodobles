@@ -3,6 +3,8 @@ const router = express.Router();
 const { db, logActivity } = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrGuard } = require('../middleware');
 const { sendWhatsAppTextMessage } = require('../whatsapp');
+const { sendGenericEmail, getMailerStatus } = require('../mailer');
+
 
 // GET /api/notifications
 // Retrieves notifications filtered strictly by user role and ownership
@@ -15,10 +17,9 @@ router.get('/', authenticateToken, (req, res) => {
     if (isAdmin) {
       // Admin sees:
       // 1. Personal notifications for their own account
-      // 2. Operational admin events (targetRole = 'admin')
+      // 2. Operational admin events (targetRole = 'admin', e.g. from residents or guards)
       // 3. Community broadcasts (targetRole = 'all')
-      // 4. Notifications sent by this admin
-      // (Notices between guardia and residents are strictly private between them)
+      // Private notices sent to residents (targetRole = 'user') belong to the resident recipients.
       notifications = db.prepare(`
         SELECT n.id, n.userId, COALESCE(n.targetRole, 'user') AS targetRole, n.title, n.text, n.senderName, n.senderId, n.createdAt,
                CASE
@@ -31,15 +32,14 @@ router.get('/', authenticateToken, (req, res) => {
         WHERE (n.userId = ?)
            OR (n.targetRole = 'admin')
            OR (n.targetRole = 'all')
-           OR (n.senderId = ?)
         ORDER BY n.createdAt DESC
         LIMIT 60
-      `).all(req.user.id, req.user.id, req.user.id, req.user.id);
+      `).all(req.user.id, req.user.id, req.user.id);
     } else if (isGuard) {
       // Guardia sees:
       // 1. Notices directed to guardia (targetRole = 'guardia')
       // 2. Community broadcasts (targetRole = 'all')
-      // 3. Notifications directly assigned to or sent by this guard
+      // 3. Personal notifications for their own account (n.userId = req.user.id)
       notifications = db.prepare(`
         SELECT n.id, n.userId, COALESCE(n.targetRole, 'guardia') AS targetRole, n.title, n.text, n.senderName, n.senderId, n.createdAt,
                CASE
@@ -52,10 +52,9 @@ router.get('/', authenticateToken, (req, res) => {
         WHERE (n.targetRole = 'guardia')
            OR (n.targetRole = 'all')
            OR (n.userId = ?)
-           OR (n.senderId = ?)
         ORDER BY n.createdAt DESC
         LIMIT 60
-      `).all(req.user.id, req.user.id, req.user.id, req.user.id);
+      `).all(req.user.id, req.user.id, req.user.id);
     } else {
       // Resident sees strictly:
       // 1. Their own personal notifications (n.userId = req.user.id)
@@ -109,14 +108,27 @@ router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
     }
 
     const now = new Date().toISOString();
+    const senderName = `${req.user.nombre} ${req.user.apellido} (Administración)`.trim();
     const result = db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (NULL, 'all', ?, ?, 0, ?)
-    `).run(title.trim(), text.trim(), now);
+      INSERT INTO notifications (userId, targetRole, title, text, read, senderId, senderName, createdAt)
+      VALUES (NULL, 'all', ?, ?, 0, ?, ?, ?)
+    `).run(title.trim(), text.trim(), req.user.id, senderName, now);
 
-    // Deliver broadcast notification to active residents on WhatsApp
+    const alertId = Number(result.lastInsertRowid);
+
+    // Auto-mark as read for the issuing admin so it never alerts them
     try {
-      const activeResidents = db.prepare('SELECT id, nombre, apellido, telefono FROM users WHERE approved = 1 AND role = "user" AND telefono IS NOT NULL').all();
+      db.prepare(`
+        INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
+        VALUES (?, ?, ?)
+      `).run(alertId, req.user.id, now);
+    } catch (e) {}
+
+    // Deliver broadcast notification to active residents on WhatsApp & Email
+    try {
+      const activeResidents = db.prepare('SELECT id, nombre, apellido, telefono, email FROM users WHERE approved = 1 AND role = "user"').all();
+      const mailerStatus = getMailerStatus();
+
       for (const resUser of activeResidents) {
         if (resUser.telefono) {
           sendWhatsAppTextMessage({
@@ -127,11 +139,20 @@ router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
             recipientName: `${resUser.nombre} ${resUser.apellido}`
           }).catch(err => console.error('[WhatsApp Broadcast Error]', err));
         }
+
+        if (mailerStatus.configured && resUser.email && resUser.email.includes('@')) {
+          sendGenericEmail({
+            to: resUser.email,
+            subject: `Alerta Comunitaria — ${title.trim()}`,
+            text: `Hola ${resUser.nombre} ${resUser.apellido},\n\nAlerta Comunitaria Rancho Doble S:\n\n${title.trim()}\n\n${text.trim()}\n\nAdministración Rancho Doble S`,
+            fromName: 'Administración Rancho Doble S'
+          }).catch(err => console.error('[Email Broadcast Error]', err));
+        }
       }
     } catch (e) {}
 
     res.status(201).json({
-      message: 'Alerta comunitaria emitida a toda la comunidad (enviada también a WhatsApp).',
+      message: 'Alerta comunitaria emitida a toda la comunidad (enviada por el sistema, WhatsApp y Correo).',
       alert: {
         id: Number(result.lastInsertRowid),
         title: title.trim(),
@@ -270,10 +291,11 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
       VALUES (?, 'user', ?, ?, 0, ?, ?, ?)
     `);
 
-    const selectUserStmt = db.prepare('SELECT id, nombre, apellido, lote, manzana, telefono FROM users WHERE id = ? AND approved = 1');
+    const selectUserStmt = db.prepare('SELECT id, nombre, apellido, lote, manzana, telefono, email FROM users WHERE id = ? AND approved = 1');
 
     let sentCount = 0;
     const recipientNames = [];
+    const mailerStatus = getMailerStatus();
 
     for (const rawId of residentIds) {
       const uId = Number(rawId);
@@ -295,6 +317,16 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
           senderName,
           recipientName: `${user.nombre} ${user.apellido}`
         }).catch(err => console.error('[WhatsApp Admin Notify Error]', err));
+      }
+
+      // Deliver to resident's Email
+      if (mailerStatus.configured && user.email && user.email.includes('@')) {
+        sendGenericEmail({
+          to: user.email,
+          subject: `Rancho Doble S — ${cleanTitle}`,
+          text: `Hola ${user.nombre} ${user.apellido},\n\n${cleanTitle}\n\n${cleanText}\n\nAdministración Rancho Doble S`,
+          fromName: 'Administración Rancho Doble S'
+        }).catch(err => console.error('[Email Admin Notify Error]', err));
       }
     }
 

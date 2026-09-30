@@ -99,7 +99,15 @@ const state = {
   adminNotifyResidentsSearchQuery: '',
   adminNotifySelectedResidents: new Set(),
   knownNotificationIds: new Set(),
-  notificationsInitialized: false
+  notificationsInitialized: false,
+  adminSettings: null,
+  activeConfigSubtab: 'email',
+  adminEmailResidentsSearchQuery: '',
+  adminEmailSelectedResidents: new Set(),
+  residentAdminNotices: [],
+  activeAdminNoticeCategory: 'Expensas y Pagos',
+  adminReceivedNotices: [],
+  activeAdminReceivedNoticeFilter: 'all'
 };
 
 // DOM Elements
@@ -524,7 +532,7 @@ function setDashboardView(view, pushHistory = true) {
   if (isGuard) {
     view = 'guard';
   } else {
-    const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'guardNotices', 'admin'];
+    const validViews = ['home', 'expenses', 'news', 'visits', 'booking', 'guardNotices', 'adminNotices', 'admin'];
     if (!validViews.includes(view)) {
       view = 'home';
     }
@@ -555,6 +563,7 @@ function setDashboardView(view, pushHistory = true) {
     visits: 'myVisitsSection',
     booking: 'bookingSection',
     guardNotices: 'guardNoticesSection',
+    adminNotices: 'adminNoticesSection',
     admin: 'adminSection',
     guard: 'guardSection'
   };
@@ -581,6 +590,7 @@ function setDashboardView(view, pushHistory = true) {
   if (view === 'visits') loadUserVisits();
   if (view === 'booking') loadBookings();
   if (view === 'guardNotices') loadResidentGuardNotices();
+  if (view === 'adminNotices') loadResidentAdminNotices();
   if (view === 'guard') loadGuardData();
   if (view === 'admin' && state.authenticatedUser?.role === 'admin') {
     setAdminTab(state.activeAdminTab || 'vecinos');
@@ -1051,7 +1061,39 @@ async function loadNotifications(isPolling = false) {
       state.notificationsInitialized = true;
     } else {
       // Look for new unread notifications that arrived since last fetch
-      const newUnreadNotifs = notifications.filter((n) => !n.read && !prevIds.has(n.id));
+      const newUnreadNotifs = notifications.filter((n) => {
+        // Must be unread and not previously alerted
+        if (n.read || prevIds.has(n.id)) return false;
+
+        // Never alert the user if they were the sender of the notification
+        if (n.senderId && Number(n.senderId) === Number(state.authenticatedUser?.id)) {
+          return false;
+        }
+
+        // If current user is administrator:
+        // Do NOT alert administrator for messages sent to residents or notices originating from administration
+        if (state.authenticatedUser?.role === 'admin') {
+          if (n.targetRole === 'user' && Number(n.userId) !== Number(state.authenticatedUser?.id)) {
+            return false;
+          }
+          if (n.senderName && n.senderName.toLowerCase().includes('administración')) {
+            return false;
+          }
+        }
+
+        // If current user is guardia:
+        // Do NOT alert guard for messages sent to residents or notices originating from guardia
+        if (state.authenticatedUser?.role === 'guardia') {
+          if (n.targetRole === 'user' && Number(n.userId) !== Number(state.authenticatedUser?.id)) {
+            return false;
+          }
+          if (n.senderName && n.senderName.toLowerCase().includes('guardia')) {
+            return false;
+          }
+        }
+
+        return true;
+      });
 
       if (newUnreadNotifs.length > 0) {
         // 1. Play audible sound chime
@@ -1063,13 +1105,10 @@ async function loadNotifications(isPolling = false) {
 
         // 3. Show floating in-app banner
         showIncomingNotificationBanner(newest);
-
-        // Record all new notifications in known set
-        newUnreadNotifs.forEach((n) => state.knownNotificationIds.add(n.id));
-      } else {
-        // Keep known IDs updated with any additional read items
-        notifications.forEach((n) => state.knownNotificationIds.add(n.id));
       }
+
+      // Record all notifications in known set so they are never alerted again
+      notifications.forEach((n) => state.knownNotificationIds.add(n.id));
     }
 
     state.notifications = notifications;
@@ -1514,7 +1553,25 @@ function renderUserVisits() {
   }
 
   userVisitsList.innerHTML = state.userVisits
-    .map((item) => `
+    .map((item) => {
+      const isInside = item.status === 'Ingresado';
+      const hasExited = item.status === 'Egresado' || (Boolean(item.exitAt) && !isInside);
+      const isCancelled = item.status === 'Cancelado';
+      // The resident can ONLY cancel visits that have not entered yet
+      const canCancel = !isInside && !hasExited && !item.entryAt && !isCancelled;
+
+      let actionBadgeOrBtn = '';
+      if (canCancel) {
+        actionBadgeOrBtn = `<button type="button" class="btn-inline-action danger cancel-visit-btn" data-id="${item.id}" title="Cancelar visita">Cancelar</button>`;
+      } else if (isInside) {
+        actionBadgeOrBtn = `<span class="badge soft" style="background: rgba(105, 210, 166, 0.18); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4); font-size: 0.74rem;">🟢 En el predio</span>`;
+      } else if (hasExited) {
+        actionBadgeOrBtn = `<span class="badge soft" style="background: rgba(255, 255, 255, 0.06); color: var(--muted); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 0.74rem;">🏁 Egresado</span>`;
+      } else if (isCancelled) {
+        actionBadgeOrBtn = `<span class="badge soft" style="background: rgba(255, 122, 122, 0.15); color: var(--danger); border: 1px solid rgba(255, 122, 122, 0.3); font-size: 0.74rem;">❌ Cancelada</span>`;
+      }
+
+      return `
       <li class="visit-item">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
           <div>
@@ -1523,15 +1580,18 @@ function renderUserVisits() {
           </div>
           <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center;">
             <button type="button" class="btn-inline-action view-visit-qr-btn" data-id="${item.id}" title="Ver Pase con Código QR">📱 Ver QR</button>
-            <button type="button" class="btn-inline-action danger cancel-visit-btn" data-id="${item.id}" title="Cancelar visita">Cancelar</button>
+            ${actionBadgeOrBtn}
           </div>
         </div>
         <div class="visit-meta">
           <span>📅 ${escapeHTML(item.date)} · ${escapeHTML(item.time)} hs</span>
-          <em class="visit-status ${item.status === 'Confirmada' || item.status === 'Ingresado' ? 'confirmed' : item.status === 'Pendiente' ? 'pending' : 'neutral'}">${escapeHTML(item.status)}</em>
+          ${item.entryAt ? `<span style="font-size: 0.76rem; color: #a3e6cb;">Ingreso: ${escapeHTML(new Date(item.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
+          ${item.exitAt ? `<span style="font-size: 0.76rem; color: var(--muted);">Egreso: ${escapeHTML(new Date(item.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
+          <em class="visit-status ${isInside ? 'confirmed' : hasExited ? 'neutral' : isCancelled ? 'danger' : 'pending'}">${escapeHTML(item.status)}</em>
         </div>
       </li>
-    `)
+      `;
+    })
     .join('');
 
   userVisitsList.querySelectorAll('.view-visit-qr-btn').forEach((btn) => {
@@ -2208,14 +2268,16 @@ async function loadAdminData() {
     const courtDate = state.adminCourtDate || getTodayISO();
     state.adminCourtDate = courtDate;
 
-    const [stats, pendingUsers, approvedUsers, allVisits, allExpenses, courtData, broadcasts] = await Promise.all([
+    const [stats, pendingUsers, approvedUsers, allVisits, allExpenses, courtData, broadcasts, settings, adminNotices] = await Promise.all([
       API.admin.getStats(),
       API.admin.getUsers('pending'),
       API.admin.getUsers('approved'),
       API.visits.get({ all: 'true' }),
       API.expenses.getAdminAll(),
       API.bookings.get(courtDate),
-      API.notifications.getAdminBroadcasts()
+      API.notifications.getAdminBroadcasts(),
+      API.admin.getSettings().catch(() => null),
+      API.adminNotices.get().catch(() => [])
     ]);
 
     state.adminStats = stats;
@@ -2225,20 +2287,28 @@ async function loadAdminData() {
     state.adminExpenses = allExpenses;
     state.adminCourtBookings = courtData.bookings || [];
     state.adminBroadcasts = broadcasts || [];
+    state.adminReceivedNotices = adminNotices || [];
+    if (settings) {
+      state.adminSettings = settings;
+    }
     if (courtData.validSlots && courtData.validSlots.length > 0) {
       state.validSlots = courtData.validSlots;
     }
 
     renderAdminPanel();
+    renderAdminReceivedNotices();
     if (state.activeAdminTab === 'auditoria') {
       loadAdminAuditLogs();
+    }
+    if (state.activeAdminTab === 'config') {
+      renderAdminSettings();
     }
   } catch (error) {
     console.error('Error loading admin data:', error);
   }
 }
 
-function setAdminTab(tabName) {
+function setAdminTab(tabName, shouldScroll = false) {
   if (!tabName) return;
   state.activeAdminTab = tabName;
   document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
@@ -2250,13 +2320,40 @@ function setAdminTab(tabName) {
     expensas: 'adminTabExpensas',
     canchas: 'adminTabCanchas',
     alertas: 'adminTabAlertas',
-    auditoria: 'adminTabAuditoria'
+    auditoria: 'adminTabAuditoria',
+    config: 'adminTabConfig'
   };
   document.querySelectorAll('.admin-tab-view').forEach((view) => {
     view.classList.toggle('active', view.id === tabMap[tabName]);
   });
+
+  const tabTitles = {
+    vecinos: { eyebrow: 'Gestión Central', title: 'Padrón de Usuarios' },
+    guardia: { eyebrow: 'Seguridad y Garita', title: 'Control de Guardia' },
+    expensas: { eyebrow: 'Administración Contable', title: 'Gestión de Expensas' },
+    canchas: { eyebrow: 'Instalaciones Deportivas', title: 'Control de Canchas' },
+    alertas: { eyebrow: 'Comunicación Oficial', title: 'Avisos y Alertas' },
+    auditoria: { eyebrow: 'Seguridad y Auditoría', title: 'Auditoría General' },
+    config: { eyebrow: 'Ajustes del Sistema', title: 'Configuración Avanzada' }
+  };
+  const headerInfo = tabTitles[tabName];
+  if (headerInfo) {
+    const eyebrowEl = document.getElementById('adminSectionEyebrow');
+    const titleEl = document.getElementById('adminSectionTitle');
+    if (eyebrowEl) eyebrowEl.textContent = headerInfo.eyebrow;
+    if (titleEl) titleEl.textContent = headerInfo.title;
+  }
+
   if (tabName === 'auditoria') {
     loadAdminAuditLogs();
+  }
+
+  if (tabName === 'config') {
+    loadAdminSettings();
+  }
+
+  if (shouldScroll) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
@@ -2595,17 +2692,34 @@ function renderAdminPanel() {
     if (visits.length === 0) {
       const isFiltered = state.guardSearchQuery || state.guardFilter !== 'all';
       adminVisitsList.innerHTML = `
-        <li class="visit-item">
-          <div>
-            <strong>${isFiltered ? 'No se encontraron visitas' : 'Sin visitas registradas'}</strong>
-            <small>${isFiltered ? 'Probá con otra patente, DNI o cambiando el filtro.' : 'No hay registros de visitas en el sistema.'}</small>
-          </div>
-        </li>
+        <div style="text-align: center; padding: 1.5rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.1);">
+          <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🚗</span>
+          <strong style="color: #fff; display: block; font-size: 0.95rem;">${isFiltered ? 'No se encontraron visitas' : 'Sin visitas registradas'}</strong>
+          <p style="font-size: 0.82rem; margin: 0.25rem 0 0 0;">${isFiltered ? 'Probá con otra patente, DNI o cambiando el filtro.' : 'No hay registros de visitas en el sistema.'}</p>
+        </div>
       `;
     } else {
       adminVisitsList.innerHTML = visits
         .slice(0, 50)
         .map((visit) => {
+          const isInside = visit.status === 'Ingresado';
+          const isExited = visit.status === 'Egresado';
+          const isExpected = !isInside && !isExited;
+
+          let cardStatusClass = 'attended';
+          if (isExpected) cardStatusClass = 'pending';
+          if (isExited) cardStatusClass = 'exited';
+
+          // Status Badge
+          let statusBadge = '';
+          if (isInside) {
+            statusBadge = `<span class="badge soft" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">🟢 En predio</span>`;
+          } else if (isExited) {
+            statusBadge = `<span class="badge soft" style="background: rgba(255, 255, 255, 0.08); color: var(--muted); border: 1px solid rgba(255, 255, 255, 0.15);">🚪 Egresó</span>`;
+          } else {
+            statusBadge = `<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4);">⏳ Esperada</span>`;
+          }
+
           // a. Día
           let visitDay = 'Sin fecha';
           if (visit.date) {
@@ -2621,42 +2735,40 @@ function renderAdminPanel() {
             }
           }
           if (visit.time) {
-            visitDay += ` (${visit.time} hs)`;
+            visitDay += ` ${visit.time} hs`;
           }
 
           // b. Hora de ingreso
           let entryDisplay = 'Aún no ingresó';
-          let entryClass = 'pending-text';
+          let entryColor = 'var(--muted)';
           if (visit.entryAt) {
             const entryD = new Date(visit.entryAt);
-            const timeStr = entryD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            entryDisplay = `${timeStr} hs`;
-            entryClass = 'highlight-green';
-          } else if (visit.status === 'Ingresado') {
+            entryDisplay = `${entryD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs`;
+            entryColor = '#10b981';
+          } else if (isInside) {
             entryDisplay = 'Ingresado';
-            entryClass = 'highlight-green';
+            entryColor = '#10b981';
           }
 
           // c. Hora de egreso
           let exitDisplay = '—';
-          let exitClass = 'pending-text';
+          let exitColor = 'var(--muted)';
           if (visit.exitAt) {
             const exitD = new Date(visit.exitAt);
-            const timeStr = exitD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            exitDisplay = `${timeStr} hs`;
-            exitClass = 'highlight-muted';
-          } else if (visit.status === 'Ingresado') {
+            exitDisplay = `${exitD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs`;
+            exitColor = 'var(--muted)';
+          } else if (isInside) {
             exitDisplay = 'Actualmente en predio';
-            exitClass = 'inside-text';
+            exitColor = '#10b981';
           }
 
           // d. Lote y manzana al cual ingresó
-          let loteManzanaDisplay = 'No especificado';
+          let loteManzanaDisplay = '';
           if (visit.hostLote || visit.hostManzana) {
             const parts = [];
             if (visit.hostLote) parts.push(`Lote ${visit.hostLote}`);
-            if (visit.hostManzana) parts.push(`Manzana ${visit.hostManzana}`);
-            loteManzanaDisplay = parts.join(' · ');
+            if (visit.hostManzana) parts.push(`Mz ${visit.hostManzana}`);
+            loteManzanaDisplay = `(${parts.join(', ')})`;
           }
 
           // e. Nombre y apellido del propietario
@@ -2666,77 +2778,56 @@ function renderAdminPanel() {
           } else if (visit.residentName) {
             ownerFullName = visit.residentName.trim();
           } else {
-            ownerFullName = 'No especificado';
+            ownerFullName = 'Vecino';
           }
 
-          // Status Badge
-          const statusText = visit.status === 'Ingresado' ? '🟢 En predio' : (visit.status === 'Egresado' ? '🚪 Egresó' : (visit.status === 'Confirmada' ? '⏳ Esperada' : escapeHTML(visit.status)));
-          const statusBadgeClass = visit.status === 'Ingresado' ? 'confirmed' : (visit.status === 'Egresado' ? 'neutral' : 'pending');
+          const plateFormatted = visit.vehiclePlate ? escapeHTML(visit.vehiclePlate) : 'Peatonal';
 
           return `
-            <li class="admin-visit-card">
-              <div class="admin-visit-header">
-                <div class="admin-visit-who">
-                  <span class="visitor-avatar">🚗</span>
-                  <div>
-                    <strong class="visitor-fullname">${escapeHTML(visit.visitorName)}</strong>
-                    <div class="visitor-badges-row">
-                      <span class="visitor-dni-badge">🪪 DNI: ${escapeHTML(visit.visitorDni || 'S/D')}</span>
-                      ${visit.vehiclePlate ? `<span class="visitor-plate-badge">🚘 ${escapeHTML(visit.vehiclePlate)}</span>` : '<span class="visitor-dni-badge">🚶 Peatonal</span>'}
-                    </div>
+            <div class="guard-notice-item-card ${cardStatusClass}">
+              <div class="notice-item-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.25rem;">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
+                    <strong style="font-size: 1.05rem; color: #fff;">${escapeHTML(visit.visitorName)}</strong>
+                    ${statusBadge}
+                  </div>
+                  <div style="font-size: 0.88rem; color: #fff; margin-top: 0.25rem;">
+                    🏡 <strong>Destino: ${escapeHTML(ownerFullName)}</strong> <span style="color: var(--gold);">${escapeHTML(loteManzanaDisplay)}</span>
                   </div>
                 </div>
-                <div class="visit-status-badge-wrap">
-                  <em class="visit-status ${statusBadgeClass}">${statusText}</em>
-                </div>
+                <span class="notice-item-meta">📅 ${escapeHTML(visitDay)}</span>
               </div>
 
-              <!-- Detalle de la visita requerido en Control de Guardia (Responsive) -->
-              <div class="admin-visit-details-grid">
-                <!-- a. Día -->
-                <div class="visit-detail-item">
-                  <span class="detail-label">📅 Día de Visita</span>
-                  <span class="detail-value">${escapeHTML(visitDay)}</span>
-                </div>
-
-                <!-- b. Hora de ingreso -->
-                <div class="visit-detail-item">
-                  <span class="detail-label">🟢 Hora de Ingreso</span>
-                  <span class="detail-value ${entryClass}">${escapeHTML(entryDisplay)}</span>
-                </div>
-
-                <!-- c. Hora de egreso -->
-                <div class="visit-detail-item">
-                  <span class="detail-label">🚪 Hora de Egreso</span>
-                  <span class="detail-value ${exitClass}">${escapeHTML(exitDisplay)}</span>
-                </div>
-
-                <!-- d. Lote y manzana al cual ingresó -->
-                <div class="visit-detail-item">
-                  <span class="detail-label">🏡 Destino (Lote / Mz)</span>
-                  <span class="detail-value highlight-gold">${escapeHTML(loteManzanaDisplay)}</span>
-                </div>
-
-                <!-- e. Nombre y apellido del propietario -->
-                <div class="visit-detail-item full-width-detail">
-                  <span class="detail-label">👤 Propietario / Anfitrión</span>
-                  <span class="detail-value" style="color: #fff; font-size: 0.94rem;">${escapeHTML(ownerFullName)}</span>
-                </div>
+              <div style="font-size: 0.84rem; color: var(--gold); margin-bottom: 0.25rem;">
+                🚘 <strong>Vehículo / Patente:</strong> <span style="font-family: monospace; font-size: 0.88rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(247, 199, 109, 0.15); border: 1px solid rgba(247, 199, 109, 0.3); color: var(--gold);">${plateFormatted}</span>
+                · 🪪 <strong>DNI:</strong> ${escapeHTML(visit.visitorDni || 'S/D')}
               </div>
 
-              <!-- Acciones de control -->
-              <div class="admin-visit-footer">
-                <div class="admin-visit-actions">
-                  <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR">📱 Ver QR</button>
-                  ${visit.status !== 'Ingresado' && visit.status !== 'Egresado' ? `
-                    <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}">🟢 Marcar Ingreso</button>
-                  ` : ''}
-                  ${visit.status === 'Ingresado' ? `
-                    <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida">🚪 Marcar Salida</button>
-                  ` : ''}
+              <div class="notice-item-details">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; font-size: 0.86rem;">
+                  <div>🟢 <strong>Ingreso:</strong> <span style="color: ${entryColor}; font-weight: 600;">${entryDisplay}</span></div>
+                  <div>🚪 <strong>Egreso:</strong> <span style="color: ${exitColor}; font-weight: 600;">${exitDisplay}</span></div>
                 </div>
+                ${visit.notes ? `<div style="margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.82rem; color: var(--muted);">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
               </div>
-            </li>
+
+              <div class="guard-visit-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                ${isExpected ? `
+                  <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                    🟢 Marcar Ingreso
+                  </button>
+                ` : ''}
+                ${isInside ? `
+                  <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                    🚪 Marcar Salida
+                  </button>
+                ` : ''}
+                <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 600;">
+                  📱 Ver QR
+                </button>
+              </div>
+            </div>
           `;
         })
         .join('');
@@ -4521,14 +4612,13 @@ function renderGuardVisits() {
 
   if (visits.length === 0) {
     guardVisitsList.innerHTML = `
-      <li class="visit-item" style="text-align: center; padding: 1.5rem; color: var(--muted); justify-content: center;">
-        <div>
-          <strong style="display: block; font-size: 1rem; color: #fff; margin-bottom: 0.25rem;">
-            ${query ? 'No se encontraron visitantes con los datos ingresados' : 'No hay visitas en esta categoría'}
-          </strong>
-          <small>${query ? 'Probá buscando por letras de la patente, DNI o apellido.' : 'Los registros aparecerán aquí automáticamente cuando los vecinos registren visitas.'}</small>
-        </div>
-      </li>
+      <div style="text-align: center; padding: 1.5rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.1);">
+        <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🚗</span>
+        <strong style="display: block; font-size: 0.95rem; color: #fff; margin-bottom: 0.25rem;">
+          ${query ? 'No se encontraron visitantes con los datos ingresados' : 'No hay visitas en esta categoría'}
+        </strong>
+        <p style="font-size: 0.82rem; margin: 0.25rem 0 0 0;">${query ? 'Probá buscando por letras de la patente, DNI o apellido.' : 'Los registros aparecerán aquí automáticamente cuando los vecinos registren visitas.'}</p>
+      </div>
     `;
     return;
   }
@@ -4537,66 +4627,124 @@ function renderGuardVisits() {
     .map((visit) => {
       const isInside = visit.status === 'Ingresado';
       const isExited = visit.status === 'Egresado';
-      const plateFormatted = visit.vehiclePlate ? escapeHTML(visit.vehiclePlate) : 'Sin vehículo';
+      const isExpected = !isInside && !isExited;
+
+      let cardStatusClass = 'attended';
+      if (isExpected) cardStatusClass = 'pending';
+      if (isExited) cardStatusClass = 'exited';
 
       let statusBadge = '';
       if (isInside) {
-        statusBadge = `<span class="badge soft" style="background: rgba(105, 210, 166, 0.2); color: var(--primary); border: 1px solid rgba(105, 210, 166, 0.4);">🟢 En predio</span>`;
+        statusBadge = `<span class="badge soft" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">🟢 En predio</span>`;
       } else if (isExited) {
         statusBadge = `<span class="badge soft" style="background: rgba(255, 255, 255, 0.08); color: var(--muted); border: 1px solid rgba(255, 255, 255, 0.15);">🚪 Egresó</span>`;
       } else {
-        statusBadge = `<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4);">⏳ Esperada (${escapeHTML(visit.status)})</span>`;
+        statusBadge = `<span class="badge soft" style="background: rgba(247, 199, 109, 0.2); color: var(--gold); border: 1px solid rgba(247, 199, 109, 0.4);">⏳ Esperada</span>`;
       }
 
-      const entryTime = visit.entryAt
-        ? `<small style="display: block; color: var(--gold); font-size: 0.8rem; margin-top: 0.15rem;">🟢 Ingresó: ${new Date(visit.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>`
-        : '';
-      const exitTime = visit.exitAt
-        ? `<small style="display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem;">🚪 Egresó: ${new Date(visit.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs</small>`
-        : '';
+      let visitDay = 'Sin fecha';
+      if (visit.date) {
+        try {
+          const parts = String(visit.date).split('-');
+          if (parts.length === 3) {
+            visitDay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          } else {
+            visitDay = visit.date;
+          }
+        } catch (e) {
+          visitDay = visit.date;
+        }
+      }
+      if (visit.time) {
+        visitDay += ` ${visit.time} hs`;
+      }
 
-      let actionButtons = '';
-      if (!isInside && !isExited) {
-        actionButtons = `
-          <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}">
-            🟢 Confirmar Ingreso
-          </button>
-        `;
+      let entryDisplay = 'Aún no ingresó';
+      let entryColor = 'var(--muted)';
+      if (visit.entryAt) {
+        const entryD = new Date(visit.entryAt);
+        entryDisplay = `${entryD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs`;
+        entryColor = '#10b981';
       } else if (isInside) {
-        actionButtons = `
-          <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}">
-            🚪 Confirmar Egreso
-          </button>
-        `;
+        entryDisplay = 'Ingresado';
+        entryColor = '#10b981';
       }
+
+      let exitDisplay = '—';
+      let exitColor = 'var(--muted)';
+      if (visit.exitAt) {
+        const exitD = new Date(visit.exitAt);
+        exitDisplay = `${exitD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs`;
+        exitColor = 'var(--muted)';
+      } else if (isInside) {
+        exitDisplay = 'Actualmente en predio';
+        exitColor = '#10b981';
+      }
+
+      let hostFullName = '';
+      if (visit.hostNombre || visit.hostApellido) {
+        hostFullName = `${visit.hostNombre || ''} ${visit.hostApellido || ''}`.trim();
+      } else if (visit.residentName) {
+        hostFullName = visit.residentName.trim();
+      } else {
+        hostFullName = 'Vecino';
+      }
+
+      let hostLocation = '';
+      if (visit.hostLote || visit.hostManzana) {
+        const parts = [];
+        if (visit.hostLote) parts.push(`Lote ${visit.hostLote}`);
+        if (visit.hostManzana) parts.push(`Mz ${visit.hostManzana}`);
+        hostLocation = `(${parts.join(', ')})`;
+      }
+
+      const plateFormatted = visit.vehiclePlate ? escapeHTML(visit.vehiclePlate) : 'Peatonal';
 
       return `
-        <li class="visit-item guard-visit-card">
-          <div class="guard-visit-header">
-            <div class="guard-visit-info">
-              <div class="guard-visit-tags">
-                <span class="badge soft guard-plate-badge">
-                  🚗 ${plateFormatted}
-                </span>
+        <div class="guard-notice-item-card ${cardStatusClass}">
+          <div class="notice-item-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 1.25rem;">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
+                <strong style="font-size: 1.05rem; color: #fff;">${escapeHTML(visit.visitorName)}</strong>
                 ${statusBadge}
               </div>
-              <strong class="guard-visitor-name">${escapeHTML(visit.visitorName)}</strong>
-              <small class="guard-visitor-dest">DNI: <strong>${escapeHTML(visit.visitorDni)}</strong> · Destino: <strong>${escapeHTML(visit.residentName)}</strong></small>
-              ${entryTime}
-              ${exitTime}
+              <div style="font-size: 0.88rem; color: #fff; margin-top: 0.25rem;">
+                🏡 <strong>Destino: ${escapeHTML(hostFullName)}</strong> <span style="color: var(--gold);">${escapeHTML(hostLocation)}</span>
+              </div>
             </div>
+            <span class="notice-item-meta">📅 ${escapeHTML(visitDay)}</span>
+          </div>
 
-            <div class="visit-actions guard-visit-actions">
-              ${actionButtons}
-              <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver código QR del pase">
-                📱 Ver Pase QR
-              </button>
+          <div style="font-size: 0.84rem; color: var(--gold); margin-bottom: 0.25rem;">
+            🚘 <strong>Vehículo / Patente:</strong> <span style="font-family: monospace; font-size: 0.88rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(247, 199, 109, 0.15); border: 1px solid rgba(247, 199, 109, 0.3); color: var(--gold);">${plateFormatted}</span>
+            · 🪪 <strong>DNI:</strong> ${escapeHTML(visit.visitorDni || 'S/D')}
+          </div>
+
+          <div class="notice-item-details">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; font-size: 0.86rem;">
+              <div>🟢 <strong>Ingreso:</strong> <span style="color: ${entryColor}; font-weight: 600;">${entryDisplay}</span></div>
+              <div>🚪 <strong>Egreso:</strong> <span style="color: ${exitColor}; font-weight: 600;">${exitDisplay}</span></div>
             </div>
+            ${visit.notes ? `<div style="margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.82rem; color: var(--muted);">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
           </div>
-          <div class="visit-meta guard-visit-meta">
-            <span>📅 Fecha prevista: ${escapeHTML(visit.date)} a las ${escapeHTML(visit.time)} hs</span>
+
+          <div class="guard-visit-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem;">
+            ${isExpected ? `
+              <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                🟢 Confirmar Ingreso
+              </button>
+            ` : ''}
+            ${isInside ? `
+              <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                🚪 Confirmar Egreso
+              </button>
+            ` : ''}
+            <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver código QR del pase" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 600;">
+              📱 Ver Pase QR
+            </button>
           </div>
-        </li>
+        </div>
       `;
     })
     .join('');
@@ -5172,6 +5320,1029 @@ function renderAdminAuditLogs() {
     .join('');
 }
 
+// ----------------- ADVANCED SYSTEM CONFIGURATION (EMAIL & WHATSAPP) ----------------- //
+
+async function loadAdminSettings(force = true) {
+  if (state.authenticatedUser?.role !== 'admin') return;
+  try {
+    const settings = await API.admin.getSettings();
+    state.adminSettings = settings;
+    renderAdminSettings();
+  } catch (err) {
+    console.error('[Load Admin Settings Error]', err);
+  }
+}
+
+function renderAdminSettings() {
+  const settings = state.adminSettings;
+  if (!settings) return;
+
+  const email = settings.email || {};
+  const wa = settings.whatsapp || {};
+
+  // 1. Update status cards and top badges
+  const configEmailStatusCard = document.getElementById('configEmailStatusCard');
+  const configEmailStatusText = document.getElementById('configEmailStatusText');
+  const configEmailSenderText = document.getElementById('configEmailSenderText');
+
+  const configWhatsAppStatusCard = document.getElementById('configWhatsAppStatusCard');
+  const configWhatsAppStatusText = document.getElementById('configWhatsAppStatusText');
+  const configWhatsAppPhoneText = document.getElementById('configWhatsAppPhoneText');
+
+  const superAdminConfigBadge = document.getElementById('superAdminConfigBadge');
+  const adminSettingsActiveStatusBadge = document.getElementById('adminSettingsActiveStatusBadge');
+
+  if (configEmailStatusText) {
+    if (email.configured) {
+      configEmailStatusText.textContent = `🟢 Activo (${email.activeType === 'gmail' ? 'Gmail' : 'SMTP'})`;
+      configEmailStatusText.style.color = 'var(--primary)';
+      if (configEmailStatusCard) configEmailStatusCard.style.borderColor = 'rgba(105, 210, 166, 0.4)';
+    } else {
+      configEmailStatusText.textContent = email.provider === 'none' ? '⚪ Desactivado' : '🟡 Sin configurar';
+      configEmailStatusText.style.color = 'var(--gold)';
+      if (configEmailStatusCard) configEmailStatusCard.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+    }
+  }
+
+  if (configEmailSenderText) {
+    configEmailSenderText.textContent = `Remitente: ${email.activeFrom || email.gmailUser || email.smtpUser || 'No configurado'}`;
+  }
+
+  if (configWhatsAppStatusText) {
+    if (wa.configured) {
+      const provName = wa.provider === 'meta_cloud' ? 'Meta Cloud API' : (wa.provider === 'evolution_gateway' ? 'Evolution API' : (wa.provider === 'twilio' ? 'Twilio' : 'Directo / wa.me'));
+      configWhatsAppStatusText.textContent = `🟢 Activo (${provName})`;
+      configWhatsAppStatusText.style.color = 'var(--primary)';
+      if (configWhatsAppStatusCard) configWhatsAppStatusCard.style.borderColor = 'rgba(105, 210, 166, 0.4)';
+    } else {
+      configWhatsAppStatusText.textContent = wa.phone ? '🟡 Parcial (Simulado)' : '⚪ Sin configurar';
+      configWhatsAppStatusText.style.color = 'var(--gold)';
+      if (configWhatsAppStatusCard) configWhatsAppStatusCard.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+    }
+  }
+
+  if (configWhatsAppPhoneText) {
+    configWhatsAppPhoneText.textContent = wa.phone ? `Teléfono oficial: +${wa.normalizedPhone || wa.phone}` : 'Teléfono oficial: No asignado';
+  }
+
+  const activeCount = (email.configured ? 1 : 0) + (wa.configured ? 1 : 0);
+  if (superAdminConfigBadge) {
+    superAdminConfigBadge.textContent = `${activeCount}/2 activos`;
+  }
+  if (adminSettingsActiveStatusBadge) {
+    adminSettingsActiveStatusBadge.textContent = `${activeCount} de 2 activos`;
+  }
+
+  // 2. Populate Email Form Fields
+  const emailProvider = email.provider || 'gmail';
+  const emailRadio = document.querySelector(`input[name="emailProvider"][value="${emailProvider}"]`);
+  if (emailRadio) {
+    emailRadio.checked = true;
+    updateEmailProviderBoxes(emailProvider);
+  }
+
+  const cfgGmailUser = document.getElementById('cfgGmailUser');
+  const cfgGmailPass = document.getElementById('cfgGmailPass');
+  if (cfgGmailUser) cfgGmailUser.value = email.gmailUser || '';
+  if (cfgGmailPass) {
+    cfgGmailPass.value = '';
+    cfgGmailPass.placeholder = email.hasGmailPass ? '•••••••• (Contraseña guardada)' : '••••••••••••••••';
+  }
+
+  const cfgSmtpHost = document.getElementById('cfgSmtpHost');
+  const cfgSmtpPort = document.getElementById('cfgSmtpPort');
+  const cfgSmtpSecure = document.getElementById('cfgSmtpSecure');
+  const cfgSmtpUser = document.getElementById('cfgSmtpUser');
+  const cfgSmtpPass = document.getElementById('cfgSmtpPass');
+  const cfgSmtpFrom = document.getElementById('cfgSmtpFrom');
+
+  if (cfgSmtpHost) cfgSmtpHost.value = email.smtpHost || '';
+  if (cfgSmtpPort) cfgSmtpPort.value = email.smtpPort || 587;
+  if (cfgSmtpSecure) cfgSmtpSecure.checked = Boolean(email.smtpSecure);
+  if (cfgSmtpUser) cfgSmtpUser.value = email.smtpUser || '';
+  if (cfgSmtpPass) {
+    cfgSmtpPass.value = '';
+    cfgSmtpPass.placeholder = email.hasSmtpPass ? '•••••••• (Contraseña guardada)' : '••••••••';
+  }
+  if (cfgSmtpFrom) cfgSmtpFrom.value = email.smtpFrom || '';
+
+  // 3. Populate WhatsApp Form Fields
+  const cfgWhatsAppPhone = document.getElementById('cfgWhatsAppPhone');
+  if (cfgWhatsAppPhone) cfgWhatsAppPhone.value = wa.phone || '';
+
+  const waProvider = wa.provider || 'meta_cloud';
+  const waRadio = document.querySelector(`input[name="whatsappProvider"][value="${waProvider}"]`);
+  if (waRadio) {
+    waRadio.checked = true;
+    updateWhatsAppProviderBoxes(waProvider);
+  }
+
+  const cfgWaPhoneId = document.getElementById('cfgWaPhoneId');
+  const cfgWaToken = document.getElementById('cfgWaToken');
+  if (cfgWaPhoneId) cfgWaPhoneId.value = wa.phoneId || '';
+  if (cfgWaToken) {
+    cfgWaToken.value = '';
+    cfgWaToken.placeholder = wa.hasToken ? '•••••••• (Token guardado)' : 'EAAG...••••••••';
+  }
+
+  const cfgWaApiUrl = document.getElementById('cfgWaApiUrl');
+  const cfgWaApiKey = document.getElementById('cfgWaApiKey');
+  const cfgWaInstance = document.getElementById('cfgWaInstance');
+  if (cfgWaApiUrl) cfgWaApiUrl.value = wa.apiUrl || '';
+  if (cfgWaApiKey) {
+    cfgWaApiKey.value = '';
+    cfgWaApiKey.placeholder = wa.hasApiKey ? '•••••••• (API Key guardada)' : '••••••••';
+  }
+  if (cfgWaInstance) cfgWaInstance.value = wa.instance || 'ranchodobles';
+
+  const cfgTwilioSid = document.getElementById('cfgTwilioSid');
+  const cfgTwilioToken = document.getElementById('cfgTwilioToken');
+  const cfgTwilioPhone = document.getElementById('cfgTwilioPhone');
+  if (cfgTwilioSid) cfgTwilioSid.value = wa.twilioSid || '';
+  if (cfgTwilioToken) {
+    cfgTwilioToken.value = '';
+    cfgTwilioToken.placeholder = wa.hasTwilioToken ? '•••••••• (Token guardado)' : '••••••••';
+  }
+  if (cfgTwilioPhone) cfgTwilioPhone.value = wa.twilioPhone || '';
+
+  const cfgWaQrCaption = document.getElementById('cfgWaQrCaption');
+  if (cfgWaQrCaption) cfgWaQrCaption.value = wa.qrCaption || '';
+
+  // Pre-fill test destination inputs
+  const testEmailTargetInput = document.getElementById('testEmailTargetInput');
+  if (testEmailTargetInput && !testEmailTargetInput.value) {
+    testEmailTargetInput.value = state.authenticatedUser?.email || email.gmailUser || email.smtpUser || '';
+  }
+  const testWhatsAppTargetInput = document.getElementById('testWhatsAppTargetInput');
+  if (testWhatsAppTargetInput && !testWhatsAppTargetInput.value) {
+    testWhatsAppTargetInput.value = wa.phone || state.authenticatedUser?.telefono || '';
+  }
+}
+
+function updateEmailProviderBoxes(provider) {
+  document.querySelectorAll('[data-provider-box]').forEach((box) => {
+    const isSelected = box.dataset.providerBox === provider;
+    box.classList.toggle('active', isSelected);
+    box.style.borderColor = isSelected ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)';
+    box.style.background = isSelected ? 'rgba(105, 210, 166, 0.08)' : 'rgba(255, 255, 255, 0.03)';
+  });
+  const gmailFields = document.getElementById('emailGmailFields');
+  const smtpFields = document.getElementById('emailSmtpFields');
+  if (gmailFields) gmailFields.style.display = provider === 'gmail' ? 'grid' : 'none';
+  if (smtpFields) smtpFields.style.display = provider === 'smtp' ? 'grid' : 'none';
+}
+
+function updateWhatsAppProviderBoxes(provider) {
+  document.querySelectorAll('[data-wa-provider-box]').forEach((box) => {
+    const isSelected = box.dataset.waProviderBox === provider;
+    box.classList.toggle('active', isSelected);
+    box.style.borderColor = isSelected ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)';
+    box.style.background = isSelected ? 'rgba(105, 210, 166, 0.08)' : 'rgba(255, 255, 255, 0.03)';
+  });
+  const metaFields = document.getElementById('waMetaFields');
+  const evoFields = document.getElementById('waEvolutionFields');
+  const twilioFields = document.getElementById('waTwilioFields');
+  if (metaFields) metaFields.style.display = provider === 'meta_cloud' ? 'grid' : 'none';
+  if (evoFields) evoFields.style.display = provider === 'evolution_gateway' ? 'grid' : 'none';
+  if (twilioFields) twilioFields.style.display = provider === 'twilio' ? 'grid' : 'none';
+}
+
+function setConfigSubtab(subtabName) {
+  if (!subtabName) return;
+  state.activeConfigSubtab = subtabName;
+  document.querySelectorAll('[data-config-subtab]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.configSubtab === subtabName);
+  });
+  const subpanelMap = {
+    email: 'configEmailSubpanel',
+    whatsapp: 'configWhatsAppSubpanel',
+    send: 'configSendEmailSubpanel'
+  };
+  document.querySelectorAll('.config-subpanel').forEach((panel) => {
+    panel.style.display = panel.id === subpanelMap[subtabName] ? 'block' : 'none';
+  });
+
+  if (subtabName === 'send') {
+    renderEmailResidentsList();
+  }
+}
+
+function renderEmailResidentsList() {
+  const container = document.getElementById('emailResidentsCheckboxesList');
+  const countBadge = document.getElementById('emailSelectedResidentsCount');
+  if (!container) return;
+
+  const query = (state.adminEmailResidentsSearchQuery || '').toLowerCase().trim();
+  const activeResidents = (state.approvedUsers || []).filter((u) => u.role === 'user' && u.email && u.email.includes('@'));
+
+  const filtered = activeResidents.filter((u) => {
+    if (!query) return true;
+    const nameMatch = `${u.nombre} ${u.apellido}`.toLowerCase().includes(query);
+    const emailMatch = (u.email || '').toLowerCase().includes(query);
+    const loteMatch = (u.lote || '').toString().toLowerCase().includes(query);
+    const dniMatch = (u.numeroDocumento || '').includes(query);
+    return nameMatch || emailMatch || loteMatch || dniMatch;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);padding:0.5rem;text-align:center;">No se encontraron propietarios con correo electrónico registrado.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map((u) => {
+    const isChecked = state.adminEmailSelectedResidents.has(u.id);
+    const loc = u.lote ? ` • Lote ${u.lote}` : '';
+    return `
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.83rem;color:#cbd5e1;padding:0.35rem 0.5rem;border-radius:6px;background:rgba(255,255,255,0.02);cursor:pointer;">
+        <input type="checkbox" class="email-resident-checkbox" data-user-id="${u.id}" ${isChecked ? 'checked' : ''} />
+        <span style="flex:1;">
+          <strong style="color:#fff;">${escapeHTML(u.nombre)} ${escapeHTML(u.apellido)}</strong>
+          <span style="color:var(--gold);font-size:0.78rem;">${loc}</span>
+          <span style="color:var(--muted);font-size:0.76rem;margin-left:0.3rem;">(${escapeHTML(u.email)})</span>
+        </span>
+      </label>
+    `;
+  }).join('');
+
+  if (countBadge) {
+    countBadge.textContent = `${state.adminEmailSelectedResidents.size} seleccionado${state.adminEmailSelectedResidents.size === 1 ? '' : 's'}`;
+  }
+
+  container.querySelectorAll('.email-resident-checkbox').forEach((chk) => {
+    chk.addEventListener('change', (e) => {
+      const uId = Number(e.target.dataset.userId);
+      if (e.target.checked) {
+        state.adminEmailSelectedResidents.add(uId);
+      } else {
+        state.adminEmailSelectedResidents.delete(uId);
+      }
+      if (countBadge) {
+        countBadge.textContent = `${state.adminEmailSelectedResidents.size} seleccionado${state.adminEmailSelectedResidents.size === 1 ? '' : 's'}`;
+      }
+    });
+  });
+}
+
+function setupConfigEventListeners() {
+  // Subtab navigation
+  document.querySelectorAll('[data-config-subtab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setConfigSubtab(btn.dataset.configSubtab);
+    });
+  });
+
+  // Refresh settings button
+  const refreshAdminSettingsBtn = document.getElementById('refreshAdminSettingsBtn');
+  if (refreshAdminSettingsBtn) {
+    refreshAdminSettingsBtn.addEventListener('click', async () => {
+      await loadAdminSettings(true);
+      showToast('Configuraciones actualizadas.');
+    });
+  }
+
+  // Email Provider changes
+  document.querySelectorAll('input[name="emailProvider"]').forEach((radio) => {
+    radio.addEventListener('change', (e) => {
+      updateEmailProviderBoxes(e.target.value);
+    });
+  });
+  document.querySelectorAll('[data-provider-box]').forEach((box) => {
+    box.addEventListener('click', () => {
+      const val = box.dataset.providerBox;
+      const r = document.querySelector(`input[name="emailProvider"][value="${val}"]`);
+      if (r) {
+        r.checked = true;
+        updateEmailProviderBoxes(val);
+      }
+    });
+  });
+
+  // WhatsApp Provider changes
+  document.querySelectorAll('input[name="whatsappProvider"]').forEach((radio) => {
+    radio.addEventListener('change', (e) => {
+      updateWhatsAppProviderBoxes(e.target.value);
+    });
+  });
+  document.querySelectorAll('[data-wa-provider-box]').forEach((box) => {
+    box.addEventListener('click', () => {
+      const val = box.dataset.waProviderBox;
+      const r = document.querySelector(`input[name="whatsappProvider"][value="${val}"]`);
+      if (r) {
+        r.checked = true;
+        updateWhatsAppProviderBoxes(val);
+      }
+    });
+  });
+
+  // Email form submit
+  const adminEmailConfigForm = document.getElementById('adminEmailConfigForm');
+  if (adminEmailConfigForm) {
+    adminEmailConfigForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveEmailConfigBtn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+      }
+      try {
+        const provider = document.querySelector('input[name="emailProvider"]:checked')?.value || 'gmail';
+        const gmailUser = document.getElementById('cfgGmailUser')?.value || '';
+        const gmailPass = document.getElementById('cfgGmailPass')?.value || '';
+        const smtpHost = document.getElementById('cfgSmtpHost')?.value || '';
+        const smtpPort = document.getElementById('cfgSmtpPort')?.value || 587;
+        const smtpSecure = document.getElementById('cfgSmtpSecure')?.checked || false;
+        const smtpUser = document.getElementById('cfgSmtpUser')?.value || '';
+        const smtpPass = document.getElementById('cfgSmtpPass')?.value || '';
+        const smtpFrom = document.getElementById('cfgSmtpFrom')?.value || '';
+
+        const emailPayload = {
+          provider,
+          gmailUser,
+          smtpHost,
+          smtpPort,
+          smtpSecure,
+          smtpUser,
+          smtpFrom
+        };
+        if (gmailPass && gmailPass !== '••••••••') emailPayload.gmailPass = gmailPass;
+        if (smtpPass && smtpPass !== '••••••••') emailPayload.smtpPass = smtpPass;
+
+        const res = await API.admin.updateSettings({ email: emailPayload });
+        showToast(res.message || 'Configuración de email guardada con éxito.');
+        await loadAdminSettings(true);
+      } catch (err) {
+        showToast(err.message || 'Error al guardar la configuración de email.');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 Guardar Configuración de Email';
+        }
+      }
+    });
+  }
+
+  // WhatsApp form submit
+  const adminWhatsAppConfigForm = document.getElementById('adminWhatsAppConfigForm');
+  if (adminWhatsAppConfigForm) {
+    adminWhatsAppConfigForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveWhatsAppConfigBtn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+      }
+      try {
+        const phone = document.getElementById('cfgWhatsAppPhone')?.value || '';
+        const provider = document.querySelector('input[name="whatsappProvider"]:checked')?.value || 'meta_cloud';
+        const phoneId = document.getElementById('cfgWaPhoneId')?.value || '';
+        const token = document.getElementById('cfgWaToken')?.value || '';
+        const apiUrl = document.getElementById('cfgWaApiUrl')?.value || '';
+        const apiKey = document.getElementById('cfgWaApiKey')?.value || '';
+        const instance = document.getElementById('cfgWaInstance')?.value || 'ranchodobles';
+        const twilioSid = document.getElementById('cfgTwilioSid')?.value || '';
+        const twilioToken = document.getElementById('cfgTwilioToken')?.value || '';
+        const twilioPhone = document.getElementById('cfgTwilioPhone')?.value || '';
+        const qrCaption = document.getElementById('cfgWaQrCaption')?.value || '';
+
+        const waPayload = {
+          phone,
+          provider,
+          phoneId,
+          apiUrl,
+          instance,
+          twilioSid,
+          twilioPhone,
+          qrCaption
+        };
+        if (token && token !== '••••••••') waPayload.token = token;
+        if (apiKey && apiKey !== '••••••••') waPayload.apiKey = apiKey;
+        if (twilioToken && twilioToken !== '••••••••') waPayload.twilioToken = twilioToken;
+
+        const res = await API.admin.updateSettings({ whatsapp: waPayload });
+        showToast(res.message || 'Configuración de WhatsApp guardada con éxito.');
+        await loadAdminSettings(true);
+      } catch (err) {
+        showToast(err.message || 'Error al guardar la configuración de WhatsApp.');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 Guardar Configuración de WhatsApp';
+        }
+      }
+    });
+  }
+
+  // Test Email button
+  const runTestEmailBtn = document.getElementById('runTestEmailBtn');
+  const testEmailTargetInput = document.getElementById('testEmailTargetInput');
+  const testEmailResultStatus = document.getElementById('testEmailResultStatus');
+  if (runTestEmailBtn) {
+    runTestEmailBtn.addEventListener('click', async () => {
+      const to = testEmailTargetInput?.value?.trim();
+      if (!to) {
+        showToast('Ingresá una dirección de correo para enviar la prueba.');
+        if (testEmailTargetInput) testEmailTargetInput.focus();
+        return;
+      }
+      runTestEmailBtn.disabled = true;
+      runTestEmailBtn.textContent = 'Enviando prueba...';
+      if (testEmailResultStatus) {
+        testEmailResultStatus.style.display = 'block';
+        testEmailResultStatus.style.background = 'rgba(255, 255, 255, 0.05)';
+        testEmailResultStatus.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        testEmailResultStatus.style.color = '#cbd5e1';
+        testEmailResultStatus.textContent = '⏳ Conectando con el servidor de correo y despachando mensaje...';
+      }
+
+      try {
+        const res = await API.admin.testEmail({ to });
+        if (testEmailResultStatus) {
+          testEmailResultStatus.style.background = 'rgba(105, 210, 166, 0.12)';
+          testEmailResultStatus.style.border = '1px solid rgba(105, 210, 166, 0.3)';
+          testEmailResultStatus.style.color = 'var(--primary)';
+          testEmailResultStatus.innerHTML = `✅ <strong>¡Prueba exitosa!</strong> ${escapeHTML(res.message || 'El correo fue entregado correctamente.')}`;
+        }
+        showToast('Correo de prueba enviado con éxito.');
+        await loadAdminSettings(true);
+      } catch (err) {
+        if (testEmailResultStatus) {
+          testEmailResultStatus.style.background = 'rgba(255, 122, 122, 0.12)';
+          testEmailResultStatus.style.border = '1px solid rgba(255, 122, 122, 0.3)';
+          testEmailResultStatus.style.color = 'var(--danger)';
+          testEmailResultStatus.innerHTML = `❌ <strong>Error en el envío:</strong> ${escapeHTML(err.message || 'Verificá los datos ingresados.')}`;
+        }
+        showToast('No se pudo enviar el correo de prueba.');
+      } finally {
+        runTestEmailBtn.disabled = false;
+        runTestEmailBtn.textContent = '📨 Enviar Correo de Prueba';
+      }
+    });
+  }
+
+  // Test WhatsApp button
+  const runTestWhatsAppBtn = document.getElementById('runTestWhatsAppBtn');
+  const testWhatsAppTargetInput = document.getElementById('testWhatsAppTargetInput');
+  const testWhatsAppResultStatus = document.getElementById('testWhatsAppResultStatus');
+  if (runTestWhatsAppBtn) {
+    runTestWhatsAppBtn.addEventListener('click', async () => {
+      const phone = testWhatsAppTargetInput?.value?.trim();
+      if (!phone) {
+        showToast('Ingresá un teléfono destino para la prueba.');
+        if (testWhatsAppTargetInput) testWhatsAppTargetInput.focus();
+        return;
+      }
+      runTestWhatsAppBtn.disabled = true;
+      runTestWhatsAppBtn.textContent = 'Enviando...';
+      if (testWhatsAppResultStatus) {
+        testWhatsAppResultStatus.style.display = 'block';
+        testWhatsAppResultStatus.style.background = 'rgba(255, 255, 255, 0.05)';
+        testWhatsAppResultStatus.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        testWhatsAppResultStatus.style.color = '#cbd5e1';
+        testWhatsAppResultStatus.textContent = '⏳ Enviando mensaje de prueba por WhatsApp...';
+      }
+
+      try {
+        const res = await API.admin.testWhatsApp({ phone });
+        if (testWhatsAppResultStatus) {
+          testWhatsAppResultStatus.style.background = 'rgba(105, 210, 166, 0.12)';
+          testWhatsAppResultStatus.style.border = '1px solid rgba(105, 210, 166, 0.3)';
+          testWhatsAppResultStatus.style.color = 'var(--primary)';
+          testWhatsAppResultStatus.innerHTML = `✅ <strong>¡Prueba completada!</strong> ${escapeHTML(res.message || 'Mensaje procesado.')}`;
+        }
+        showToast('Prueba de WhatsApp procesada.');
+        await loadAdminSettings(true);
+      } catch (err) {
+        if (testWhatsAppResultStatus) {
+          testWhatsAppResultStatus.style.background = 'rgba(255, 122, 122, 0.12)';
+          testWhatsAppResultStatus.style.border = '1px solid rgba(255, 122, 122, 0.3)';
+          testWhatsAppResultStatus.style.color = 'var(--danger)';
+          testWhatsAppResultStatus.innerHTML = `❌ <strong>Error en el envío:</strong> ${escapeHTML(err.message || 'Verificá los datos.')}`;
+        }
+        showToast('No se pudo enviar el WhatsApp de prueba.');
+      } finally {
+        runTestWhatsAppBtn.disabled = false;
+        runTestWhatsAppBtn.textContent = '📲 Enviar WhatsApp de Prueba';
+      }
+    });
+  }
+
+  // Direct send email to owners form
+  const adminDirectSendEmailForm = document.getElementById('adminDirectSendEmailForm');
+  const emailSendTargetAll = document.getElementById('emailSendTargetAll');
+  const emailSendTargetSelected = document.getElementById('emailSendTargetSelected');
+  const emailSelectedResidentsBox = document.getElementById('emailSelectedResidentsBox');
+  const emailResidentsSearchInput = document.getElementById('emailResidentsSearchInput');
+  const emailSelectAllBtn = document.getElementById('emailSelectAllBtn');
+  const emailDeselectAllBtn = document.getElementById('emailDeselectAllBtn');
+
+  if (emailSendTargetAll && emailSendTargetSelected && emailSelectedResidentsBox) {
+    emailSendTargetAll.addEventListener('change', () => {
+      emailSelectedResidentsBox.style.display = 'none';
+    });
+    emailSendTargetSelected.addEventListener('change', () => {
+      emailSelectedResidentsBox.style.display = 'block';
+      renderEmailResidentsList();
+    });
+  }
+
+  if (emailResidentsSearchInput) {
+    emailResidentsSearchInput.addEventListener('input', (e) => {
+      state.adminEmailResidentsSearchQuery = e.target.value;
+      renderEmailResidentsList();
+    });
+  }
+
+  if (emailSelectAllBtn) {
+    emailSelectAllBtn.addEventListener('click', () => {
+      const activeResidents = (state.approvedUsers || []).filter((u) => u.role === 'user' && u.email && u.email.includes('@'));
+      activeResidents.forEach((u) => state.adminEmailSelectedResidents.add(u.id));
+      renderEmailResidentsList();
+    });
+  }
+
+  if (emailDeselectAllBtn) {
+    emailDeselectAllBtn.addEventListener('click', () => {
+      state.adminEmailSelectedResidents.clear();
+      renderEmailResidentsList();
+    });
+  }
+
+  if (adminDirectSendEmailForm) {
+    adminDirectSendEmailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const recipientType = document.querySelector('input[name="emailSendTarget"]:checked')?.value || 'all';
+      const residentIds = recipientType === 'selected' ? Array.from(state.adminEmailSelectedResidents) : [];
+      const subject = document.getElementById('adminSendEmailSubject')?.value?.trim();
+      const message = document.getElementById('adminSendEmailMessage')?.value?.trim();
+
+      if (!subject || !message) {
+        showToast('Por favor completá el asunto y mensaje del correo.');
+        return;
+      }
+
+      if (recipientType === 'selected' && residentIds.length === 0) {
+        showToast('Seleccioná al menos un propietario destinatario.');
+        return;
+      }
+
+      const countPrompt = recipientType === 'all'
+        ? 'a todos los propietarios activos'
+        : `a los ${residentIds.length} propietario(s) seleccionado(s)`;
+
+      if (!window.confirm(`¿Confirmás el envío de este correo ${countPrompt}?`)) {
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitAdminSendEmailBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando correos...';
+      }
+
+      try {
+        const res = await API.admin.sendEmailToOwners({
+          recipientType,
+          residentIds,
+          subject,
+          message
+        });
+        showToast(res.message || 'Correos enviados exitosamente.');
+        adminDirectSendEmailForm.reset();
+        state.adminEmailSelectedResidents.clear();
+        renderEmailResidentsList();
+        if (emailSelectedResidentsBox) emailSelectedResidentsBox.style.display = 'none';
+        if (emailSendTargetAll) emailSendTargetAll.checked = true;
+      } catch (err) {
+        showToast(err.message || 'Error al enviar correos a propietarios.');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 Enviar Correo a Propietarios';
+        }
+      }
+    });
+  }
+}
+
+// ==========================================================================
+// AVISOS A ADMINISTRACIÓN (Portal Propietarios y Gestión Admin)
+// ==========================================================================
+
+const ADMIN_NOTICE_CATEGORIES = {
+  'Expensas y Pagos': { icon: '💳', tag: 'Pagos' },
+  'Mantenimiento y Obras': { icon: '🛠️', tag: 'Infraestructura' },
+  'Convivencia y Normas': { icon: '⚖️', tag: 'Reglamento' },
+  'Trámites y Permisos': { icon: '📋', tag: 'Gestión' },
+  'Consulta General': { icon: '💬', tag: 'Institucional' }
+};
+
+function setResidentAdminNoticeCategory(category) {
+  state.activeAdminNoticeCategory = category;
+  const cfg = ADMIN_NOTICE_CATEGORIES[category] || { icon: '🏛️', tag: 'Aviso' };
+
+  document.querySelectorAll('#adminNoticeCategoriesGrid .notice-option-card').forEach((card) => {
+    card.classList.toggle('active', card.dataset.adminNoticeCat === category);
+  });
+
+  const categoryInput = document.getElementById('residentAdminNoticeCategoryInput');
+  if (categoryInput) categoryInput.value = category;
+
+  const badge = document.getElementById('selectedAdminNoticeCategoryBadge');
+  if (badge) badge.textContent = `${cfg.icon} ${category}`;
+}
+
+async function loadResidentAdminNotices() {
+  if (!state.authenticatedUser) return;
+  try {
+    const notices = await API.adminNotices.get();
+    state.residentAdminNotices = notices || [];
+    renderResidentAdminNotices();
+  } catch (error) {
+    console.error('Error cargando avisos a administración del residente:', error);
+  }
+}
+
+function renderResidentAdminNotices() {
+  const list = document.getElementById('residentAdminNoticesList');
+  const countBadge = document.getElementById('residentAdminNoticesCountBadge');
+  if (!list) return;
+
+  const notices = state.residentAdminNotices || [];
+  if (countBadge) {
+    countBadge.textContent = `${notices.length} aviso${notices.length === 1 ? '' : 's'}`;
+  }
+
+  if (notices.length === 0) {
+    list.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.1);">
+        <span style="font-size: 1.8rem; display: block; margin-bottom: 0.35rem;">🏛️</span>
+        <strong style="color: #fff; display: block; font-size: 0.95rem;">Aún no enviaste avisos a la administración</strong>
+        <p style="font-size: 0.82rem; margin: 0.25rem 0 0 0;">Utilizá el formulario superior para remitir consultas de expensas, pedidos de mantenimiento o solicitudes oficiales.</p>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = notices
+    .map((notice) => {
+      const cfg = ADMIN_NOTICE_CATEGORIES[notice.category] || { icon: '🏛️', tag: 'Aviso' };
+      const date = new Date(notice.createdAt);
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let statusBadge = '';
+      if (notice.status === 'Pendiente') {
+        statusBadge = `<span class="badge soft" style="background: #78350f !important; color: #ffffff !important; border: 1.5px solid #f59e0b !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🟡 Pendiente de respuesta</span>`;
+      } else if (notice.status === 'En gestión') {
+        statusBadge = `<span class="badge soft" style="background: #1e3a8a !important; color: #ffffff !important; border: 1.5px solid #60a5fa !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🔵 En gestión</span>`;
+      } else if (notice.status === 'Resuelto') {
+        statusBadge = `<span class="badge soft" style="background: #581c87 !important; color: #ffffff !important; border: 1.5px solid #c084fc !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🏆 Resuelto</span>`;
+      } else {
+        statusBadge = `<span class="badge soft" style="background: #064e3b !important; color: #ffffff !important; border: 1.5px solid #10b981 !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">✅ Respondido</span>`;
+      }
+
+      let responseBlock = '';
+      if (notice.response || notice.resolvedBy) {
+        const resDate = notice.resolvedAt ? new Date(notice.resolvedAt).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        responseBlock = `
+          <div class="notice-item-response" style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 10px; padding: 0.75rem 0.9rem; margin-top: 0.6rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+              <span style="font-size: 1.25rem;">🏛️</span>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.4rem;">
+                  <strong style="color: #a3e6cb; font-size: 0.86rem;">Respuesta oficial de ${escapeHTML(notice.resolvedBy || 'Administración')}</strong>
+                  <small style="color: var(--muted); font-size: 0.76rem;">${resDate ? `${resDate} hs` : ''}</small>
+                </div>
+                <p style="margin: 0; color: #fff; font-size: 0.86rem; line-height: 1.45; white-space: pre-wrap;">${escapeHTML(notice.response || 'Aviso gestionado por administración.')}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="guard-notice-item-card ${notice.status === 'Pendiente' ? 'pending' : 'attended'}">
+          <div class="notice-item-header">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <span style="font-size: 1.15rem;">${cfg.icon}</span>
+              <strong style="color: var(--gold); font-size: 0.95rem;">${escapeHTML(notice.subject)}</strong>
+              <span class="badge soft" style="font-size: 0.72rem;">${escapeHTML(notice.category)}</span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <div style="font-size: 0.78rem; color: var(--muted); display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <span>📅 Enviado el ${dateStr} a las ${timeStr} hs</span>
+          </div>
+
+          <div class="notice-item-details" style="font-size: 0.88rem; white-space: pre-wrap; margin-top: 0.2rem;">
+            ${escapeHTML(notice.details)}
+          </div>
+
+          ${responseBlock}
+        </div>
+      `;
+    })
+    .join('');
+}
+
+async function handleResidentAdminNoticeSubmit(event) {
+  event.preventDefault();
+  const categoryInput = document.getElementById('residentAdminNoticeCategoryInput');
+  const subjectInput = document.getElementById('residentAdminNoticeSubjectInput');
+  const detailsInput = document.getElementById('residentAdminNoticeDetailsInput');
+  const submitBtn = document.getElementById('submitResidentAdminNoticeBtn');
+
+  const category = categoryInput?.value?.trim() || state.activeAdminNoticeCategory || 'Expensas y Pagos';
+  const subject = subjectInput?.value?.trim();
+  const details = detailsInput?.value?.trim();
+
+  if (!subject) {
+    showToast('Por favor indicá el asunto o título de tu aviso.');
+    if (subjectInput) subjectInput.focus();
+    return;
+  }
+
+  if (!details) {
+    showToast('Por favor escribí el detalle de tu aviso o mensaje.');
+    if (detailsInput) detailsInput.focus();
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando aviso...';
+  }
+
+  try {
+    const res = await API.adminNotices.create({ category, subject, details });
+    showToast(res.message || 'Aviso enviado a la administración con éxito.');
+    if (subjectInput) subjectInput.value = '';
+    if (detailsInput) detailsInput.value = '';
+    await loadResidentAdminNotices();
+  } catch (err) {
+    showToast(err.message || 'Error al enviar el aviso a administración.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🏛️ Enviar Aviso a Administración';
+    }
+  }
+}
+
+// Admin side for received resident notices
+async function loadAdminReceivedNotices() {
+  if (state.authenticatedUser?.role !== 'admin') return;
+  try {
+    const notices = await API.adminNotices.get();
+    state.adminReceivedNotices = notices || [];
+    renderAdminReceivedNotices();
+  } catch (err) {
+    console.error('Error cargando avisos recibidos de propietarios:', err);
+  }
+}
+
+function renderAdminReceivedNotices() {
+  const list = document.getElementById('adminReceivedResidentNoticesList');
+  const countBadge = document.getElementById('adminReceivedNoticesCountBadge');
+  if (!list) return;
+
+  const all = state.adminReceivedNotices || [];
+  const pendingCount = all.filter((n) => n.status === 'Pendiente').length;
+
+  if (countBadge) {
+    if (pendingCount > 0) {
+      countBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+      countBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+      countBadge.style.color = '#f59e0b';
+      countBadge.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+    } else {
+      countBadge.textContent = `${all.length} recibidos`;
+      countBadge.style.background = 'rgba(255, 255, 255, 0.05)';
+      countBadge.style.color = 'var(--muted)';
+      countBadge.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+    }
+  }
+
+  const filter = state.activeAdminReceivedNoticeFilter || 'all';
+  let filtered = all;
+  if (filter === 'Pendiente') {
+    filtered = all.filter((n) => n.status === 'Pendiente');
+  } else if (filter === 'Respondido') {
+    filtered = all.filter((n) => n.status !== 'Pendiente');
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div style="text-align: center; padding: 1.4rem; color: var(--muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.08);">
+        <span style="font-size: 1.6rem; display: block; margin-bottom: 0.35rem;">📬</span>
+        <strong style="color: #fff; display: block; font-size: 0.95rem;">No hay avisos para mostrar</strong>
+        <p style="font-size: 0.82rem; margin: 0.2rem 0 0 0;">${filter === 'Pendiente' ? 'No hay avisos pendientes de respuesta en este momento.' : 'Aún no se recibieron avisos de propietarios en esta sección.'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = filtered
+    .map((notice) => {
+      const cfg = ADMIN_NOTICE_CATEGORIES[notice.category] || { icon: '🏛️', tag: 'Aviso' };
+      const date = new Date(notice.createdAt);
+      const dateStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const location = notice.lote || notice.manzana ? `(Lote ${escapeHTML(notice.lote || '-')}, Mz ${escapeHTML(notice.manzana || '-')})` : '';
+
+      let statusBadge = '';
+      if (notice.status === 'Pendiente') {
+        statusBadge = `<span class="badge soft" style="background: #78350f !important; color: #ffffff !important; border: 1.5px solid #f59e0b !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🟡 Pendiente</span>`;
+      } else if (notice.status === 'En gestión') {
+        statusBadge = `<span class="badge soft" style="background: #1e3a8a !important; color: #ffffff !important; border: 1.5px solid #60a5fa !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🔵 En gestión</span>`;
+      } else if (notice.status === 'Resuelto') {
+        statusBadge = `<span class="badge soft" style="background: #581c87 !important; color: #ffffff !important; border: 1.5px solid #c084fc !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">🏆 Resuelto</span>`;
+      } else {
+        statusBadge = `<span class="badge soft" style="background: #064e3b !important; color: #ffffff !important; border: 1.5px solid #10b981 !important; font-weight: 700; font-size: 0.8rem; padding: 0.25rem 0.6rem;">✅ Respondido</span>`;
+      }
+
+      let responseBlock = '';
+      if (notice.response) {
+        responseBlock = `
+          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 8px; padding: 0.55rem 0.75rem; font-size: 0.82rem; margin-top: 0.35rem;">
+            <strong style="color: #a3e6cb;">Respuesta enviada:</strong> <span style="color: #fff;">${escapeHTML(notice.response)}</span>
+            ${notice.resolvedAt ? `<span style="color: var(--muted); font-size: 0.75rem; display: block; margin-top: 0.2rem;">${new Date(notice.resolvedAt).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs</span>` : ''}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="guard-notice-item-card ${notice.status === 'Pendiente' ? 'pending' : 'attended'}">
+          <div class="notice-item-header">
+            <div>
+              <strong style="color: #fff; font-size: 0.96rem;">${escapeHTML(notice.residentName)}</strong>
+              <span style="color: var(--gold); font-size: 0.84rem; font-weight: 600; margin-left: 0.3rem;">${location}</span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted);">
+            <span>${cfg.icon} <strong>${escapeHTML(notice.category)}</strong></span>
+            <span>·</span>
+            <strong style="color: #fff;">${escapeHTML(notice.subject)}</strong>
+            <span>·</span>
+            <span>📅 ${dateStr} ${timeStr} hs</span>
+            ${notice.userPhone ? `<span>· 📱 ${escapeHTML(notice.userPhone)}</span>` : ''}
+            ${notice.userEmail ? `<span>· ✉️ ${escapeHTML(notice.userEmail)}</span>` : ''}
+          </div>
+
+          <div class="notice-item-details" style="font-size: 0.88rem; white-space: pre-wrap;">
+            ${escapeHTML(notice.details)}
+          </div>
+
+          ${responseBlock}
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.4rem;">
+            <button type="button" class="btn-inline-action primary admin-respond-notice-btn" data-notice-id="${notice.id}">
+              💬 ${notice.response ? 'Editar Respuesta / Estado' : 'Responder al Propietario'}
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  list.querySelectorAll('.admin-respond-notice-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const noticeId = Number(btn.dataset.noticeId);
+      const notice = (state.adminReceivedNotices || []).find((n) => n.id === noticeId);
+      if (notice) {
+        openAdminRespondNoticeModal(notice);
+      }
+    });
+  });
+}
+
+function openAdminRespondNoticeModal(notice) {
+  const modal = document.getElementById('adminRespondNoticeModal');
+  const idInput = document.getElementById('adminRespondNoticeId');
+  const residentNameEl = document.getElementById('adminRespondResidentName');
+  const catBadge = document.getElementById('adminRespondCategoryBadge');
+  const subjectEl = document.getElementById('adminRespondSubject');
+  const detailsEl = document.getElementById('adminRespondDetails');
+  const statusSelect = document.getElementById('adminRespondStatusSelect');
+  const messageInput = document.getElementById('adminRespondMessageInput');
+
+  if (!modal) return;
+
+  if (idInput) idInput.value = notice.id;
+  if (residentNameEl) {
+    const loc = notice.lote || notice.manzana ? ` (Lote ${notice.lote || '-'}, Mz ${notice.manzana || '-'})` : '';
+    residentNameEl.textContent = `${notice.residentName}${loc}`;
+  }
+  if (catBadge) catBadge.textContent = notice.category;
+  if (subjectEl) subjectEl.textContent = notice.subject;
+  if (detailsEl) detailsEl.textContent = notice.details;
+  if (statusSelect) {
+    statusSelect.value = notice.status === 'Pendiente' ? 'Respondido' : notice.status;
+  }
+  if (messageInput) {
+    messageInput.value = notice.response || '';
+  }
+
+  modal.style.display = 'flex';
+  if (messageInput) messageInput.focus();
+}
+
+function closeAdminRespondNoticeModal() {
+  const modal = document.getElementById('adminRespondNoticeModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleAdminRespondNoticeSubmit(event) {
+  event.preventDefault();
+  const idInput = document.getElementById('adminRespondNoticeId');
+  const statusSelect = document.getElementById('adminRespondStatusSelect');
+  const messageInput = document.getElementById('adminRespondMessageInput');
+  const submitBtn = document.getElementById('submitAdminRespondNoticeBtn');
+
+  const noticeId = Number(idInput?.value);
+  const status = statusSelect?.value || 'Respondido';
+  const response = messageInput?.value?.trim() || '';
+
+  if (!noticeId) return;
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
+  }
+
+  try {
+    const res = await API.adminNotices.updateStatus(noticeId, { status, response });
+    showToast(res.message || 'Respuesta registrada y notificada con éxito.');
+    closeAdminRespondNoticeModal();
+    await loadAdminReceivedNotices();
+  } catch (err) {
+    showToast(err.message || 'Error al actualizar el aviso.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '💾 Guardar y Responder';
+    }
+  }
+}
+
+function setupAdminNoticesEventListeners() {
+  // Resident category options click
+  document.querySelectorAll('#adminNoticeCategoriesGrid .notice-option-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      setResidentAdminNoticeCategory(card.dataset.adminNoticeCat);
+    });
+  });
+
+  // Resident form submit
+  const residentForm = document.getElementById('residentAdminNoticeForm');
+  if (residentForm) {
+    residentForm.addEventListener('submit', handleResidentAdminNoticeSubmit);
+  }
+
+  // Resident refresh list button
+  const refreshResidentBtn = document.getElementById('refreshResidentAdminNoticesBtn');
+  if (refreshResidentBtn) {
+    refreshResidentBtn.addEventListener('click', async () => {
+      await loadResidentAdminNotices();
+      showToast('Avisos actualizados.');
+    });
+  }
+
+  // Admin filter buttons
+  document.querySelectorAll('.admin-notice-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-notice-filter-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.activeAdminReceivedNoticeFilter = btn.dataset.adminFilter || 'all';
+      renderAdminReceivedNotices();
+    });
+  });
+
+  // Admin refresh button
+  const refreshAdminBtn = document.getElementById('refreshAdminReceivedNoticesBtn');
+  if (refreshAdminBtn) {
+    refreshAdminBtn.addEventListener('click', async () => {
+      await loadAdminReceivedNotices();
+      showToast('Avisos de propietarios actualizados.');
+    });
+  }
+
+  // Admin modal close buttons
+  const closeBtn = document.getElementById('closeAdminRespondNoticeModalBtn');
+  const cancelBtn = document.getElementById('cancelAdminRespondNoticeBtn');
+  if (closeBtn) closeBtn.addEventListener('click', closeAdminRespondNoticeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeAdminRespondNoticeModal);
+
+  // Admin respond form submit
+  const respondForm = document.getElementById('adminRespondNoticeForm');
+  if (respondForm) {
+    respondForm.addEventListener('submit', handleAdminRespondNoticeSubmit);
+  }
+}
+
 // ----------------- AUTHENTICATION FLOWS ----------------- //
 
 async function handleLogin(event) {
@@ -5338,7 +6509,7 @@ function attachEventListeners() {
       const tab = button.dataset.adminViewTab;
       state.activeAdminTab = tab;
       setDashboardView('admin');
-      setAdminTab(tab);
+      setAdminTab(tab, true);
     });
   });
 
@@ -5729,7 +6900,7 @@ function attachEventListeners() {
 
   if (adminGoToAuditFromGuardBtn) {
     adminGoToAuditFromGuardBtn.addEventListener('click', () => {
-      setAdminTab('auditoria');
+      setAdminTab('auditoria', true);
     });
   }
 
@@ -5985,10 +7156,10 @@ function attachEventListeners() {
   if (copyInviteLinkWhatsappBtn) copyInviteLinkWhatsappBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkWhatsappBtn));
   if (toggleManualVisitFormBtn) toggleManualVisitFormBtn.addEventListener('click', toggleManualVisitForm);
 
-  // Admin module buttons navigation (no-scroll modular architecture)
+  // Admin module buttons navigation (bottom navigation)
   document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      setAdminTab(btn.dataset.adminTab);
+      setAdminTab(btn.dataset.adminTab, true);
     });
   });
 
@@ -6526,6 +7697,11 @@ function attachEventListeners() {
       stopQrScanner(true);
       return;
     }
+    const adminRespondNoticeModal = document.getElementById('adminRespondNoticeModal');
+    if (adminRespondNoticeModal && adminRespondNoticeModal.style.display !== 'none') {
+      closeAdminRespondNoticeModal();
+      return;
+    }
 
     if (dashboardScreen && dashboardScreen.classList.contains('active')) {
       let targetView = e.state?.view || (window.location.hash ? window.location.hash.replace('#', '') : 'home');
@@ -6535,6 +7711,12 @@ function attachEventListeners() {
       setDashboardView(targetView, false);
     }
   });
+
+  // Advanced Configuration listeners
+  setupConfigEventListeners();
+
+  // Avisos a Administración listeners
+  setupAdminNoticesEventListeners();
 
   // Listen to session expiry
   window.addEventListener('auth:expired', () => {

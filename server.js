@@ -15,6 +15,7 @@ const notificationsRoutes = require('./server/routes/notifications');
 const expensesRoutes = require('./server/routes/expenses');
 const logsRoutes = require('./server/routes/logs');
 const guardNoticesRoutes = require('./server/routes/guardNotices');
+const adminNoticesRoutes = require('./server/routes/adminNotices');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -99,6 +100,7 @@ const registerApi = (prefix = '') => {
   app.use(`${prefix}/api/expenses`, expensesRoutes);
   app.use(`${prefix}/api/activity-logs`, logsRoutes);
   app.use(`${prefix}/api/guard-notices`, guardNoticesRoutes);
+  app.use(`${prefix}/api/admin-notices`, adminNoticesRoutes);
   app.get(`${prefix}/api/health`, (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });

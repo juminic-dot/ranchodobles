@@ -597,6 +597,16 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
       return res.status(403).json({ error: 'No tenés permisos para actualizar esta visita.' });
     }
 
+    // Resident/owner can only cancel visits that have not entered yet
+    if (!isAdmin && status === 'Cancelado') {
+      if (visit.status === 'Ingresado' || visit.entryAt) {
+        return res.status(400).json({ error: 'No es posible cancelar una visita que ya ingresó y se encuentra dentro del predio.' });
+      }
+      if (visit.status === 'Egresado' || visit.exitAt) {
+        return res.status(400).json({ error: 'No es posible cancelar una visita que ya egresó del predio.' });
+      }
+    }
+
     const now = new Date().toISOString();
 
     if (status === 'Ingresado') {
@@ -665,6 +675,15 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Solo podés eliminar tus propias visitas.' });
+    }
+
+    if (!isAdmin) {
+      if (visit.status === 'Ingresado' || visit.entryAt) {
+        return res.status(400).json({ error: 'No es posible cancelar una visita que ya ingresó y se encuentra dentro del predio.' });
+      }
+      if (visit.status === 'Egresado' || visit.exitAt) {
+        return res.status(400).json({ error: 'No es posible cancelar una visita que ya egresó del predio.' });
+      }
     }
 
     db.prepare('DELETE FROM visits WHERE id = ?').run(visitId);

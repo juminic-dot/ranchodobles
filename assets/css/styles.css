@@ -277,6 +277,27 @@ select {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
+select {
+  background-color: #0b1520 !important;
+  color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+select option,
+optgroup {
+  background-color: #0b1520 !important;
+  color: #ffffff !important;
+  color-scheme: dark !important;
+  padding: 0.6rem 0.8rem;
+  font-weight: 500;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #1a324b !important;
+  color: #a3e6cb !important;
+}
+
 input::placeholder {
   color: rgba(155, 174, 204, 0.8);
 }
@@ -1705,12 +1726,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: #ffffff;
 }
 
-/* Admin Nav Buttons & Modular Views (No-Scroll) */
+/* Admin Bottom Nav Container & Buttons (Modulo visible arriba, navegacion abajo) */
+.admin-bottom-nav-container {
+  margin-top: 2rem;
+  padding: 1.25rem 1.2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md, 16px);
+}
+
+.admin-bottom-nav-header {
+  margin-bottom: 0.85rem;
+}
+
 .admin-nav-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin: 1.2rem 0 1rem 0;
+  margin: 0;
   padding: 0.4rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2195,6 +2228,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .menu-big-btn.btn-guard-notices .menu-btn-icon {
   background: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.25);
+}
+
+.menu-big-btn.btn-admin-notices::before {
+  background: #38bdf8;
+}
+.menu-big-btn.btn-admin-notices:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.menu-big-btn.btn-admin-notices .menu-btn-icon {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
 }
 
 .menu-big-btn.btn-admin::before {
@@ -3151,7 +3195,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   align-items: center;
 }
 
-.guard-subfilter-btn {
+.guard-subfilter-btn,
+.guard-filter-tab,
+.guard-notice-filter-btn {
   padding: 0.4rem 0.85rem;
   border-radius: 999px;
   font-size: 0.82rem;
@@ -3164,12 +3210,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: var(--muted);
 }
 
-.guard-subfilter-btn:hover {
+.guard-subfilter-btn:hover,
+.guard-filter-tab:hover,
+.guard-notice-filter-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
 }
 
-.guard-subfilter-btn.active {
+.guard-subfilter-btn.active,
+.guard-filter-tab.active,
+.guard-notice-filter-btn.active {
   background: rgba(212, 163, 89, 0.22) !important;
   border-color: var(--gold) !important;
   color: #fff !important;
@@ -3531,22 +3581,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     display: none;
   }
 
-  .guard-subfilter-btn {
+  .guard-subfilter-btn,
+  .guard-filter-tab,
+  .guard-notice-filter-btn {
     flex-shrink: 0;
     padding: 0.42rem 0.85rem;
   }
 
   /* Visit Card Action Buttons on Mobile */
-  .guard-visit-card {
-    padding: 0.95rem 1rem;
-  }
-
-  .guard-visit-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
   .guard-visit-actions {
     width: 100%;
     display: grid;
@@ -3554,13 +3596,20 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     gap: 0.5rem;
   }
 
+  .guard-visit-actions button,
   .guard-confirm-entry-btn,
   .guard-confirm-exit-btn,
-  .guard-view-qr-btn {
+  .guard-view-qr-btn,
+  .mark-ingreso-btn,
+  .mark-egreso-btn,
+  .admin-view-visit-qr-btn {
     width: 100%;
     min-height: 42px;
-    padding: 0.65rem 0.6rem;
-    font-size: 0.84rem;
+    padding: 0.6rem 0.55rem;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* If only QR button exists, span full width */
@@ -3714,6 +3763,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-left: 4px solid #10b981;
 }
 
+.guard-notice-item-card.exited {
+  border-left: 4px solid rgba(255, 255, 255, 0.22);
+}
+
 .notice-item-header {
   display: flex;
   justify-content: space-between;
@@ -3751,6 +3804,176 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
+}
+
+/* ==========================================================================
+   Configuración Avanzada del Sistema (Email & WhatsApp)
+   ========================================================================== */
+
+.config-status-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+  margin: 1.1rem 0;
+}
+
+.config-service-badge-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.1rem;
+  display: flex;
+  gap: 0.95rem;
+  align-items: center;
+  transition: all 0.22s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.config-service-badge-card:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.config-badge-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+}
+
+.config-badge-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.config-badge-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+.config-badge-status {
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.config-badge-desc {
+  color: var(--muted);
+  font-size: 0.78rem;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-provider-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.config-provider-box {
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 12px;
+  padding: 0.95rem;
+  height: 100%;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.config-provider-box:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(105, 210, 166, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.config-provider-box.active {
+  border-color: var(--primary);
+  background: rgba(105, 210, 166, 0.1);
+  box-shadow: 0 0 0 1px rgba(105, 210, 166, 0.45), 0 8px 24px rgba(105, 210, 166, 0.12);
+}
+
+.config-provider-box.active::after {
+  content: "✓";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: rgba(105, 210, 166, 0.2);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.config-card-inner {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
+.config-card-inner.test-box {
+  background: rgba(10, 20, 28, 0.6);
+  border-color: rgba(105, 210, 166, 0.2);
+}
+
+.config-subpanel {
+  display: none;
+}
+
+.config-subpanel.active {
+  display: block;
+  animation: fadeInSubpanel 0.22s ease-out;
+}
+
+@keyframes fadeInSubpanel {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#emailResidentsCheckboxesList label {
+  transition: background 0.15s ease;
+}
+
+#emailResidentsCheckboxesList label:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 699px) {
+  .config-provider-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .config-status-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-card-inner {
+    padding: 0.95rem;
+  }
 }
 
 

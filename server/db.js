@@ -149,6 +149,24 @@ db.exec(`
     resolvedBy TEXT,
     createdAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS admin_notices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER NOT NULL,
+    residentName TEXT NOT NULL,
+    lote TEXT,
+    manzana TEXT,
+    userEmail TEXT,
+    userPhone TEXT,
+    category TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    details TEXT NOT NULL,
+    status TEXT DEFAULT 'Pendiente',
+    response TEXT,
+    resolvedAt TEXT,
+    resolvedBy TEXT,
+    createdAt TEXT NOT NULL
+  );
 `);
 
 // Migrations for existing databases
@@ -186,6 +204,27 @@ try {
     );
   `);
 } catch (e) {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_notices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      residentName TEXT NOT NULL,
+      lote TEXT,
+      manzana TEXT,
+      userEmail TEXT,
+      userPhone TEXT,
+      category TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      details TEXT NOT NULL,
+      status TEXT DEFAULT 'Pendiente',
+      response TEXT,
+      resolvedAt TEXT,
+      resolvedBy TEXT,
+      createdAt TEXT NOT NULL
+    );
+  `);
+} catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN vehiclePlate TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN guestEmail TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE visits ADD COLUMN visitorPhone TEXT;"); } catch (e) {}
@@ -208,6 +247,17 @@ try { db.exec("ALTER TABLE notifications ADD COLUMN senderName TEXT;"); } catch 
 try { db.exec("ALTER TABLE invites ADD COLUMN used INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN usedAt TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN usedByVisitor TEXT;"); } catch (e) {}
+
+// System settings table for Email & WhatsApp configuration
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updatedAt TEXT
+    );
+  `);
+} catch (e) {}
 
 // Retroactively classify legacy notifications (only if targetRole is NULL)
 try {
@@ -388,6 +438,56 @@ function logActivity(userId, userName, userRole, action, details = '', ip = '') 
   }
 }
 
+function getSetting(key, defaultValue = null) {
+  try {
+    const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
+    return row && row.value !== null && row.value !== undefined ? row.value : defaultValue;
+  } catch (err) {
+    console.error(`[DB getSetting Error] key=${key}`, err);
+    return defaultValue;
+  }
+}
+
+function setSetting(key, value) {
+  try {
+    const now = new Date().toISOString();
+    const valStr = value !== null && value !== undefined ? String(value) : '';
+    db.prepare(`
+      INSERT INTO system_settings (key, value, updatedAt)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt
+    `).run(key, valStr, now);
+  } catch (err) {
+    console.error(`[DB setSetting Error] key=${key}`, err);
+  }
+}
+
+function getAllSettings() {
+  try {
+    const rows = db.prepare('SELECT key, value FROM system_settings').all();
+    const map = {};
+    for (const r of rows) {
+      map[r.key] = r.value;
+    }
+    return map;
+  } catch (err) {
+    console.error('[DB getAllSettings Error]', err);
+    return {};
+  }
+}
+
+function setSettings(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  for (const [key, value] of Object.entries(obj)) {
+    setSetting(key, value);
+  }
+}
+
 module.exports = db;
 module.exports.db = db;
 module.exports.logActivity = logActivity;
+module.exports.getSetting = getSetting;
+module.exports.setSetting = setSetting;
+module.exports.getAllSettings = getAllSettings;
+module.exports.setSettings = setSettings;
+
