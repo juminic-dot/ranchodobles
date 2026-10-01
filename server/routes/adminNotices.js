@@ -199,9 +199,10 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
 
     // Forward response to Email if configured and email available
     const mailerStatus = getMailerStatus();
-    if (mailerStatus.configured && resident && resident.email && resident.email.includes('@')) {
+    const validEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (mailerStatus.configured && resident && resident.email && validEmailRegex.test(resident.email.trim()) && !resident.email.toLowerCase().endsWith('@guardia')) {
       sendGenericEmail({
-        to: resident.email,
+        to: resident.email.trim(),
         subject: `Rancho Doble S — Respuesta a tu aviso: ${notice.subject}`,
         text: `Hola ${resident.nombre} ${resident.apellido},\n\nLa administración ha respondido a tu aviso sobre "${notice.subject}":\n\nEstado: ${status}\nRespuesta:\n${cleanResponse || 'Tu aviso se encuentra ' + status + '.'}\n\nAdministración Rancho Doble S`,
         fromName: 'Administración Rancho Doble S'

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
+const { notify } = require('../notifier');
 
 // GET /api/news
 router.get('/', (req, res) => {
@@ -46,15 +47,15 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       now
     );
 
-    // Broadcast notification to all residents (community)
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (NULL, 'all', ?, ?, 0, ?)
-    `).run(
-      'Nueva noticia del predio',
-      title.trim(),
-      now
-    );
+    // Broadcast notification to all residents (in-app and WhatsApp)
+    const adminSender = req.user ? `${req.user.nombre} ${req.user.apellido} (Administración)` : 'Administración Rancho Doble S';
+    notify({
+      targetRole: 'all',
+      title: '📢 Nueva noticia del predio',
+      text: `${title.trim()}\n\n${description.trim()}`,
+      senderId: req.user ? req.user.id : null,
+      senderName: adminSender
+    }).catch(e => console.error('[News Notify Error]', e));
 
     res.status(201).json({
       message: 'Noticia publicada con éxito.',

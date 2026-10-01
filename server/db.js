@@ -347,7 +347,7 @@ function ensureOfficialUsers() {
 
     const usersToDelete = db.prepare(`
       SELECT id FROM users
-      WHERE LOWER(email) NOT IN ('superadmin@ranchodobles.com', 'superadmin', 'jorgecabral@guardia', 'jorgesuarez@ranchodobles.com')
+      WHERE LOWER(email) NOT IN ('superadmin@ranchodobles.com', 'superadmin', 'jorgecabral@guardia', 'jorgesuarez@ranchodobles.com', 'juminic@gmail.com')
         AND LOWER(COALESCE(username, '')) NOT IN ('superadmin', 'l2m2', 'jorgecabral@guardia')
     `).all();
 
@@ -376,13 +376,13 @@ function ensureOfficialUsers() {
     }
 
     // 3. Ensure Vecino: Jorge Suarez (Usuario: l2m2, Password: vecinos2026)
-    const vecino = db.prepare("SELECT id FROM users WHERE LOWER(username) = 'l2m2' OR LOWER(email) = 'jorgesuarez@ranchodobles.com'").get();
+    const vecino = db.prepare("SELECT id, email, telefono FROM users WHERE LOWER(username) = 'l2m2' OR LOWER(email) = 'jorgesuarez@ranchodobles.com' OR LOWER(email) = 'juminic@gmail.com'").get();
     let vecinoId;
     if (!vecino) {
       const res = db.prepare(`
         INSERT INTO users (apellido, nombre, tipoDocumento, numeroDocumento, telefono, email, username, lote, manzana, passwordHash, role, approved, createdAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-      `).run('Suarez', 'Jorge', 'DNI', '30123456', '1122334455', 'jorgesuarez@ranchodobles.com', 'l2m2', '2', '2', defaultHash, 'user', now);
+      `).run('Suarez', 'Jorge', 'DNI', '30123456', '1138604906', 'juminic@gmail.com', 'l2m2', '2', '2', defaultHash, 'user', now);
       vecinoId = Number(res.lastInsertRowid);
       console.log('[DB] Usuario Vecino oficial creado: Jorge Suarez (l2m2)');
 
@@ -404,7 +404,8 @@ function ensureOfficialUsers() {
       insertVisit.run(vecinoId, 'Jorge Suarez (L2M2)', 'Mariana Pérez', '34222111', 'AF 234 CD', '2026-09-22', '18:30', 'Ingresado', now);
     } else {
       vecinoId = vecino.id;
-      db.prepare("UPDATE users SET nombre = 'Jorge', apellido = 'Suarez', email = 'jorgesuarez@ranchodobles.com', username = 'l2m2', lote = '2', manzana = '2', passwordHash = ?, role = 'user', approved = 1 WHERE id = ?").run(defaultHash, vecinoId);
+      const currentEmail = (vecino.email && vecino.email !== 'jorgesuarez@ranchodobles.com') ? vecino.email : 'juminic@gmail.com';
+      db.prepare("UPDATE users SET nombre = 'Jorge', apellido = 'Suarez', email = ?, username = 'l2m2', lote = '2', manzana = '2', passwordHash = ?, role = 'user', approved = 1 WHERE id = ?").run(currentEmail, defaultHash, vecinoId);
     }
 
     // 4. Ensure Guardia: Jorge Cabral (Usuario: jorgecabral@guardia, Password: vecinos2026)

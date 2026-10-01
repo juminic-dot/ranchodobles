@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { authenticateToken, requireAdmin } = require('../middleware');
+const { notify } = require('../notifier');
 
 const bankInfo = {
   banco: 'Banco Galicia',
@@ -132,16 +133,14 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
         WHERE id = ?
       `).run(cleanRef, savedReceiptPath, savedReceiptName, savedReceiptMime, now, expenseId);
 
-      // Notify resident
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (?, 'user', ?, ?, 0, ?)
-      `).run(
-        expense.userId,
-        'Pago de expensas acreditado',
-        `La administración acreditó como pagado el periodo ${expense.period}.`,
-        now
-      );
+      // Notify resident (in-app and personal WhatsApp)
+      notify({
+        userId: expense.userId,
+        targetRole: 'user',
+        title: '✅ Pago de expensas acreditado',
+        text: `La administración acreditó como pagado el periodo ${expense.period}.`,
+        senderName: 'Administración Rancho Doble S'
+      }).catch(e => console.error('[Expense Accredit Notify Error]', e));
 
       return res.json({ message: 'Pago acreditado con éxito por administración.', status: 'Pagado' });
     }
@@ -165,26 +164,24 @@ router.post('/:id/pay', authenticateToken, (req, res) => {
       expenseId
     );
 
-    // Notify resident (personal)
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, 'user', ?, ?, 0, ?)
-    `).run(
-      req.user.id,
-      'Aviso de pago de expensas',
-      `Tu aviso de pago para el periodo ${expense.period} fue registrado${savedReceiptPath ? ' con comprobante digital' : ''} y está en revisión por la administración.`,
-      now
-    );
+    // Notify resident (personal confirmation)
+    notify({
+      userId: req.user.id,
+      targetRole: 'user',
+      title: '🧾 Aviso de pago de expensas',
+      text: `Tu aviso de pago para el periodo ${expense.period} fue registrado${savedReceiptPath ? ' con comprobante digital' : ''} y está en revisión por la administración.`,
+      senderName: 'Administración Rancho Doble S'
+    }).catch(e => console.error('[Expense Inform Notify Error]', e));
 
-    // Notify admin (exclusively for administrators)
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (NULL, 'admin', ?, ?, 0, ?)
-    `).run(
-      'Nuevo aviso de pago de expensas',
-      `${req.user.nombre} ${req.user.apellido} informó el pago de expensas del periodo ${expense.period}${cleanRef ? ` (${cleanRef})` : ''}${savedReceiptPath ? ' con comprobante digital adjunto' : ''}.`,
-      now
-    );
+    // Notify admin (operational notice, no resident WhatsApp)
+    notify({
+      targetRole: 'admin',
+      title: 'Nuevo aviso de pago de expensas',
+      text: `${req.user.nombre} ${req.user.apellido} informó el pago de expensas del periodo ${expense.period}${cleanRef ? ` (${cleanRef})` : ''}${savedReceiptPath ? ' con comprobante digital adjunto' : ''}.`,
+      senderId: req.user.id,
+      senderName: `${req.user.nombre} ${req.user.apellido}`,
+      sendWhatsApp: false
+    }).catch(e => console.error('[Expense Admin Inform Notify Error]', e));
 
     res.json({
       message: 'Aviso de pago y comprobante enviados. Se encuentra en revisión por la administración.',
@@ -261,27 +258,25 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
 
     db.prepare('UPDATE expenses SET status = ?, paidAt = ? WHERE id = ?').run(status, paidAt, expenseId);
 
-    // Notify resident of the decision
+    // Notify resident of the decision (in-app and personal WhatsApp)
     if (status === 'Pagado') {
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (?, 'user', ?, ?, 0, ?)
-      `).run(
-        expense.userId,
-        '¡Pago de expensas confirmado!',
-        `La administración confirmó la recepción del pago de tus expensas del periodo ${expense.period}.`,
-        now
-      );
+      notify({
+        userId: expense.userId,
+        targetRole: 'user',
+        title: '✅ ¡Pago de expensas confirmado!',
+        text: `La administración confirmó la recepción del pago de tus expensas del periodo ${expense.period}.`,
+        senderId: req.user.id,
+        senderName: 'Administración Rancho Doble S'
+      }).catch(e => console.error('[Expense Pay Confirm Notify Error]', e));
     } else if (status === 'Pendiente') {
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (?, 'user', ?, ?, 0, ?)
-      `).run(
-        expense.userId,
-        'Aviso de expensas observado',
-        `El aviso de pago para el periodo ${expense.period} fue desestimado o requiere verificación. Por favor comunicate con administración.`,
-        now
-      );
+      notify({
+        userId: expense.userId,
+        targetRole: 'user',
+        title: '⚠️ Aviso de expensas observado',
+        text: `El aviso de pago para el periodo ${expense.period} fue desestimado o requiere verificación. Por favor comunicate con administración.`,
+        senderId: req.user.id,
+        senderName: 'Administración Rancho Doble S'
+      }).catch(e => console.error('[Expense Observe Notify Error]', e));
     }
 
     res.json({ message: `Estado de liquidación actualizado a "${status}".`, status });
@@ -346,10 +341,6 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       INSERT INTO expenses (userId, period, dueDate, amount, status, concept, createdAt)
       VALUES (?, ?, ?, ?, 'Pendiente', ?, ?)
     `);
-    const residentNotifStmt = db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, 'user', ?, ?, 0, ?)
-    `);
 
     let createdCount = 0;
     let skippedCount = 0;
@@ -362,27 +353,31 @@ router.post('/admin/emit', authenticateToken, requireAdmin, (req, res) => {
       }
 
       insertStmt.run(u.id, cleanPeriod, cleanDueDate, numAmount, cleanConcept, now);
-      // Strictly personal notification for this neighbor only
-      residentNotifStmt.run(
-        u.id,
-        'Nueva liquidación de expensas',
-        `Se emitió la liquidación de expensas para ${cleanPeriod} por un total de $ ${numAmount.toLocaleString('es-AR')}. Vencimiento: ${cleanDueDate}.`,
-        now
-      );
+
+      // Strictly personal notification for this neighbor only (in-app and WhatsApp)
+      notify({
+        userId: u.id,
+        targetRole: 'user',
+        title: '📄 Nueva liquidación de expensas',
+        text: `Se emitió la liquidación de expensas para ${cleanPeriod} por un total de $ ${numAmount.toLocaleString('es-AR')}. Vencimiento: ${cleanDueDate}. Concepto: ${cleanConcept}.`,
+        senderId: req.user.id,
+        senderName: 'Administración Rancho Doble S'
+      }).catch(e => console.error('[Expense Emission Notify Error]', e));
+
       createdCount++;
     }
 
     // Admin-only notification summary (strictly targetRole = 'admin', userId = req.user.id)
     if (createdCount > 0) {
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (?, 'admin', ?, ?, 0, ?)
-      `).run(
-        req.user.id,
-        'Emisión de expensas realizada',
-        `Se emitieron ${createdCount} liquidaciones de expensas correspondientes a ${cleanPeriod}.`,
-        now
-      );
+      notify({
+        userId: req.user.id,
+        targetRole: 'admin',
+        title: 'Emisión de expensas realizada',
+        text: `Se emitieron ${createdCount} liquidaciones de expensas correspondientes a ${cleanPeriod}.`,
+        senderId: req.user.id,
+        senderName: 'Administración Rancho Doble S',
+        sendWhatsApp: false
+      }).catch(e => console.error('[Expense Emission Admin Summary Error]', e));
 
       // Audit log
       if (typeof db.logActivity === 'function') {

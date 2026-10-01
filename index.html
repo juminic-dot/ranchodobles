@@ -270,7 +270,6 @@
                         <h4>Padrón de usuarios</h4>
                         <span class="badge soft" id="superAdminPendingBadge" style="display: none;">0 pendientes</span>
                       </div>
-                      <p>Vecinos activos, solicitudes de registro, alta y directorio de propietarios.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -285,7 +284,6 @@
                         <h4>Control de guardia</h4>
                         <span class="badge soft" id="superAdminGuardBadge" style="display: none;">0 en predio</span>
                       </div>
-                      <p>Monitoreo de ingresos y egresos, directivas a garita y detalle de visitas.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -297,7 +295,6 @@
                     <div class="menu-btn-icon">💳</div>
                     <div class="menu-btn-text">
                       <h4>Gestión de expensas</h4>
-                      <p>Emisión de liquidaciones, seguimiento de cobranzas y verificación de pagos.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -309,7 +306,6 @@
                     <div class="menu-btn-icon">🎾</div>
                     <div class="menu-btn-text">
                       <h4>Control de canchas</h4>
-                      <p>Supervisión de turnos de tenis y gestión de bloqueos de horarios.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -321,7 +317,6 @@
                     <div class="menu-btn-icon">📢</div>
                     <div class="menu-btn-text">
                       <h4>Avisos y alertas</h4>
-                      <p>Publicación de novedades, comunicados generales y notificaciones a vecinos.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -333,7 +328,6 @@
                     <div class="menu-btn-icon">📋</div>
                     <div class="menu-btn-text">
                       <h4>Auditoría general</h4>
-                      <p>Registro histórico completo de actividades, accesos y eventos de seguridad.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -348,7 +342,6 @@
                         <h4>Configuración avanzada</h4>
                         <span class="badge soft" id="superAdminConfigBadge">Ajustes</span>
                       </div>
-                      <p>Asignación de cuenta de email para envíos a propietarios y configuración de WhatsApp oficial.</p>
                     </div>
                   </div>
                   <div class="menu-btn-arrow">➔</div>
@@ -505,9 +498,6 @@
                         </svg>
                         Abrir WhatsApp
                       </button>
-                      <button type="button" class="btn-inline-action" id="copyInviteLinkWhatsappBtn" title="Copiar enlace de invitación">
-                        📋 Copiar enlace
-                      </button>
                     </div>
                   </div>
 
@@ -517,60 +507,19 @@
                       <div class="invite-card-icon manual-icon">📝</div>
                       <div>
                         <h5>Registro manual de visitas</h5>
-                        <p>Cargá los datos de tu visita directamente desde el portal y generá su código QR de ingreso al instante.</p>
+                        <p>Cargá los datos de tu visita directamente desde el formulario oficial y autorizá su ingreso en la guardia.</p>
                       </div>
                     </div>
                     <div class="invite-card-actions">
-                      <button type="button" class="primary-btn invite-action-btn manual-btn" id="toggleManualVisitFormBtn">
+                      <button type="button" class="primary-btn invite-action-btn manual-btn" id="openManualVisitBtn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
                           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
-                        Registrar visita manualmente
+                        Registrar visita
                       </button>
                     </div>
                   </div>
                 </div>
-
-                <!-- Formulario manual (oculto inicialmente) -->
-                <form id="visitForm" class="visit-form" style="display: none;" novalidate>
-                  <div class="panel-heading" style="margin-top: 0.5rem;">
-                    <h4>Carga manual de visita</h4>
-                  </div>
-                  <div class="field-grid two-col">
-                    <label>
-                      <span>Nombre y apellido de la visita</span>
-                      <input type="text" name="visitName" placeholder="Ej: Ana López" required />
-                    </label>
-                    <label>
-                      <span>DNI de la visita</span>
-                      <input type="text" name="visitDni" placeholder="Ej: 43.123.456" required />
-                    </label>
-                  </div>
-
-                  <div class="field-grid two-col">
-                    <label>
-                      <span>Patente del vehículo</span>
-                      <input type="text" name="visitPlate" placeholder="Ej: AB 123 CD (o 'Sin vehículo')" />
-                    </label>
-                    <label>
-                      <span>Fecha</span>
-                      <input type="date" name="visitDate" id="visitDateField" required />
-                    </label>
-                  </div>
-
-                  <div class="field-grid two-col">
-                    <label>
-                      <span>Horario estimado</span>
-                      <input type="time" name="visitTime" id="visitTimeField" required />
-                    </label>
-                    <label>
-                      <span>WhatsApp de la visita (opcional)</span>
-                      <input type="tel" name="visitPhone" placeholder="Ej: 11 2345-6789" />
-                    </label>
-                  </div>
-
-                  <button type="submit" class="primary-btn small-btn" id="submitVisitBtn">Registrar y generar QR</button>
-                </form>
 
                 <div class="visit-list-wrap">
                   <h5>Visitas programadas en el predio</h5>
@@ -975,12 +924,12 @@
                     </div>
                     <!-- Control de accesos -->
                     <div id="adminGuardAccesosSubpanel" style="margin-top: 0.85rem;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
-                          <button type="button" class="btn-inline-action" id="adminNotifyGuardFromGuardBtn" style="font-size: 0.82rem; padding: 0.4rem 0.8rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
+                      <div class="admin-guard-actions-container" style="margin-bottom: 0.75rem;">
+                        <div class="admin-guard-actions-row">
+                          <button type="button" class="btn-inline-action" id="adminNotifyGuardFromGuardBtn" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
                             🛡️ Notificar a Guardia
                           </button>
-                          <button type="button" class="btn-inline-action" id="adminGoToAuditFromGuardBtn" style="font-size: 0.82rem; padding: 0.4rem 0.8rem;">
+                          <button type="button" class="btn-inline-action" id="adminGoToAuditFromGuardBtn" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
                             📋 Ver Auditoría General
                           </button>
                         </div>
@@ -991,6 +940,7 @@
                         <input
                           type="search"
                           id="guardSearchInput"
+                          class="guard-search-input"
                           placeholder="🔍 Buscar por Patente, DNI o Nombre..."
                           style="width: 100%; padding: 0.6rem 0.9rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;"
                           autocomplete="off"
@@ -1047,7 +997,7 @@
                         <span class="badge soft" id="adminCourtOccupiedBadge">0 ocupados</span>
                         <span class="badge soft" id="adminCourtBlockedBadge" style="display: none; background: rgba(255, 122, 122, 0.15); color: var(--danger); border: 1px solid rgba(255, 122, 122, 0.3);">0 bloqueados</span>
                       </div>
-                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                      <div class="admin-courts-toolbar" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                         <button type="button" class="btn-inline-action active" id="adminCourtDateTodayBtn">Hoy</button>
                         <button type="button" class="btn-inline-action" id="adminCourtDateTomorrowBtn">Mañana</button>
                         <input
@@ -1080,7 +1030,7 @@
                         <h4>🏛️ Avisos Recibidos de Propietarios</h4>
                         <span class="badge soft" id="adminReceivedNoticesCountBadge">0 avisos</span>
                       </div>
-                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                      <div class="admin-notices-toolbar" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                         <button type="button" class="btn-inline-action active admin-notice-filter-btn" data-admin-filter="all">Todos</button>
                         <button type="button" class="btn-inline-action admin-notice-filter-btn" data-admin-filter="Pendiente">⏳ Pendientes</button>
                         <button type="button" class="btn-inline-action admin-notice-filter-btn" data-admin-filter="Respondido">✅ Respondidos</button>
@@ -1098,7 +1048,7 @@
                         <h4>📢 Avisos y Alertas Masivas Inmediatas</h4>
                         <span class="badge soft" id="adminBroadcastAlertsCount">0 emitidas</span>
                       </div>
-                      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                      <div class="admin-alerts-toolbar" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                         <button type="button" class="primary-btn" id="openBroadcastAlertModalBtn" style="padding: 0.42rem 0.95rem; font-size: 0.85rem; width: auto; background: var(--gold); color: #081018; border: none; font-weight: 600;">
                           🚨 Alerta Masiva
                         </button>
@@ -1132,12 +1082,12 @@
                     <p class="panel-subtext">Historial auditable centralizado e inalterable de cada acción realizada en la aplicación por vecinos, personal de guardia y administradores.</p>
 
                     <!-- Filtros de búsqueda y roles -->
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; align-items: center;">
+                    <div class="audit-search-controls" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; align-items: center; width: 100%;">
                       <input
                         type="search"
                         id="adminAuditSearchInput"
                         placeholder="🔍 Buscar por operador, acción, lote, detalle..."
-                        style="flex: 1; min-width: 220px; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem;"
+                        style="flex: 1 1 200px; min-width: 0; width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.88rem;"
                         autocomplete="off"
                       />
                       <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;" id="adminAuditRoleFilters">
@@ -1346,8 +1296,18 @@
 
                           <div class="config-provider-selector" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
                             <label class="config-provider-option" style="cursor: pointer;">
-                              <input type="radio" name="whatsappProvider" value="meta_cloud" id="waProviderMeta" checked style="display: none;" />
-                              <div class="config-provider-box active" data-wa-provider-box="meta_cloud" style="border: 1px solid var(--primary); background: rgba(105, 210, 166, 0.08); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                              <input type="radio" name="whatsappProvider" value="baileys" id="waProviderBaileys" checked style="display: none;" />
+                              <div class="config-provider-box active" data-wa-provider-box="baileys" style="border: 1px solid var(--primary); background: rgba(105, 210, 166, 0.08); border-radius: 10px; padding: 0.85rem; height: 100%;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.2rem;">
+                                  <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">WhatsApp Baileys (Nativo / QR)</div>
+                                  <span style="background: rgba(105, 210, 166, 0.2); color: var(--primary); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Recomendado</span>
+                                </div>
+                                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Escaneá el código QR directamente aquí con el WhatsApp de guardia o administración. Sin costo ni APIs externas.</div>
+                              </div>
+                            </label>
+                            <label class="config-provider-option" style="cursor: pointer;">
+                              <input type="radio" name="whatsappProvider" value="meta_cloud" id="waProviderMeta" style="display: none;" />
+                              <div class="config-provider-box" data-wa-provider-box="meta_cloud" style="border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 0.85rem; height: 100%;">
                                 <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">Meta Cloud API (Oficial)</div>
                                 <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem;">Graph API de Meta/Facebook para envíos de alta confiabilidad y QR directo.</div>
                               </div>
@@ -1375,8 +1335,70 @@
                             </label>
                           </div>
 
+                          <!-- Bloque WhatsApp Baileys Nativo -->
+                          <div id="waBaileysFields" class="config-fields-block" style="display: grid; gap: 1rem;">
+                            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 1.2rem;">
+                              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+                                <div>
+                                  <div style="font-size: 1rem; font-weight: 700; color: #fff;">Estado de Conexión de WhatsApp Baileys</div>
+                                  <div style="font-size: 0.82rem; color: var(--muted);">Conectá la línea oficial del predio para enviar pases QR y alertas automáticas a propietarios.</div>
+                                </div>
+                                <div id="baileysStatusBadge" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                  <span id="baileysStatusDot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+                                  <span id="baileysStatusText">Desconectado</span>
+                                </div>
+                              </div>
+
+                              <!-- Panel cuando está conectado -->
+                              <div id="baileysConnectedBox" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                  <div>
+                                    <div style="font-weight: 700; color: #a7f3d0; font-size: 0.95rem;">✅ Sesión de WhatsApp Vinculada y Activa</div>
+                                    <div style="font-size: 0.83rem; color: #cbd5e1; margin-top: 0.2rem;">Número conectado: <strong id="baileysConnectedPhoneNum" style="color: #fff;">-</strong></div>
+                                  </div>
+                                  <button type="button" id="baileysDisconnectBtn" style="padding: 0.45rem 1rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.82rem;">
+                                    🔌 Desconectar WhatsApp
+                                  </button>
+                                </div>
+                              </div>
+
+                              <!-- Panel cuando está esperando escaneo de QR -->
+                              <div id="baileysQrBox" style="display: none; text-align: center; padding: 1rem; background: rgba(0, 0, 0, 0.2); border-radius: 10px; margin-bottom: 0.75rem;">
+                                <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem; font-size: 0.95rem;">Escaneá este código QR con WhatsApp</div>
+                                <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                                  1. Abrí WhatsApp en el celular de la Guardia o Administración.<br/>
+                                  2. Tocá los tres puntos <strong>(⋮)</strong> o <strong>Ajustes</strong> ➔ <strong>Dispositivos vinculados</strong>.<br/>
+                                  3. Tocá <strong>"Vincular un dispositivo"</strong> y apuntá la cámara hacia la pantalla:
+                                </div>
+                                <div style="display: inline-block; padding: 12px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                                  <img id="baileysQrImage" src="" alt="Código QR WhatsApp" style="display: block; width: 220px; height: 220px;" />
+                                </div>
+                                <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.75rem;">
+                                  <button type="button" id="baileysRefreshQrBtn" style="padding: 0.45rem 1rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; font-size: 0.82rem; cursor: pointer;">
+                                    🔄 Actualizar QR
+                                  </button>
+                                  <button type="button" id="baileysCancelConnectBtn" style="padding: 0.45rem 1rem; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); border-radius: 8px; font-size: 0.82rem; cursor: pointer;">
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+
+                              <!-- Panel cuando está desconectado -->
+                              <div id="baileysDisconnectedBox" style="text-align: center; padding: 1.5rem 1rem; background: rgba(0, 0, 0, 0.15); border-radius: 10px;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📲</div>
+                                <div style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 0.35rem;">WhatsApp Baileys no está conectado</div>
+                                <div style="font-size: 0.82rem; color: var(--muted); max-width: 440px; margin: 0 auto 1.2rem auto; line-height: 1.45;">
+                                  Vinculá el celular de la guardia o administración para que los códigos QR y las notificaciones a los propietarios se envíen automáticamente desde este número.
+                                </div>
+                                <button type="button" id="baileysConnectBtn" style="padding: 0.6rem 1.4rem; font-weight: 700; font-size: 0.88rem; width: auto; display: inline-flex; align-items: center; gap: 0.5rem; background: #25d366; color: #000; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);">
+                                  <span>🔗</span> Vincular WhatsApp / Generar Código QR
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
                           <!-- Bloque Meta Cloud API -->
-                          <div id="waMetaFields" class="config-fields-block" style="display: grid; gap: 0.85rem;">
+                          <div id="waMetaFields" class="config-fields-block" style="display: none; gap: 0.85rem;">
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem;">
                               <label>
                                 <span style="font-size: 0.85rem; font-weight: 600;">Phone Number ID (Meta) *</span>
@@ -1663,6 +1685,19 @@
                 </button>
               </div>
 
+              <!-- Barra de selección de vista activa para Guardia -->
+              <div class="guard-view-switcher-bar glass-card" style="display: flex; gap: 0.6rem; padding: 0.6rem 0.85rem; margin-bottom: 1.25rem; align-items: center; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(15, 23, 42, 0.55); overflow-x: auto;">
+                <span style="font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 0.2rem;">Vista activa:</span>
+                <button type="button" class="btn-inline-action active guard-view-tab-btn" data-guard-tab="plates" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600;">
+                  <span>🚗 Buscar Patente</span>
+                  <span class="badge mini soft" id="guardTabVehiclesBadge">0</span>
+                </button>
+                <button type="button" class="btn-inline-action guard-view-tab-btn" data-guard-tab="notices" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600;">
+                  <span>🛎️ Avisos de Vecinos</span>
+                  <span class="badge mini soft" id="guardTabNoticesBadge">0</span>
+                </button>
+              </div>
+
               <!-- Subpanel: Buscador de Patentes e Invitados Registrados -->
               <div class="glass-card panel-block" id="guardPlateSearchBlock" style="margin-bottom: 1.5rem;">
                 <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
@@ -1670,7 +1705,12 @@
                     <h4>🚗 Buscador de Patente (Formularios de Invitados)</h4>
                     <span class="badge soft" id="guardVisitsCountBadge">0 registrados</span>
                   </div>
-                  <button type="button" class="text-btn" id="refreshGuardVisitsBtn">Actualizar lista</button>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-inline-action guard-switch-to-notices-btn" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);">
+                      🛎️ Ver Avisos de Vecinos (<span id="guardPlateNoticesIndicator">0</span>) →
+                    </button>
+                    <button type="button" class="text-btn" id="refreshGuardVisitsBtn">Actualizar lista</button>
+                  </div>
                 </div>
                 <p class="panel-subtext">Buscá entre las solicitudes e invitaciones registradas, localizá al visitante y confirmá su <strong>ingreso</strong>, y luego su <strong>egreso</strong>.</p>
 
@@ -1698,13 +1738,16 @@
               </div>
 
               <!-- Subpanel: Avisos Recibidos de Vecinos (Delivery, Servicios, Animales, etc.) -->
-              <div class="glass-card panel-block" id="guardResidentNoticesBlock" style="margin-bottom: 1.5rem;">
+              <div class="glass-card panel-block" id="guardResidentNoticesBlock" style="display: none; margin-bottom: 1.5rem;">
                 <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                   <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                     <h4>🛎️ Avisos Recibidos de Vecinos</h4>
                     <span class="badge soft" id="guardResidentNoticesCountBadge">0 avisos</span>
                   </div>
                   <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-inline-action guard-switch-to-plates-btn" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; border-color: rgba(105, 210, 166, 0.4); color: var(--primary);">
+                      🚗 Volver a Buscar Patente
+                    </button>
                     <button type="button" class="btn-inline-action" id="guardOpenNotifyResidentTopBtn" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; border-color: rgba(247, 199, 109, 0.4); color: var(--gold);">
                       💬 Notificar a un Vecino
                     </button>
@@ -1721,6 +1764,7 @@
 
                 <div id="guardResidentNoticesList" style="display: grid; gap: 0.75rem;"></div>
               </div>
+
             </section>
           </main>
         </div>

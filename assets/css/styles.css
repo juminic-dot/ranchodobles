@@ -529,23 +529,60 @@ select:focus {
 .content-panel {
   display: grid;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .content-section {
   display: none;
   gap: 1.2rem;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .content-section.active {
   display: grid;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-views-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-tab-view {
+  display: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-tab-view.active {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .stats-grid,
@@ -599,10 +636,13 @@ select:focus {
   padding: 1rem;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: linear-gradient(180deg, rgba(17, 28, 38, 0.82), rgba(10, 17, 24, 0.8));
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 20px;
   box-shadow: var(--shadow-soft);
+  overflow: hidden;
 }
 
 .panel-heading,
@@ -610,8 +650,13 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .badge.soft {
@@ -771,40 +816,95 @@ select:focus {
 
 .visit-item {
   display: grid;
-  gap: 0.45rem;
-  padding: 0.8rem 0.9rem;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.visit-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.visit-item-who {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .visit-item strong {
   display: block;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .visit-item small {
   color: var(--muted);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.visit-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .visit-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.7rem;
+  gap: 0.5rem 0.85rem;
   color: var(--muted);
   font-size: 0.8rem;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.visit-meta span {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.visit-entry-time {
+  font-size: 0.76rem;
+  color: #a3e6cb;
+  font-weight: 600;
+}
+
+.visit-exit-time {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .visit-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 90px;
-  padding: 0.25rem 0.5rem;
+  min-width: 85px;
+  padding: 0.25rem 0.55rem;
   border-radius: 999px;
   font-style: normal;
   font-weight: 700;
   font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .visit-status.confirmed {
@@ -820,6 +920,11 @@ select:focus {
 .visit-status.neutral {
   background: rgba(116, 185, 255, 0.12);
   color: var(--secondary);
+}
+
+.visit-status.danger {
+  background: rgba(255, 122, 122, 0.15);
+  color: var(--danger);
 }
 
 /* Tarjeta detallada y responsive de visita en Control de Guardia */
@@ -1985,6 +2090,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .modal-card {
   width: min(580px, 100%);
   max-width: 100%;
+  min-width: 0;
   margin: auto;
   padding: 1.5rem;
   background: linear-gradient(180deg, rgba(21, 33, 46, 0.98), rgba(12, 19, 28, 0.98));
@@ -1994,6 +2100,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   flex-direction: column;
   max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
@@ -2026,8 +2135,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.8rem;
+  gap: 0.6rem;
   margin-top: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ============================================================
@@ -2555,15 +2667,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
    ============================================================ */
 .invite-methods-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1.15rem;
   margin-top: 1rem;
   margin-bottom: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .invite-method-card {
   border-radius: 20px;
-  padding: 1.4rem;
+  padding: 1.35rem 1.4rem;
   background: linear-gradient(145deg, rgba(21, 33, 47, 0.8), rgba(12, 20, 30, 0.85));
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
@@ -2574,6 +2690,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .invite-method-card:hover {
@@ -2601,6 +2721,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .invite-card-icon {
@@ -2629,6 +2752,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 1.1rem;
   color: var(--text);
   font-weight: 700;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .invite-card-header p {
@@ -2636,6 +2761,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 0.88rem;
   color: var(--muted);
   line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .invite-card-actions {
@@ -2643,11 +2770,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .invite-action-btn {
-  flex: 1;
-  min-width: 180px;
+  flex: 1 1 160px;
+  min-width: 160px;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2655,6 +2786,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 600;
   font-size: 0.92rem;
   padding: 0.8rem 1.2rem;
+  box-sizing: border-box;
 }
 
 .invite-action-btn.manual-btn {
@@ -3087,6 +3219,65 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: var(--primary);
 }
 
+#guardResidentNoticesBtn {
+  border-color: rgba(247, 199, 109, 0.35);
+  background: rgba(247, 199, 109, 0.08);
+}
+#guardResidentNoticesBtn:hover {
+  border-color: var(--gold) !important;
+  background: rgba(247, 199, 109, 0.16) !important;
+  box-shadow: 0 8px 24px rgba(247, 199, 109, 0.25);
+}
+#guardResidentNoticesBtn .guard-card-badge {
+  background: rgba(247, 199, 109, 0.22);
+  color: var(--gold);
+}
+
+/* Active card styles for view selection in Guard */
+#guardSearchPlateBtn.active {
+  border-color: var(--primary) !important;
+  background: rgba(105, 210, 166, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(105, 210, 166, 0.45), 0 10px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+#guardResidentNoticesBtn.active {
+  border-color: var(--gold) !important;
+  background: rgba(247, 199, 109, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(247, 199, 109, 0.45), 0 10px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.guard-view-tab-btn {
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.guard-view-tab-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.guard-view-tab-btn.active[data-guard-tab="plates"] {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(105, 210, 166, 0.18);
+  box-shadow: 0 2px 10px rgba(105, 210, 166, 0.2);
+}
+
+.guard-view-tab-btn.active[data-guard-tab="notices"] {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(247, 199, 109, 0.18);
+  box-shadow: 0 2px 10px rgba(247, 199, 109, 0.2);
+}
+
+
 #guardNotificationsBtn {
   border-color: rgba(138, 206, 255, 0.35);
   background: rgba(138, 206, 255, 0.08);
@@ -3435,233 +3626,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   flex-shrink: 0;
 }
 
-/* 6. Responsive Breakpoints for Guard Panel */
-
-/* Tablet & Smaller Desktop Screens (<= 900px) */
-@media (max-width: 900px) {
-  .guard-buttons-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.85rem;
-  }
-}
-
-/* Mobile Screens (<= 699px) */
-@media (max-width: 699px) {
-  .guard-operator-card {
-    padding: 1rem 1.15rem;
-  }
-
-  .guard-operator-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.85rem;
-  }
-
-  .guard-operator-status {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: space-between;
-    padding-top: 0.65rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .guard-shift-change-topbar-btn {
-    white-space: nowrap !important;
-    padding: 0.55rem 0.9rem;
-    font-size: 0.84rem;
-  }
-
-  .dashboard-layout {
-    width: calc(100% - 1.4rem) !important;
-    max-width: calc(100% - 1.4rem) !important;
-    margin: 0.65rem auto 1.5rem !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .content-panel,
-  .content-section,
-  #guardSection {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .guard-operator-card,
-  .guard-buttons-grid,
-  .guard-action-card,
-  .panel-block,
-  #guardPlateSearchBlock,
-  #guardShiftLogBlock {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .guard-buttons-grid {
-    display: grid !important;
-    grid-template-columns: 100% !important;
-    gap: 0.75rem !important;
-    margin-bottom: 1.25rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .guard-action-card {
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 1.05rem 1.15rem;
-    gap: 0.45rem;
-    border-radius: 16px;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-  }
-
-  .guard-card-icon {
-    font-size: 1.85rem;
-  }
-
-  .guard-card-badge {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.55rem;
-  }
-
-  .guard-card-title {
-    font-size: 1.08rem;
-  }
-
-  .guard-card-desc {
-    font-size: 0.82rem;
-    line-height: 1.4;
-    display: block;
-  }
-
-  .panel-heading h4 {
-    word-break: break-word !important;
-    font-size: clamp(0.95rem, 3.8vw, 1.15rem) !important;
-  }
-
-  .guard-search-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .guard-search-input {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Filter tabs horizontal scroll */
-  .guard-filter-tabs {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    padding-bottom: 0.4rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    box-sizing: border-box !important;
-  }
-
-  .guard-filter-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .guard-subfilter-btn,
-  .guard-filter-tab,
-  .guard-notice-filter-btn {
-    flex-shrink: 0;
-    padding: 0.42rem 0.85rem;
-  }
-
-  /* Visit Card Action Buttons on Mobile */
-  .guard-visit-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  .guard-visit-actions button,
-  .guard-confirm-entry-btn,
-  .guard-confirm-exit-btn,
-  .guard-view-qr-btn,
-  .mark-ingreso-btn,
-  .mark-egreso-btn,
-  .admin-view-visit-qr-btn {
-    width: 100%;
-    min-height: 42px;
-    padding: 0.6rem 0.55rem;
-    font-size: 0.82rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* If only QR button exists, span full width */
-  .guard-visit-actions > button:only-child {
-    grid-column: 1 / -1;
-  }
-
-  /* Log items stacking on mobile */
-  .guard-log-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.35rem;
-    padding: 0.65rem 0.75rem;
-  }
-
-  .guard-log-time {
-    align-self: flex-end;
-    font-size: 0.72rem;
-    opacity: 0.85;
-  }
-
-  /* Scanner modal responsive constraint */
-  #qrReaderContainer {
-    min-height: 190px !important;
-    max-height: 38vh !important;
-  }
-
-  #qrReader video {
-    max-height: 38vh !important;
-    object-fit: cover !important;
-  }
-}
-
-/* Extra Small Screens (<= 380px) */
-@media (max-width: 380px) {
-  .dashboard-layout {
-    padding: 0.5rem 0.4rem 1.25rem !important;
-  }
-
-  .guard-action-card {
-    padding: 0.85rem 0.9rem;
-  }
-
-  .guard-card-title {
-    font-size: 1rem;
-  }
-
-  .guard-visit-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ==========================================================================
    Avisos a Guardia (Resident View & Guard Panel)
    ========================================================================== */
@@ -3753,6 +3717,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   gap: 0.65rem;
   position: relative;
   transition: all 0.2s ease;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .guard-notice-item-card.pending {
@@ -3773,6 +3742,43 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.notice-item-who {
+  flex: 1 1 200px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.notice-item-who-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-visitor-name {
+  font-size: 1.05rem;
+  color: #fff;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-destination {
+  font-size: 0.88rem;
+  color: #fff;
+  margin-top: 0.25rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-lot {
+  color: var(--gold);
 }
 
 .notice-item-meta {
@@ -3782,6 +3788,28 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   flex-wrap: wrap;
   font-size: 0.8rem;
   color: var(--muted);
+  flex-shrink: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-plate-row {
+  font-size: 0.84rem;
+  color: var(--gold);
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-plate-chip {
+  font-family: monospace;
+  font-size: 0.88rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(247, 199, 109, 0.15);
+  border: 1px solid rgba(247, 199, 109, 0.3);
+  color: var(--gold);
+  display: inline-block;
 }
 
 .notice-item-details {
@@ -3792,6 +3820,30 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.notice-item-times-row {
+  display: flex;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.notice-item-notes {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+  color: var(--muted);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notice-item-response {
@@ -3804,6 +3856,38 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notice-item-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.guard-visit-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-guard-actions-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -3962,17 +4046,573 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* 6. Responsive Breakpoints for Guard Panel */
+
+/* Tablet & Smaller Desktop Screens (<= 900px) */
+@media (max-width: 900px) {
+  .guard-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+  }
+}
+
+/* Mobile Screens (<= 699px) */
 @media (max-width: 699px) {
+  .topbar {
+    width: calc(100% - 1.2rem) !important;
+    margin: 0.6rem auto 0 !important;
+    padding: 0.65rem 0.85rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-layout {
+    width: calc(100% - 1.2rem) !important;
+    max-width: calc(100% - 1.2rem) !important;
+    margin: 0.65rem auto 1.5rem !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  .content-panel,
+  .content-section,
+  .admin-views-container,
+  .admin-tab-view,
+  #homeSection,
+  #adminSection,
+  #guardSection,
+  #visitsSection,
+  #newsSection,
+  #expensesSection,
+  #bookingSection,
+  #guardNoticesSection,
+  #adminNoticesSection {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .guard-operator-card,
+  .guard-buttons-grid,
+  .guard-action-card,
+  .panel-block,
+  .glass-card,
+  .visit-panel,
+  #guardPlateSearchBlock,
+  #guardResidentNoticesBlock,
+  #guardShiftLogBlock {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .panel-block {
+    padding: 0.95rem 0.9rem !important;
+    border-radius: 16px !important;
+  }
+
+  .panel-heading {
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .panel-heading h4 {
+    word-break: break-word !important;
+    font-size: clamp(0.95rem, 3.8vw, 1.15rem) !important;
+  }
+
+  /* Guard Operator Header */
+  .guard-operator-card {
+    padding: 1rem 1.1rem !important;
+  }
+
+  .guard-operator-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .guard-operator-status {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .guard-shift-change-topbar-btn {
+    white-space: nowrap !important;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.84rem;
+  }
+
+  .guard-buttons-grid {
+    display: grid !important;
+    grid-template-columns: 100% !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.25rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .guard-action-card {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 1.05rem 1.15rem;
+    gap: 0.45rem;
+    border-radius: 16px;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .guard-search-container,
+  .guard-search-bar,
+  .guard-search-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Filter tabs horizontal scroll */
+  .guard-filter-tabs {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: 0.4rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-sizing: border-box !important;
+  }
+
+  .guard-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .guard-subfilter-btn,
+  .guard-filter-tab,
+  .guard-notice-filter-btn {
+    flex-shrink: 0;
+    padding: 0.42rem 0.85rem;
+  }
+
+  /* Propietarios / Mis Visitas - Invite Cards */
+  .invite-methods-grid {
+    grid-template-columns: 100% !important;
+    gap: 0.85rem !important;
+  }
+
+  .invite-method-card {
+    padding: 1.05rem 0.95rem !important;
+    gap: 0.85rem !important;
+    border-radius: 16px !important;
+  }
+
+  .invite-card-header {
+    gap: 0.75rem !important;
+  }
+
+  .invite-card-icon {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.5rem !important;
+    border-radius: 12px !important;
+  }
+
+  .invite-card-actions {
+    width: 100% !important;
+  }
+
+  .invite-action-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0.7rem 1rem !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* User Visits List & General Visit Item */
+  .visit-item {
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .visit-item-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+
+  .visit-item-who {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .visit-item .visit-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)) !important;
+    gap: 0.4rem !important;
+  }
+
+  .visit-item .visit-actions button,
+  .visit-item .visit-actions .badge {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    min-height: 38px !important;
+    padding: 0.45rem 0.6rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .visit-meta {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.35rem !important;
+    padding-top: 0.45rem !important;
+    border-top: 1px dashed rgba(255, 255, 255, 0.07) !important;
+    width: 100% !important;
+  }
+
+  .visit-status {
+    align-self: flex-start !important;
+  }
+
+  /* Admin Control de Guardia & Garita Visit Cards */
+  .guard-notice-item-card {
+    padding: 0.85rem 0.9rem !important;
+    gap: 0.55rem !important;
+    border-radius: 14px !important;
+  }
+
+  .notice-item-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.4rem !important;
+  }
+
+  .notice-item-who {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .notice-item-meta {
+    align-self: flex-start !important;
+    font-size: 0.76rem !important;
+  }
+
+  .notice-item-plate-row {
+    font-size: 0.8rem !important;
+  }
+
+  .notice-item-details {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.84rem !important;
+  }
+
+  .notice-item-times-row {
+    flex-direction: column !important;
+    gap: 0.3rem !important;
+  }
+
+  /* Visit Card Action Buttons on Mobile */
+  .guard-visit-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.45rem !important;
+    margin-top: 0.45rem !important;
+  }
+
+  .guard-visit-actions button,
+  .guard-confirm-entry-btn,
+  .guard-confirm-exit-btn,
+  .guard-view-qr-btn,
+  .mark-ingreso-btn,
+  .mark-egreso-btn,
+  .admin-view-visit-qr-btn {
+    width: 100% !important;
+    min-height: 40px !important;
+    padding: 0.55rem 0.45rem !important;
+    font-size: 0.82rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* If only QR button exists, span full width */
+  .guard-visit-actions > button:only-child {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Admin Guard Top Action Buttons */
+  .admin-guard-actions-row {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.45rem !important;
+  }
+
+  .admin-guard-actions-row button {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.55rem 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Admin Padrón de Usuarios - Active User Cards */
+  .active-user-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    padding: 0.85rem !important;
+  }
+
+  .active-user-info {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .active-user-text {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .active-user-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 0.4rem !important;
+  }
+
+  .active-user-actions button,
+  .active-user-actions span {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 38px !important;
+    padding: 0.45rem 0.5rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Admin Auditoría Search & Filters */
+  .audit-search-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+
+  .audit-search-controls input {
+    width: 100% !important;
+  }
+
+  #adminAuditRoleFilters {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.35rem !important;
+  }
+
+  #adminAuditRoleFilters button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.45rem 0.5rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Log items stacking on mobile */
+  .guard-log-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .guard-log-time {
+    align-self: flex-end;
+    font-size: 0.72rem;
+    opacity: 0.85;
+  }
+
+  /* Scanner modal responsive constraint */
+  #qrReaderContainer {
+    min-height: 190px !important;
+    max-height: 38vh !important;
+  }
+
+  #qrReader video {
+    max-height: 38vh !important;
+    object-fit: cover !important;
+  }
+
+  /* Admin Canchas & Avisos Toolbars */
+  .admin-courts-toolbar {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  .admin-courts-toolbar input[type="date"] {
+    flex: 1 1 130px !important;
+    min-width: 130px !important;
+  }
+
+  .admin-notices-toolbar {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)) !important;
+    gap: 0.35rem !important;
+  }
+
+  .admin-notices-toolbar button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .admin-alerts-toolbar {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.4rem !important;
+  }
+
+  .admin-alerts-toolbar button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 38px !important;
+  }
+
+  .notice-item-action-row {
+    width: 100% !important;
+  }
+
+  .notice-item-action-row button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 40px !important;
+  }
+
+  /* Modal Actions on Mobile */
+  .modal-actions {
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Configuración Avanzada */
   .config-provider-selector {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .config-status-cards-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .config-card-inner {
-    padding: 0.95rem;
+    padding: 0.95rem !important;
+  }
+}
+
+/* Small Screens (<= 480px) */
+@media (max-width: 480px) {
+  .modal-actions {
+    flex-direction: column-reverse !important;
+  }
+
+  .modal-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .date-selector-group {
+    width: 100% !important;
+  }
+
+  .date-selector-group input[type="date"] {
+    width: 100% !important;
+  }
+
+  .booking-filters {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .booking-filters button {
+    width: 100% !important;
+    text-align: center !important;
+    padding: 0.45rem 0.2rem !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+/* Extra Small Screens (<= 380px) */
+@media (max-width: 380px) {
+  .dashboard-layout {
+    width: calc(100% - 0.75rem) !important;
+    max-width: calc(100% - 0.75rem) !important;
+    margin: 0.4rem auto 1.25rem !important;
+    padding: 0 !important;
+  }
+
+  .topbar {
+    width: calc(100% - 0.75rem) !important;
+    margin: 0.4rem auto 0 !important;
+    padding: 0.5rem 0.65rem !important;
+  }
+
+  .panel-block {
+    padding: 0.75rem 0.65rem !important;
+    border-radius: 14px !important;
+  }
+
+  .guard-action-card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .guard-card-title {
+    font-size: 1rem;
+  }
+
+  .admin-guard-actions-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .guard-visit-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .visit-item .visit-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .active-user-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .booking-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-courts-toolbar {
+    grid-template-columns: 1fr !important;
   }
 }
 

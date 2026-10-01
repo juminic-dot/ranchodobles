@@ -132,6 +132,7 @@ app.use((err, req, res, next) => {
 });
 
 const { getMailerStatus } = require('./server/mailer');
+const { initBaileys, getBaileysStatus } = require('./server/baileys');
 
 let server = null;
 if (require.main === module) {
@@ -146,6 +147,10 @@ if (require.main === module) {
     } else {
       console.log(` ⚠️ Correo no configurado (blanqueo de clave simulará o avisará en .env)`);
     }
+
+    // Auto-initialize Baileys if configured/session exists
+    initBaileys();
+
     console.log(`=========================================`);
   });
 }

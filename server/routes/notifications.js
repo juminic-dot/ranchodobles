@@ -4,6 +4,7 @@ const { db, logActivity } = require('../db');
 const { authenticateToken, requireAdmin, requireAdminOrGuard } = require('../middleware');
 const { sendWhatsAppTextMessage } = require('../whatsapp');
 const { sendGenericEmail, getMailerStatus } = require('../mailer');
+const { notify } = require('../notifier');
 
 
 // GET /api/notifications
@@ -100,71 +101,49 @@ router.get('/admin/broadcasts', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // POST /api/notifications/broadcast
-router.post('/broadcast', authenticateToken, requireAdmin, (req, res) => {
+router.post('/broadcast', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { title, text } = req.body;
     if (!title || !text) {
       return res.status(400).json({ error: 'El título y el mensaje de la alerta son obligatorios.' });
     }
 
-    const now = new Date().toISOString();
+    const cleanTitle = String(title).trim();
+    const cleanText = String(text).trim();
     const senderName = `${req.user.nombre} ${req.user.apellido} (Administración)`.trim();
-    const result = db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, senderId, senderName, createdAt)
-      VALUES (NULL, 'all', ?, ?, 0, ?, ?, ?)
-    `).run(title.trim(), text.trim(), req.user.id, senderName, now);
+    const adminIdentifier = `${senderName} (${req.user.username || req.user.email})`;
 
-    const alertId = Number(result.lastInsertRowid);
+    // Unified notifier: creates in-app notification for ALL + dispatches WhatsApp to all approved members + email
+    const alert = await notify({
+      targetRole: 'all',
+      title: cleanTitle,
+      text: cleanText,
+      senderId: req.user.id,
+      senderName,
+      sendWhatsApp: true,
+      sendEmail: true
+    });
 
-    // Auto-mark as read for the issuing admin so it never alerts them
-    try {
-      db.prepare(`
-        INSERT OR IGNORE INTO notification_reads (notificationId, userId, readAt)
-        VALUES (?, ?, ?)
-      `).run(alertId, req.user.id, now);
-    } catch (e) {}
-
-    // Deliver broadcast notification to active residents on WhatsApp & Email
-    try {
-      const activeResidents = db.prepare('SELECT id, nombre, apellido, telefono, email FROM users WHERE approved = 1 AND role = "user"').all();
-      const mailerStatus = getMailerStatus();
-
-      for (const resUser of activeResidents) {
-        if (resUser.telefono) {
-          sendWhatsAppTextMessage({
-            phone: resUser.telefono,
-            title: title.trim(),
-            message: text.trim(),
-            senderName: `${req.user.nombre} ${req.user.apellido} (Administración)`,
-            recipientName: `${resUser.nombre} ${resUser.apellido}`
-          }).catch(err => console.error('[WhatsApp Broadcast Error]', err));
-        }
-
-        if (mailerStatus.configured && resUser.email && resUser.email.includes('@')) {
-          sendGenericEmail({
-            to: resUser.email,
-            subject: `Alerta Comunitaria — ${title.trim()}`,
-            text: `Hola ${resUser.nombre} ${resUser.apellido},\n\nAlerta Comunitaria Rancho Doble S:\n\n${title.trim()}\n\n${text.trim()}\n\nAdministración Rancho Doble S`,
-            fromName: 'Administración Rancho Doble S'
-          }).catch(err => console.error('[Email Broadcast Error]', err));
-        }
-      }
-    } catch (e) {}
+    // Audit log
+    logActivity(
+      req.user.id,
+      adminIdentifier,
+      'admin',
+      'EMISION_ALERTA_MASIVA',
+      `Alerta masiva comunitaria emitida - Título: "${cleanTitle}" - Detalle: "${cleanText.substring(0, 120)}"`,
+      req.ip || ''
+    );
 
     res.status(201).json({
-      message: 'Alerta comunitaria emitida a toda la comunidad (enviada por el sistema, WhatsApp y Correo).',
-      alert: {
-        id: Number(result.lastInsertRowid),
-        title: title.trim(),
-        text: text.trim(),
-        createdAt: now
-      }
+      message: 'Alerta comunitaria emitida a toda la comunidad (distribuida en la app y por WhatsApp).',
+      alert
     });
   } catch (error) {
     console.error('[Broadcast Alert Error]', error);
     res.status(500).json({ error: 'Error al emitir la alerta general.' });
   }
 });
+
 
 // POST /api/notifications/guard-to-admin
 // Guard sends a direct notification/report to Administration. Audited in activity_logs!
@@ -320,9 +299,10 @@ router.post('/admin/notify-residents', authenticateToken, requireAdmin, (req, re
       }
 
       // Deliver to resident's Email
-      if (mailerStatus.configured && user.email && user.email.includes('@')) {
+      const validEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (mailerStatus.configured && user.email && validEmailRegex.test(user.email.trim()) && !user.email.toLowerCase().endsWith('@guardia')) {
         sendGenericEmail({
-          to: user.email,
+          to: user.email.trim(),
           subject: `Rancho Doble S — ${cleanTitle}`,
           text: `Hola ${user.nombre} ${user.apellido},\n\n${cleanTitle}\n\n${cleanText}\n\nAdministración Rancho Doble S`,
           fromName: 'Administración Rancho Doble S'

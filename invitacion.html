@@ -131,16 +131,51 @@
         gap: 0.75rem;
         margin-top: 0.5rem;
       }
+
+      @media (max-width: 600px) {
+        .guest-shell {
+          width: calc(100% - 1.2rem);
+          margin: 1rem auto;
+          padding: 1.15rem 1rem;
+          border-radius: 18px;
+        }
+
+        .guest-header h1 {
+          font-size: 1.45rem;
+        }
+
+        .qr-pass-card {
+          padding: 1.25rem 0.85rem;
+          gap: 1rem;
+        }
+
+        .guest-summary-table {
+          padding: 0.85rem 0.95rem;
+          font-size: 0.85rem;
+        }
+
+        .guest-summary-table div {
+          flex-direction: column;
+          gap: 0.2rem;
+        }
+      }
+
+      @media (max-width: 380px) {
+        .guest-shell {
+          width: calc(100% - 0.75rem);
+          padding: 0.9rem 0.75rem;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="guest-shell glass-card">
       <header class="guest-header">
         <img src="assets/img/logo.png" alt="Logo" class="brand-logo-hero" style="margin: 0 auto 1.2rem auto;" />
-        <h1>Acreditación de Visita</h1>
-        <p class="brand-copy" style="margin-top: 0.25rem;">Completá tus datos para autorizar tu ingreso y obtener tu código QR de acceso.</p>
+        <h1 id="pageTitle">Acreditación de Visita</h1>
+        <p class="brand-copy" id="pageSubtitle" style="margin-top: 0.25rem;">Completá tus datos para autorizar tu ingreso al predio.</p>
         <div class="host-badge-box" id="hostBadge">
-          <span>🏠 Anfitrión:</span>
+          <span id="hostBadgeLabel">🏠 Anfitrión:</span>
           <strong id="hostNameText">Propietario</strong>
         </div>
       </header>
@@ -174,8 +209,8 @@
             <input type="text" name="dni" id="guestDni" required placeholder="Ej: 34.567.890" />
           </label>
           <label>
-            <span>Teléfono de contacto</span>
-            <input type="tel" name="phone" id="guestPhone" placeholder="Ej: 11 2345-6789" />
+            <span id="phoneFieldLabel">Teléfono / WhatsApp *</span>
+            <input type="tel" name="phone" id="guestPhone" required placeholder="Ej: 11 2345-6789" />
           </label>
         </div>
 
@@ -202,70 +237,58 @@
         </div>
 
         <button type="submit" class="primary-btn" id="submitGuestBtn" style="margin-top: 0.5rem;">
-          Generar Pase de Ingreso con Código QR
+          Enviar Registro
         </button>
         <div id="guestFormError" class="form-status" style="color: var(--danger); text-align: center;"></div>
       </form>
 
-      <!-- Pase de Acceso generado con Código QR (inicialmente oculto) -->
-      <div id="guestPassContainer" class="qr-pass-card" style="display: none;">
-        <div class="qr-message-banner">
-          “Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso”
+      <!-- Mensaje de confirmación de visita registrada -->
+      <div id="guestSuccessContainer" class="qr-pass-card" style="display: none; text-align: center; padding: 2.5rem 1.5rem;">
+        <div style="width: 76px; height: 76px; margin: 0 auto 1.25rem auto; border-radius: 50%; background: rgba(105, 210, 166, 0.16); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: var(--primary);">
+          ✓
         </div>
-
-        <div class="qr-box">
-          <img id="qrPassImage" src="" alt="Código QR de ingreso a Rancho Doble S" />
-        </div>
-
-        <div class="guest-summary-table">
-          <div>
-            <small>Visitante:</small>
-            <strong id="passVisitorName">--</strong>
-          </div>
-          <div>
-            <small>DNI:</small>
-            <strong id="passVisitorDni">--</strong>
-          </div>
-          <div>
-            <small>Vehículo / Patente:</small>
-            <strong id="passVisitorPlate">--</strong>
-          </div>
-          <div>
-            <small>Destino / Anfitrión:</small>
-            <strong id="passHostName">--</strong>
-          </div>
-          <div>
-            <small>Fecha y Horario:</small>
-            <strong id="passDateTime">--</strong>
-          </div>
-          <div>
-            <small>Estado de acceso:</small>
-            <em class="visit-status confirmed">Autorizado</em>
-          </div>
-        </div>
-
-        <div class="pass-actions" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
-          <a id="downloadQrBtn" download="pase-acceso-ranchodobles.png" href="" class="primary-btn" style="text-decoration: none; text-align: center; justify-content: center; display: inline-flex; align-items: center; padding: 0.95rem 1.2rem; font-size: 1rem; border-radius: 14px; font-weight: 600;">
-            📥 Descargar mi QR de ingreso
-          </a>
-        </div>
+        <h2 id="successTitle" style="font-size: 1.65rem; color: #fff; margin-bottom: 0.75rem; font-weight: 700; letter-spacing: -0.02em;">
+          Ya registramos su visita, muchas gracias
+        </h2>
+        <p id="successDesc" style="color: var(--muted); font-size: 0.98rem; line-height: 1.5; max-width: 440px; margin: 0 auto;">
+          Te enviamos el código QR para el ingreso al predio por WhatsApp. Presentalo en la guardia de ingreso al llegar.
+        </p>
       </div>
     </div>
 
     <script>
       const urlParams = new URLSearchParams(window.location.search);
       const inviteParam = urlParams.get('c') || urlParams.get('code') || urlParams.get('token');
+      const isManual = urlParams.get('manual') === '1' || urlParams.get('manual') === 'true';
+
+      const pageTitle = document.getElementById('pageTitle');
+      const pageSubtitle = document.getElementById('pageSubtitle');
+      const hostBadgeLabel = document.getElementById('hostBadgeLabel');
+      const phoneFieldLabel = document.getElementById('phoneFieldLabel');
+      const guestPhone = document.getElementById('guestPhone');
+      const successTitle = document.getElementById('successTitle');
+      const successDesc = document.getElementById('successDesc');
 
       const hostNameText = document.getElementById('hostNameText');
       const hostBadge = document.getElementById('hostBadge');
       const guestForm = document.getElementById('guestRegisterForm');
-      const guestPassContainer = document.getElementById('guestPassContainer');
+      const guestSuccessContainer = document.getElementById('guestSuccessContainer');
       const submitGuestBtn = document.getElementById('submitGuestBtn');
       const guestFormError = document.getElementById('guestFormError');
       const invalidInviteBox = document.getElementById('invalidInviteBox');
       const invalidInviteMessage = document.getElementById('invalidInviteMessage');
-      const qrPassImage = document.getElementById('qrPassImage');
-      const downloadQrBtn = document.getElementById('downloadQrBtn');
+
+      if (isManual) {
+        document.title = 'Registro de Visita — Rancho Doble S';
+        if (pageTitle) pageTitle.textContent = 'Registro de Visita';
+        if (pageSubtitle) pageSubtitle.textContent = 'Cargá los datos de tu visita para autorizar su ingreso en la guardia.';
+        if (hostBadgeLabel) hostBadgeLabel.textContent = '🏠 Propietario:';
+        if (phoneFieldLabel) phoneFieldLabel.textContent = 'Teléfono de contacto (opcional)';
+        if (guestPhone) {
+          guestPhone.required = false;
+          guestPhone.placeholder = 'Ej: 11 2345-6789 (opcional)';
+        }
+      }
 
       const guestDate = document.getElementById('guestDate');
       const guestTime = document.getElementById('guestTime');
@@ -363,13 +386,20 @@
         const date = guestDate.value;
         const time = guestTime.value;
 
-        if (!apellido || !nombre || !dni) {
-          guestFormError.textContent = 'Por favor completá apellido, nombre y DNI.';
-          return;
+        if (isManual) {
+          if (!apellido || !nombre || !dni) {
+            guestFormError.textContent = 'Por favor completá apellido, nombre y DNI del visitante.';
+            return;
+          }
+        } else {
+          if (!apellido || !nombre || !dni || !phone) {
+            guestFormError.textContent = 'Por favor completá apellido, nombre, DNI y teléfono / WhatsApp.';
+            return;
+          }
         }
 
         submitGuestBtn.disabled = true;
-        submitGuestBtn.textContent = 'Generando código QR...';
+        submitGuestBtn.textContent = 'Enviando registro...';
 
         try {
           const res = await fetch(`${apiBase}/api/visits/guest-register`, {
@@ -382,42 +412,42 @@
               nombre,
               dni,
               visitorPhone: phone,
+              guestPhone: phone,
+              phone: phone,
               vehiclePlate,
               guestEmail,
               date,
-              time
+              time,
+              isManual
             })
           });
 
           const data = await res.json();
           if (!res.ok) {
-            throw new Error(data.error || 'Error al procesar el pase de ingreso.');
+            throw new Error(data.error || 'Error al procesar el registro de ingreso.');
           }
 
           currentPassData = data;
 
-          const visitorFullName = `${nombre} ${apellido}`;
-          const residentHost = data.visit.residentName || verifiedHostName;
+          if (isManual) {
+            if (successTitle) successTitle.textContent = 'Ya registramos tu visita, muchas gracias';
+            if (successDesc) successDesc.textContent = 'El registro fue enviado a la guardia de ingreso. Al llegar al predio, el visitante solo debe presentar su DNI para ingresar.';
+          } else {
+            if (successTitle) successTitle.textContent = 'Ya registramos su visita, muchas gracias';
+            if (successDesc) successDesc.textContent = 'Te enviamos el código QR para el ingreso al predio por WhatsApp. Presentalo en la guardia de ingreso al llegar.';
+          }
 
-          // Renderizar previsualización del pase y activar botón de descarga
+          // Ocultar formulario y anfitrión, mostrar mensaje de confirmación
           guestForm.style.display = 'none';
-          guestPassContainer.style.display = 'grid';
-
-          qrPassImage.src = data.qrCode;
-          downloadQrBtn.href = data.qrCode;
-          downloadQrBtn.download = `pase-acceso-${nombre.toLowerCase()}-${apellido.toLowerCase()}.png`;
-
-          document.getElementById('passVisitorName').textContent = visitorFullName;
-          document.getElementById('passVisitorDni').textContent = dni;
-          document.getElementById('passVisitorPlate').textContent = vehiclePlate || 'Sin vehículo';
-          document.getElementById('passHostName').textContent = residentHost;
-          document.getElementById('passDateTime').textContent = `${date} a las ${time} hs`;
-
+          if (hostBadge) hostBadge.style.display = 'none';
+          if (guestSuccessContainer) {
+            guestSuccessContainer.style.display = 'block';
+          }
         } catch (error) {
           guestFormError.textContent = error.message;
         } finally {
           submitGuestBtn.disabled = false;
-          submitGuestBtn.textContent = 'Generar Pase de Ingreso con Código QR';
+          submitGuestBtn.textContent = 'Enviar Registro';
         }
       });
     </script>

@@ -10,6 +10,11 @@
  */
 
 const { getSetting } = require('./db');
+const {
+  getBaileysStatus,
+  sendBaileysText,
+  sendBaileysImage
+} = require('./baileys');
 
 const DEFAULT_CAPTION = 'Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso.';
 
@@ -58,6 +63,9 @@ function getWhatsAppCredentials() {
   const officialPhone = getSetting('whatsapp_phone') || process.env.WHATSAPP_PHONE || '';
   const qrCaption = getSetting('whatsapp_qr_caption') || process.env.WHATSAPP_QR_CAPTION || DEFAULT_CAPTION;
 
+  // Baileys status
+  const baileys = getBaileysStatus();
+
   // Meta Cloud API
   const metaToken = getSetting('whatsapp_token') || process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WA_TOKEN;
   const metaPhoneId = getSetting('whatsapp_phone_id') || process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
@@ -77,15 +85,17 @@ function getWhatsAppCredentials() {
 
   let activeProvider = provider;
   if (!activeProvider) {
-    if (metaToken && metaPhoneId) activeProvider = 'meta_cloud';
+    if (baileys.isConnected || baileys.hasSession) activeProvider = 'baileys';
+    else if (metaToken && metaPhoneId) activeProvider = 'meta_cloud';
     else if (evoUrl) activeProvider = 'evolution_gateway';
     else if (twilioSid && twilioToken && twilioPhone) activeProvider = 'twilio';
     else if (webhookUrl) activeProvider = 'webhook';
     else if (officialPhone) activeProvider = 'phone_direct';
-    else activeProvider = 'simulated';
+    else activeProvider = 'baileys'; // Default to Baileys for self-hosted setup
   }
 
-  const isConfigured = (activeProvider === 'meta_cloud' && Boolean(metaToken && metaPhoneId)) ||
+  const isConfigured = (activeProvider === 'baileys' && Boolean(baileys.isConnected || baileys.hasSession)) ||
+                       (activeProvider === 'meta_cloud' && Boolean(metaToken && metaPhoneId)) ||
                        (activeProvider === 'evolution_gateway' && Boolean(evoUrl)) ||
                        (activeProvider === 'twilio' && Boolean(twilioSid && twilioToken && twilioPhone)) ||
                        (activeProvider === 'webhook' && Boolean(webhookUrl)) ||
@@ -94,8 +104,14 @@ function getWhatsAppCredentials() {
   return {
     provider: activeProvider,
     configured: isConfigured,
-    officialPhone,
+    officialPhone: officialPhone || baileys.phone || '',
     qrCaption,
+    baileys: {
+      status: baileys.status,
+      isConnected: baileys.isConnected,
+      phone: baileys.phone,
+      hasSession: baileys.hasSession
+    },
     meta: { token: metaToken, phoneId: metaPhoneId },
     evolution: { url: evoUrl ? evoUrl.replace(/\/+$/, '') : '', key: evoKey, instance: evoInstance },
     twilio: { sid: twilioSid, token: twilioToken, phone: twilioPhone },
@@ -108,13 +124,21 @@ function getWhatsAppCredentials() {
  */
 function getWhatsAppStatus() {
   const creds = getWhatsAppCredentials();
+  const baileys = getBaileysStatus();
   return {
     configured: creds.configured,
     provider: creds.provider,
-    officialPhone: creds.officialPhone,
+    officialPhone: creds.officialPhone || baileys.phone || '',
     phoneId: creds.meta.phoneId,
     url: creds.evolution.url,
-    from: creds.twilio.phone
+    from: creds.twilio.phone,
+    baileys: {
+      status: baileys.status,
+      isConnected: baileys.isConnected,
+      phone: baileys.phone,
+      hasSession: baileys.hasSession,
+      hasQr: Boolean(baileys.qr)
+    }
   };
 }
 
@@ -151,6 +175,28 @@ async function sendWhatsAppQrPass({ phone, qrCode, visitId, visitorName, caption
 
   const creds = getWhatsAppCredentials();
   const effectiveCaption = caption || creds.qrCaption || DEFAULT_CAPTION;
+
+  // 0. WhatsApp Baileys (Native / QR Direct)
+  if (creds.provider === 'baileys') {
+    try {
+      if (!imageBuffer && qrCode && qrCode.includes(';base64,')) {
+        imageBuffer = Buffer.from(qrCode.split(';base64,')[1], 'base64');
+      }
+      if (!imageBuffer) {
+        throw new Error('No se pudo generar el buffer de imagen para el envío por Baileys.');
+      }
+      const bRes = await sendBaileysImage(normalizedPhone, imageBuffer, effectiveCaption);
+      if (!bRes.success) {
+        console.error('[WhatsApp Baileys QR Pass Error]', bRes.error);
+        return { success: false, error: bRes.error };
+      }
+      console.log(`[WhatsApp Service] ✅ Pase QR enviado vía Baileys a +${normalizedPhone} (ID: ${bRes.messageId})`);
+      return { success: true, provider: 'baileys', messageId: bRes.messageId };
+    } catch (err) {
+      console.error('[WhatsApp Baileys QR Pass Exception]', err);
+      return { success: false, error: err.message };
+    }
+  }
 
   // 1. Meta WhatsApp Cloud API (Graph API)
   if (creds.provider === 'meta_cloud') {
@@ -369,6 +415,22 @@ async function sendWhatsAppTextMessage({ phone, title, message, senderName, reci
   const textContent = `*Rancho Doble S — Aviso Oficial*\n_${senderHeader}_\n\n*${title}*\n${message}`;
 
   const creds = getWhatsAppCredentials();
+
+  // 0. WhatsApp Baileys (Native / QR Direct)
+  if (creds.provider === 'baileys') {
+    try {
+      const bRes = await sendBaileysText(normalizedPhone, textContent);
+      if (!bRes.success) {
+        console.error('[WhatsApp Baileys Text Error]', bRes.error);
+        return { success: false, error: bRes.error };
+      }
+      console.log(`[WhatsApp Service] ✅ Notificación enviada vía Baileys a +${normalizedPhone} (ID: ${bRes.messageId})`);
+      return { success: true, provider: 'baileys', messageId: bRes.messageId, phone: normalizedPhone, text: textContent };
+    } catch (err) {
+      console.error('[WhatsApp Baileys Text Exception]', err);
+      return { success: false, error: err.message };
+    }
+  }
 
   // 1. Meta WhatsApp Cloud API
   if (creds.provider === 'meta_cloud') {

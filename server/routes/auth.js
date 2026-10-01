@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { db, logActivity } = require('../db');
 const { JWT_SECRET, authenticateToken, loginLimiter, registerLimiter } = require('../middleware');
 const { sendPasswordResetEmail } = require('../mailer');
+const { notify } = require('../notifier');
 
 // POST /api/auth/register
 router.post('/register', registerLimiter, async (req, res) => {
@@ -314,17 +315,14 @@ router.put('/change-password', authenticateToken, async (req, res) => {
 
     db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(newHash, req.user.id);
 
-    // Register security notification
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
-    `).run(
-      req.user.id,
-      'Seguridad de la cuenta',
-      'Tu contraseña de acceso fue actualizada correctamente desde tu panel.',
-      now
-    );
+    // Register security notification (in-app and WhatsApp)
+    notify({
+      userId: req.user.id,
+      targetRole: 'user',
+      title: '🔐 Seguridad de la cuenta',
+      text: 'Tu contraseña de acceso fue actualizada correctamente desde tu panel de usuario.',
+      senderName: 'Seguridad Rancho Doble S'
+    }).catch(e => console.error('[Auth Password Change Notify Error]', e));
 
     res.json({ message: 'Contraseña actualizada con éxito.' });
   } catch (error) {
@@ -481,17 +479,14 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
     db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(passwordHash, record.targetUserId);
     db.prepare('UPDATE password_resets SET used = 1 WHERE id = ?').run(record.id);
 
-    // Register security notification
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO notifications (userId, title, text, read, createdAt)
-      VALUES (?, ?, ?, 0, ?)
-    `).run(
-      record.targetUserId,
-      'Contraseña restablecida',
-      'Tu contraseña ha sido restablecida exitosamente mediante el enlace seguro.',
-      now
-    );
+    // Register security notification (in-app and WhatsApp)
+    notify({
+      userId: record.targetUserId,
+      targetRole: 'user',
+      title: '🔐 Contraseña restablecida',
+      text: 'Tu contraseña ha sido restablecida exitosamente mediante el enlace seguro de recuperación.',
+      senderName: 'Seguridad Rancho Doble S'
+    }).catch(e => console.error('[Auth Password Reset Notify Error]', e));
 
     res.json({
       message: '¡Tu contraseña ha sido restablecida con éxito! Ya podés iniciar sesión.',

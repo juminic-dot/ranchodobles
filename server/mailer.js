@@ -236,13 +236,29 @@ async function sendGenericEmail({ to, subject, html, text, fromName = 'Administr
 
   if (tInfo) {
     try {
+      const defaultHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1512; color: #e2e8f0; margin: 0; padding: 24px; border-radius: 12px; max-width: 520px; border: 1px solid #2f6f57;">
+          <div style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="color: #f7c76d; margin: 0; font-size: 22px;">🏡 Rancho Doble S</h2>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Portal de Propietarios y Administración</div>
+          </div>
+          <div style="background: rgba(105, 210, 166, 0.08); border: 1px solid rgba(105, 210, 166, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;">
+            <h3 style="color: #69d2a6; margin: 0 0 10px 0; font-size: 16px;">${escapeHtml(subject || 'Comunicado Oficial')}</h3>
+            <p style="margin: 0; font-size: 14px; color: #cbd5e1; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(text || '')}</p>
+          </div>
+          <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; font-size: 12px; color: #64748b;">
+            © ${new Date().getFullYear()} Consorcio Rancho Doble S — Sistema de Gestión Inteligente
+          </div>
+        </div>
+      `;
+
       const info = await tInfo.transporter.sendMail({
         from: fromHeader,
         to,
         replyTo: fromAddress,
         subject,
         text: text || '',
-        html: html || (text ? `<p style="font-family:sans-serif;line-height:1.5;">${escapeHtml(text).replace(/\n/g, '<br>')}</p>` : ''),
+        html: html || defaultHtml,
         headers: {
           'X-Priority': '1',
           'Importance': 'high'

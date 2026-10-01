@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const os = require('os');
 const { db, logActivity } = require('../db');
 const { authenticateToken, JWT_SECRET } = require('../middleware');
-const { sendWhatsAppQrPass } = require('../whatsapp');
+const { sendWhatsAppQrPass, sendWhatsAppTextMessage } = require('../whatsapp');
 
 function getLocalIp() {
   const nets = os.networkInterfaces();
@@ -251,28 +251,60 @@ router.post('/guest-register', async (req, res) => {
     }
 
     // Notify resident (host)
+    const hostNotifTitle = 'Nueva visita acreditada';
+    const hostNotifText = `${visitorFullName} (DNI ${cleanDni}, Patente: ${cleanPlate}) completó su acreditación mediante tu invitación para el ${visitDate}.`;
+
     db.prepare(`
       INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
       VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       host.id,
-      'Nueva visita acreditada',
-      `${visitorFullName} (DNI ${cleanDni}, Patente: ${cleanPlate}) completó su acreditación mediante tu invitación para el ${visitDate}.`,
+      hostNotifTitle,
+      hostNotifText,
       now
     );
 
+    // Notify Guardia of new visit registration
+    const guardNotifTitle = 'Nueva visita registrada';
+    const guardNotifText = `Visita: ${visitorFullName} (DNI ${cleanDni}, Patente: ${cleanPlate}) para el lote de ${hostFullName} el ${visitDate} a las ${visitTime}.`;
+
+    db.prepare(`
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'guardia', ?, ?, 0, ?)
+    `).run(
+      guardNotifTitle,
+      guardNotifText,
+      now
+    );
+
+    // Alert host resident directly on WhatsApp
+    try {
+      if (host.telefono) {
+        sendWhatsAppTextMessage({
+          phone: host.telefono,
+          title: hostNotifTitle,
+          message: hostNotifText,
+          senderName: 'Acreditación Rancho Doble S',
+          recipientName: `${host.nombre} ${host.apellido}`
+        }).catch(err => console.error('[WhatsApp Host Accreditation Alert Error]', err));
+      }
+    } catch (e) {}
+
     if (guestEmail) {
-      console.log(`[Email Dispatcher] Notificación enviada a ${guestEmail}: "Este es tu código QR para el ingreso al predio, presentalo en la guardia de ingreso"`);
+      console.log(`[Email Dispatcher] Notificación enviada a ${guestEmail}: "Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso."`);
     }
 
     let waResult = null;
-    if (cleanPhone) {
+    const isManualMode = Boolean(req.body.isManual || req.body.manual);
+    // En registro manual no se envía QR al invitado; en garita le pedirán DNI e ingresa
+    if (cleanPhone && !isManualMode) {
       try {
         waResult = await sendWhatsAppQrPass({
           phone: cleanPhone,
           qrCode,
           visitId: Number(result.lastInsertRowid),
           visitorName: visitorFullName,
+          caption: 'Te enviamos el código QR para el ingreso al predio, presentalo en la guardia de ingreso.',
           protocol: req.protocol,
           reqHost: req.get('host')
         });
@@ -375,9 +407,13 @@ router.post('/', authenticateToken, async (req, res) => {
     if (req.user.role === 'admin' || (req.user.username && req.user.username.toLowerCase() === 'superadmin')) {
       return res.status(403).json({ error: 'El Administrador General no tiene permisos para generar invitaciones o visitas particulares.' });
     }
-    const { visitorName, visitorDni, vehiclePlate, visitorPhone, visitPhone, phone, date, time } = req.body;
+    const { visitorName, apellido, nombre, visitorDni, vehiclePlate, visitorPhone, visitPhone, phone, guestEmail, visitEmail, date, time } = req.body;
 
-    if (!visitorName || !visitorDni || !date || !time) {
+    const resolvedVisitorName = (visitorName && String(visitorName).trim())
+      ? String(visitorName).trim()
+      : `${(nombre || '').trim()} ${(apellido || '').trim()}`.trim();
+
+    if (!resolvedVisitorName || !visitorDni || !date || !time) {
       return res.status(400).json({ error: 'Nombre, DNI, fecha y horario son requeridos.' });
     }
 
@@ -385,9 +421,10 @@ router.post('/', authenticateToken, async (req, res) => {
     const residentFullName = `${req.user.nombre} ${req.user.apellido}`;
     const cleanPlate = vehiclePlate && String(vehiclePlate).trim() ? String(vehiclePlate).trim().toUpperCase() : 'Sin vehículo';
     const cleanPhone = visitorPhone || visitPhone || phone ? String(visitorPhone || visitPhone || phone).trim() : null;
+    const cleanEmail = guestEmail || visitEmail ? String(guestEmail || visitEmail).trim() : null;
 
     // Generate QR Code
-    const qrTextPayload = `RDS-PASS|VISITANTE:${visitorName.trim()}|DNI:${visitorDni.trim()}|PATENTE:${cleanPlate}|DESTINO:${residentFullName}|FECHA:${date.trim()}`;
+    const qrTextPayload = `RDS-PASS|VISITANTE:${resolvedVisitorName}|DNI:${visitorDni.trim()}|PATENTE:${cleanPlate}|DESTINO:${residentFullName}|FECHA:${date.trim()}`;
     const qrCode = await QRCode.toDataURL(qrTextPayload, {
       width: 320,
       margin: 2,
@@ -398,16 +435,17 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     const insertStmt = db.prepare(`
-      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, visitorPhone, qrCode, date, time, status, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
+      INSERT INTO visits (userId, residentName, visitorName, visitorDni, vehiclePlate, guestEmail, visitorPhone, qrCode, date, time, status, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmada', ?)
     `);
 
     const result = insertStmt.run(
       req.user.id,
       residentFullName,
-      visitorName.trim(),
+      resolvedVisitorName,
       visitorDni.trim(),
       cleanPlate,
+      cleanEmail,
       cleanPhone,
       qrCode,
       date.trim(),
@@ -415,32 +453,32 @@ router.post('/', authenticateToken, async (req, res) => {
       now
     );
 
-    // Create notification
+    // Create notification for resident
     db.prepare(`
       INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
       VALUES (?, 'user', ?, ?, 0, ?)
     `).run(
       req.user.id,
       'Aviso de ingreso registrado',
-      `${visitorName.trim()} (DNI ${visitorDni.trim()}, Patente ${cleanPlate}) tiene ingreso previsto para ${date} a las ${time}.`,
+      `${resolvedVisitorName} (DNI ${visitorDni.trim()}, Patente ${cleanPlate}) tiene ingreso previsto para ${date} a las ${time}.`,
       now
     );
 
+    // Notify Guardia of new visit registration
+    const guardNotifTitle = 'Nueva visita registrada';
+    const guardNotifText = `Visita: ${resolvedVisitorName} (DNI ${visitorDni.trim()}, Patente: ${cleanPlate}) para el lote de ${residentFullName} el ${date.trim()} a las ${time.trim()}.`;
+
+    db.prepare(`
+      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
+      VALUES (NULL, 'guardia', ?, ?, 0, ?)
+    `).run(
+      guardNotifTitle,
+      guardNotifText,
+      now
+    );
+
+    // En el registro manual no se envía el QR al invitado; en la garita le pedirán el DNI e ingresa
     let waResult = null;
-    if (cleanPhone) {
-      try {
-        waResult = await sendWhatsAppQrPass({
-          phone: cleanPhone,
-          qrCode,
-          visitId: Number(result.lastInsertRowid),
-          visitorName: visitorName.trim(),
-          protocol: req.protocol,
-          reqHost: req.get('host')
-        });
-      } catch (waErr) {
-        console.error('[WhatsApp Dispatcher Error]', waErr);
-      }
-    }
 
     res.status(201).json({
       message: 'Visita registrada con éxito.',
@@ -614,30 +652,56 @@ router.patch('/:id/status', authenticateToken, (req, res) => {
 
       // If marked as Ingresado by security/admin, notify resident (personal host only)
       if (!isOwner) {
+        const notifTitle = '🚗 Visita ingresada al predio';
+        const notifText = `${visit.visitorName} (DNI ${visit.visitorDni || 'S/D'}, Patente ${visit.vehiclePlate || 'Sin vehículo'}) acaba de ingresar por la guardia.`;
+
         db.prepare(`
           INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
           VALUES (?, 'user', ?, ?, 0, ?)
-        `).run(
-          visit.userId,
-          'Visita ingresada al predio',
-          `${visit.visitorName} (DNI ${visit.visitorDni}, Patente ${visit.vehiclePlate || 'Sin vehículo'}) acaba de ingresar por la guardia.`,
-          now
-        );
+        `).run(visit.userId, notifTitle, notifText, now);
+
+        // Alert resident owner directly on WhatsApp
+        try {
+          const hostUser = db.prepare('SELECT telefono, nombre, apellido FROM users WHERE id = ?').get(visit.userId);
+          if (hostUser && hostUser.telefono) {
+            const guardSender = req.user ? `${req.user.nombre} ${req.user.apellido} (Guardia)` : 'Guardia de Acceso';
+            sendWhatsAppTextMessage({
+              phone: hostUser.telefono,
+              title: notifTitle,
+              message: notifText,
+              senderName: guardSender,
+              recipientName: `${hostUser.nombre} ${hostUser.apellido}`
+            }).catch(waErr => console.error('[WhatsApp Visit Entry Alert Error]', waErr));
+          }
+        } catch (e) {}
       }
     } else if (status === 'Egresado') {
       db.prepare('UPDATE visits SET status = ?, exitAt = ? WHERE id = ?').run(status, now, visitId);
 
       // If marked as Egresado by security/admin, notify resident (personal host only)
       if (!isOwner) {
+        const exitTitle = 'Visita egresada del predio';
+        const exitText = `${visit.visitorName} (Patente ${visit.vehiclePlate || 'Sin vehículo'}) ha salido del predio por la guardia.`;
+
         db.prepare(`
           INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
           VALUES (?, 'user', ?, ?, 0, ?)
-        `).run(
-          visit.userId,
-          'Visita egresada del predio',
-          `${visit.visitorName} (Patente ${visit.vehiclePlate || 'Sin vehículo'}) ha salido del predio por la guardia.`,
-          now
-        );
+        `).run(visit.userId, exitTitle, exitText, now);
+
+        // Alert resident owner directly on WhatsApp
+        try {
+          const hostUser = db.prepare('SELECT telefono, nombre, apellido FROM users WHERE id = ?').get(visit.userId);
+          if (hostUser && hostUser.telefono) {
+            const guardSender = req.user ? `${req.user.nombre} ${req.user.apellido} (Guardia)` : 'Guardia de Acceso';
+            sendWhatsAppTextMessage({
+              phone: hostUser.telefono,
+              title: exitTitle,
+              message: exitText,
+              senderName: guardSender,
+              recipientName: `${hostUser.nombre} ${hostUser.apellido}`
+            }).catch(waErr => console.error('[WhatsApp Visit Exit Alert Error]', waErr));
+          }
+        } catch (e) {}
       }
     } else {
       db.prepare('UPDATE visits SET status = ? WHERE id = ?').run(status, visitId);

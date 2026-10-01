@@ -11,6 +11,12 @@ const {
   sendTestWhatsAppMessage,
   normalizeWhatsAppNumber
 } = require('../whatsapp');
+const {
+  connectBaileys,
+  disconnectBaileys,
+  getBaileysStatus
+} = require('../baileys');
+const { notify } = require('../notifier');
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -161,19 +167,18 @@ router.post('/users', async (req, res) => {
 
     const newUserId = Number(result.lastInsertRowid);
 
-    // Initial welcome notification (personal)
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, ?, ?, ?, 0, ?)
-    `).run(
-      newUserId,
-      isGuard ? 'guardia' : 'user',
-      isGuard ? '¡Bienvenido a la Guardia!' : '¡Bienvenido a Rancho Doble S!',
-      isGuard
+    // Initial welcome notification (personal & WhatsApp if user)
+    const adminSender = `${req.user.nombre} ${req.user.apellido} (Administración)`;
+    notify({
+      userId: newUserId,
+      targetRole: isGuard ? 'guardia' : 'user',
+      title: isGuard ? '¡Bienvenido a la Guardia!' : '¡Bienvenido a Rancho Doble S!',
+      text: isGuard
         ? 'Tu cuenta de guardia ha sido creada por la administración. Podés acceder con tu usuario para control de acceso en garita.'
         : 'Tu cuenta de propietario ha sido creada por la administración. Podés acceder con tu usuario o email para gestionar expensas, visitas y reservas.',
-      now
-    );
+      senderId: req.user.id,
+      senderName: adminSender
+    }).catch(e => console.error('[Admin Create User Notify Error]', e));
 
     // Log admin activity
     logActivity(
@@ -337,17 +342,16 @@ router.patch('/users/:id/approve', (req, res) => {
       WHERE id = ?
     `).run(newLote, newManzana, newUsername, userId);
 
-    // Notify user (personal)
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, 'user', ?, ?, 0, ?)
-    `).run(
+    // Notify user (personal in-app and WhatsApp)
+    const adminSender = `${req.user.nombre} ${req.user.apellido} (Administración)`;
+    notify({
       userId,
-      '¡Cuenta aprobada!',
-      `Tu cuenta ha sido aprobada por la administración. Tu usuario de acceso es ${newUsername || user.username}. Ya podés ingresar al portal.`,
-      now
-    );
+      targetRole: 'user',
+      title: '✅ ¡Cuenta aprobada!',
+      text: `Tu cuenta ha sido aprobada por la administración. Tu usuario de acceso es "${newUsername || user.username}". Ya podés ingresar al portal de Rancho Doble S.`,
+      senderId: req.user.id,
+      senderName: adminSender
+    }).catch(e => console.error('[Admin Approve User Notify Error]', e));
 
     res.json({ message: `Usuario ${user.nombre} ${user.apellido} (${newUsername || user.username || ''}) aprobado con éxito.` });
   } catch (error) {
@@ -543,6 +547,7 @@ router.get('/settings', (req, res) => {
         normalizedPhone: normalizeWhatsAppNumber(waCreds.officialPhone),
         provider: waCreds.provider,
         configured: waCreds.configured,
+        baileys: waStatus.baileys,
         hasToken: Boolean(waCreds.meta.token),
         phoneId: waCreds.meta.phoneId || '',
         apiUrl: waCreds.evolution.url || '',
@@ -690,6 +695,39 @@ router.post('/settings/test-whatsapp', async (req, res) => {
   } catch (error) {
     console.error('[Admin Test WhatsApp Error]', error);
     res.status(500).json({ error: error.message || 'Error al ejecutar prueba de WhatsApp.' });
+  }
+});
+
+// GET /api/admin/whatsapp/baileys/status
+router.get('/whatsapp/baileys/status', (req, res) => {
+  try {
+    const status = getBaileysStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('[Admin Baileys Status Error]', error);
+    res.status(500).json({ error: 'Error al consultar estado de WhatsApp Baileys.' });
+  }
+});
+
+// POST /api/admin/whatsapp/baileys/connect
+router.post('/whatsapp/baileys/connect', async (req, res) => {
+  try {
+    const result = await connectBaileys();
+    res.json(result);
+  } catch (error) {
+    console.error('[Admin Baileys Connect Error]', error);
+    res.status(500).json({ error: error.message || 'Error al iniciar conexión de Baileys.' });
+  }
+});
+
+// POST /api/admin/whatsapp/baileys/disconnect
+router.post('/whatsapp/baileys/disconnect', async (req, res) => {
+  try {
+    const result = await disconnectBaileys();
+    res.json(result);
+  } catch (error) {
+    console.error('[Admin Baileys Disconnect Error]', error);
+    res.status(500).json({ error: error.message || 'Error al desconectar WhatsApp Baileys.' });
   }
 });
 

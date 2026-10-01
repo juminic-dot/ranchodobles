@@ -80,7 +80,9 @@ const state = {
   activeAdminTab: 'vecinos',
   activeVecinosSubtab: 'activos',
   activeGuardAdminSubtab: 'accesos',
+  guardActiveTab: 'plates',
   guardVisits: [],
+
   guardVisitsFilter: 'all',
   guardPlateQuery: '',
   guardActivityLogs: [],
@@ -157,7 +159,8 @@ const visitTimeField = document.getElementById('visitTimeField');
 const userVisitsList = document.getElementById('userVisitsList');
 const openWhatsAppInviteBtn = document.getElementById('openWhatsAppInviteBtn');
 const copyInviteLinkWhatsappBtn = document.getElementById('copyInviteLinkWhatsappBtn');
-const toggleManualVisitFormBtn = document.getElementById('toggleManualVisitFormBtn');
+const openManualVisitBtn = document.getElementById('openManualVisitBtn') || document.getElementById('toggleManualVisitFormBtn');
+const toggleManualVisitFormBtn = openManualVisitBtn;
 const viewQrModal = document.getElementById('viewQrModal');
 const closeViewQrModal = document.getElementById('closeViewQrModal');
 
@@ -218,9 +221,14 @@ const guardShiftChangeBtn = document.getElementById('guardShiftChangeBtn');
 const guardVehiclesInsideBadge = document.getElementById('guardVehiclesInsideBadge');
 const guardNotifBadge = document.getElementById('guardNotifBadge');
 const guardVisitsCountBadge = document.getElementById('guardVisitsCountBadge');
+const guardPlateSearchBlock = document.getElementById('guardPlateSearchBlock');
 const guardPlateSearchInput = document.getElementById('guardPlateSearchInput');
 const guardVisitsList = document.getElementById('guardVisitsList');
 const refreshGuardVisitsBtn = document.getElementById('refreshGuardVisitsBtn');
+const guardPlateNoticesIndicator = document.getElementById('guardPlateNoticesIndicator');
+const guardTabVehiclesBadge = document.getElementById('guardTabVehiclesBadge');
+const guardTabNoticesBadge = document.getElementById('guardTabNoticesBadge');
+
 const guardLogsCountBadge = document.getElementById('guardLogsCountBadge');
 const refreshGuardLogsBtn = document.getElementById('refreshGuardLogsBtn');
 const guardActivityLogsList = document.getElementById('guardActivityLogsList');
@@ -1065,6 +1073,14 @@ async function loadNotifications(isPolling = false) {
         // Must be unread and not previously alerted
         if (n.read || prevIds.has(n.id)) return false;
 
+        // Community broadcasts (targetRole === 'all') must alert all users
+        if (n.targetRole === 'all') {
+          if (n.senderId && Number(n.senderId) === Number(state.authenticatedUser?.id)) {
+            return false; // Already alerted locally when emitted
+          }
+          return true;
+        }
+
         // Never alert the user if they were the sender of the notification
         if (n.senderId && Number(n.senderId) === Number(state.authenticatedUser?.id)) {
           return false;
@@ -1080,6 +1096,7 @@ async function loadNotifications(isPolling = false) {
             return false;
           }
         }
+
 
         // If current user is guardia:
         // Do NOT alert guard for messages sent to residents or notices originating from guardia
@@ -1365,7 +1382,7 @@ async function openWhatsAppInvite() {
     showToast('Generando enlace para WhatsApp...');
     const inviteUrl = await getInvitationUrl();
     const residentName = `${state.authenticatedUser?.nombre || ''} ${state.authenticatedUser?.apellido || ''}`.trim();
-    const message = `👋 *Rancho Doble S — Invitación de Acceso*\n\nHola! Te envío la invitación para ingresar al predio (de parte de *${residentName}*).\n\n🎟️ *TOCÁ AQUÍ PARA TU PASE QR:*\n${inviteUrl}\n\n_Completás tus datos (nombre, DNI y patente) y ya tenés el pase para la guardia._`;
+    const message = `👋 *Rancho Doble S — Invitación de Acceso*\n\n¡Hola! Te envío la invitación para ingresar al predio (de parte de *${residentName}*).\n\n🎟️ *TOCÁ AQUÍ PARA TU REGISTRO:*\n${inviteUrl}\n\n_Completás tus datos y te enviaremos el código QR para el ingreso al predio por WhatsApp._`;
 
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
@@ -1412,28 +1429,14 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-function toggleManualVisitForm() {
-  if (!visitForm || !toggleManualVisitFormBtn) return;
-  const isHidden = visitForm.style.display === 'none' || !visitForm.style.display;
-  if (isHidden) {
-    visitForm.style.display = 'grid';
-    toggleManualVisitFormBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
-        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-      </svg>
-      Ocultar formulario
-    `;
-    visitForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    const firstInput = visitForm.querySelector('input[name="visitName"]');
-    if (firstInput) firstInput.focus();
-  } else {
-    visitForm.style.display = 'none';
-    toggleManualVisitFormBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
-        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-      </svg>
-      Registrar visita manualmente
-    `;
+async function openManualVisitWindow() {
+  try {
+    showToast('Abriendo formulario de registro...');
+    const inviteUrl = await getInvitationUrl();
+    const manualUrl = `${inviteUrl}&manual=1`;
+    window.open(manualUrl, '_blank');
+  } catch (error) {
+    showToast('Error al abrir el formulario: ' + error.message);
   }
 }
 
@@ -1573,20 +1576,20 @@ function renderUserVisits() {
 
       return `
       <li class="visit-item">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-          <div>
+        <div class="visit-item-top">
+          <div class="visit-item-who">
             <strong>${escapeHTML(item.visitorName)}</strong>
             <small>DNI ${escapeHTML(item.visitorDni)} · Patente: <strong>${escapeHTML(item.vehiclePlate || 'Sin vehículo')}</strong></small>
           </div>
-          <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center;">
+          <div class="visit-actions">
             <button type="button" class="btn-inline-action view-visit-qr-btn" data-id="${item.id}" title="Ver Pase con Código QR">📱 Ver QR</button>
             ${actionBadgeOrBtn}
           </div>
         </div>
         <div class="visit-meta">
           <span>📅 ${escapeHTML(item.date)} · ${escapeHTML(item.time)} hs</span>
-          ${item.entryAt ? `<span style="font-size: 0.76rem; color: #a3e6cb;">Ingreso: ${escapeHTML(new Date(item.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
-          ${item.exitAt ? `<span style="font-size: 0.76rem; color: var(--muted);">Egreso: ${escapeHTML(new Date(item.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
+          ${item.entryAt ? `<span class="visit-entry-time">Ingreso: ${escapeHTML(new Date(item.entryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
+          ${item.exitAt ? `<span class="visit-exit-time">Egreso: ${escapeHTML(new Date(item.exitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} hs</span>` : ''}
           <em class="visit-status ${isInside ? 'confirmed' : hasExited ? 'neutral' : isCancelled ? 'danger' : 'pending'}">${escapeHTML(item.status)}</em>
         </div>
       </li>
@@ -1618,41 +1621,69 @@ function renderUserVisits() {
 async function handleVisitSubmit(event) {
   event.preventDefault();
   const formData = new FormData(visitForm);
-  const visitorName = String(formData.get('visitName') || '').trim();
+  const apellido = String(formData.get('visitApellido') || '').trim();
+  const nombre = String(formData.get('visitNombre') || '').trim();
+  let visitorName = String(formData.get('visitName') || '').trim();
+  if (!visitorName && (nombre || apellido)) {
+    visitorName = `${nombre} ${apellido}`.trim();
+  }
   const visitorDni = String(formData.get('visitDni') || '').trim();
   const vehiclePlate = String(formData.get('visitPlate') || '').trim() || 'Sin vehículo';
   const visitorPhone = String(formData.get('visitPhone') || '').trim();
+  const guestEmail = String(formData.get('visitEmail') || '').trim();
   const date = String(formData.get('visitDate') || '').trim();
   const time = String(formData.get('visitTime') || '').trim();
 
-  if (!visitorName || !visitorDni || !date || !time) {
-    showToast('Completá todos los campos de la visita.');
+  if ((!visitorName && (!nombre || !apellido)) || !visitorDni || !date || !time) {
+    showToast('Por favor completá apellido, nombre, DNI, fecha y horario.');
     return;
   }
 
+  const submitBtn = document.getElementById('submitVisitBtn');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando registro...';
+  }
+
   try {
-    const res = await API.visits.create({ visitorName, visitorDni, vehiclePlate, visitorPhone, date, time });
-    showToast('Visita registrada con éxito. Pase QR generado.');
+    const res = await API.visits.create({
+      visitorName,
+      apellido,
+      nombre,
+      visitorDni,
+      vehiclePlate,
+      visitorPhone,
+      guestEmail,
+      date,
+      time
+    });
+
+    showToast('Ya registramos tu visita, muchas gracias');
+
+    const successMsg = document.getElementById('manualVisitSuccessMsg');
+    if (successMsg) {
+      successMsg.style.display = 'block';
+      setTimeout(() => {
+        if (successMsg) successMsg.style.display = 'none';
+      }, 7000);
+    }
+
     visitForm.reset();
     if (visitDateField) visitDateField.value = getTodayISO();
-    loadUserVisits();
-    loadNotifications();
-
-    if (res && res.qrCode) {
-      showQrPassModal({
-        id: res.visit?.id,
-        visitorName,
-        visitorDni,
-        vehiclePlate,
-        visitorPhone,
-        date,
-        time,
-        status: 'Confirmada',
-        qrCode: res.qrCode
-      });
+    if (visitTimeField) {
+      const now = new Date();
+      visitTimeField.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
+
+    await loadUserVisits();
+    await loadNotifications();
   } catch (error) {
-    showToast(error.message);
+    showToast(error.message || 'Error al registrar la visita.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar Registro';
+    }
   }
 }
 
@@ -2478,18 +2509,18 @@ function renderAdminPanel() {
           }
 
           return `
-            <div class="active-user-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; padding: 0.85rem 1rem; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07);">
-              <div style="display: flex; align-items: center; gap: 0.85rem; min-width: 260px;">
-                <div style="width: 42px; height: 42px; border-radius: 50%; background: ${isAdmin ? 'rgba(247, 199, 109, 0.18)' : 'rgba(105, 210, 166, 0.15)'}; color: ${isAdmin ? 'var(--gold)' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; border: 1px solid ${isAdmin ? 'rgba(247, 199, 109, 0.3)' : 'rgba(105, 210, 166, 0.3)'};">
+            <div class="active-user-card">
+              <div class="active-user-info">
+                <div class="active-user-avatar" style="width: 42px; height: 42px; border-radius: 50%; background: ${isAdmin ? 'rgba(247, 199, 109, 0.18)' : 'rgba(105, 210, 166, 0.15)'}; color: ${isAdmin ? 'var(--gold)' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; border: 1px solid ${isAdmin ? 'rgba(247, 199, 109, 0.3)' : 'rgba(105, 210, 166, 0.3)'};">
                   ${initials}
                 </div>
-                <div>
-                  <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <div class="active-user-text">
+                  <div class="active-user-title-row">
                     <strong style="font-size: 0.95rem; color: #fff;">${escapeHTML(user.nombre)} ${escapeHTML(user.apellido)}</strong>
                     ${lotBadge}
                     ${roleBadge}
                   </div>
-                  <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem;">
+                  <div class="active-user-meta-row">
                     <span>${usernameDisplay}🪪 ${escapeHTML(user.tipoDocumento || 'DNI')}: ${escapeHTML(user.numeroDocumento)}</span>
                     <span>📞 ${escapeHTML(user.telefono)}</span>
                     <span>📧 ${escapeHTML(user.email)}</span>
@@ -2497,7 +2528,7 @@ function renderAdminPanel() {
                 </div>
               </div>
 
-              <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+              <div class="active-user-actions">
                 ${actionsHtml}
               </div>
             </div>
@@ -2786,44 +2817,44 @@ function renderAdminPanel() {
           return `
             <div class="guard-notice-item-card ${cardStatusClass}">
               <div class="notice-item-header">
-                <div>
-                  <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                    <span style="font-size: 1.25rem;">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
-                    <strong style="font-size: 1.05rem; color: #fff;">${escapeHTML(visit.visitorName)}</strong>
+                <div class="notice-item-who">
+                  <div class="notice-item-who-title">
+                    <span class="notice-item-icon">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
+                    <strong class="notice-item-visitor-name">${escapeHTML(visit.visitorName)}</strong>
                     ${statusBadge}
                   </div>
-                  <div style="font-size: 0.88rem; color: #fff; margin-top: 0.25rem;">
-                    🏡 <strong>Destino: ${escapeHTML(ownerFullName)}</strong> <span style="color: var(--gold);">${escapeHTML(loteManzanaDisplay)}</span>
+                  <div class="notice-item-destination">
+                    🏡 <strong>Destino: ${escapeHTML(ownerFullName)}</strong> <span class="notice-item-lot">${escapeHTML(loteManzanaDisplay)}</span>
                   </div>
                 </div>
                 <span class="notice-item-meta">📅 ${escapeHTML(visitDay)}</span>
               </div>
 
-              <div style="font-size: 0.84rem; color: var(--gold); margin-bottom: 0.25rem;">
-                🚘 <strong>Vehículo / Patente:</strong> <span style="font-family: monospace; font-size: 0.88rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(247, 199, 109, 0.15); border: 1px solid rgba(247, 199, 109, 0.3); color: var(--gold);">${plateFormatted}</span>
+              <div class="notice-item-plate-row">
+                🚘 <strong>Vehículo / Patente:</strong> <span class="notice-item-plate-chip">${plateFormatted}</span>
                 · 🪪 <strong>DNI:</strong> ${escapeHTML(visit.visitorDni || 'S/D')}
               </div>
 
               <div class="notice-item-details">
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; font-size: 0.86rem;">
+                <div class="notice-item-times-row">
                   <div>🟢 <strong>Ingreso:</strong> <span style="color: ${entryColor}; font-weight: 600;">${entryDisplay}</span></div>
                   <div>🚪 <strong>Egreso:</strong> <span style="color: ${exitColor}; font-weight: 600;">${exitDisplay}</span></div>
                 </div>
-                ${visit.notes ? `<div style="margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.82rem; color: var(--muted);">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
+                ${visit.notes ? `<div class="notice-item-notes">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
               </div>
 
-              <div class="guard-visit-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem;">
+              <div class="guard-visit-actions">
                 ${isExpected ? `
-                  <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                  <button type="button" class="btn-inline-action success mark-ingreso-btn" data-id="${visit.id}">
                     🟢 Marcar Ingreso
                   </button>
                 ` : ''}
                 ${isInside ? `
-                  <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+                  <button type="button" class="btn-inline-action danger mark-egreso-btn" data-id="${visit.id}" title="Registrar salida">
                     🚪 Marcar Salida
                   </button>
                 ` : ''}
-                <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 600;">
+                <button type="button" class="btn-inline-action admin-view-visit-qr-btn" data-id="${visit.id}" title="Ver Pase QR">
                   📱 Ver QR
                 </button>
               </div>
@@ -3134,15 +3165,15 @@ function renderAdminExpensesList() {
   adminExpensesList.innerHTML = expenses
     .map((exp) => `
       <li class="visit-item">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-          <div>
+        <div class="visit-item-top">
+          <div class="visit-item-who">
             <strong>${escapeHTML(exp.nombre)} ${escapeHTML(exp.apellido)} <small>(DNI ${escapeHTML(exp.numeroDocumento)}${exp.lote ? ` · Lote ${escapeHTML(exp.lote)} Mz ${escapeHTML(exp.manzana || '-')}` : ''})</small></strong>
             <p style="margin: 0.2rem 0; font-size: 0.95rem;">
               <strong>${escapeHTML(exp.period)}</strong> — $ ${Number(exp.amount).toLocaleString('es-AR')}
             </p>
             <small>${exp.concept ? `📌 ${escapeHTML(exp.concept)} · ` : ''}${exp.paymentReference ? `📄 Ref: <strong>${escapeHTML(exp.paymentReference)}</strong> · ` : ''}Vencimiento: ${escapeHTML(exp.dueDate)}</small>
           </div>
-          <div class="visit-actions" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+          <div class="visit-actions">
             ${exp.receiptPath ? `
               <button type="button" class="btn-inline-action view-receipt-btn admin-view-receipt-btn" data-id="${exp.id}" title="Ver comprobante de pago digital">
                 <span>📎</span> Ver Comprobante
@@ -4001,9 +4032,22 @@ async function handleBroadcastAlert(e) {
     const res = await API.notifications.broadcast({ title, text });
     showToast(res.message || 'Alerta comunitaria emitida con éxito.');
     closeBroadcastAlertModalFn();
+
+    // Audible chime, floating in-app banner and device vibration for immediate feedback
+    playNotificationSound();
+    showIncomingNotificationBanner({
+      title: `🚨 Alerta Comunitaria: ${title}`,
+      text
+    });
+    showDeviceNotification({
+      title: `🚨 Alerta Comunitaria: ${title}`,
+      text
+    });
+
     await loadAdminData();
-    loadNotifications();
+    await loadNotifications();
   } catch (err) {
+
     showToast(err.message || 'Error al emitir alerta comunitaria.');
   } finally {
     if (submitBroadcastAlertBtn) {
@@ -4556,8 +4600,52 @@ function renderScannedVisitResult(visit) {
 
 // ----------------- GUARD PANEL FUNCTIONS (@guardia) ----------------- //
 
+function setGuardTab(tabName = 'plates', shouldScroll = false) {
+  state.guardActiveTab = tabName;
+  const isPlates = tabName === 'plates';
+
+  // Toggle active class on main cards in the grid
+  if (guardSearchPlateBtn) {
+    guardSearchPlateBtn.classList.toggle('active', isPlates);
+  }
+  if (guardResidentNoticesBtn) {
+    guardResidentNoticesBtn.classList.toggle('active', !isPlates);
+  }
+
+  // Toggle subpanels visibility so each is seen independently without scrolling
+  const plateBlock = guardPlateSearchBlock || document.getElementById('guardPlateSearchBlock');
+  const noticesBlock = guardResidentNoticesBlock || document.getElementById('guardResidentNoticesBlock');
+
+  if (plateBlock) {
+    plateBlock.style.display = isPlates ? 'block' : 'none';
+  }
+  if (noticesBlock) {
+    noticesBlock.style.display = isPlates ? 'none' : 'block';
+  }
+
+  // Sync active class on view tab buttons
+  document.querySelectorAll('.guard-view-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.guardTab === tabName);
+  });
+
+  if (isPlates) {
+    if (shouldScroll && plateBlock) {
+      plateBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (guardPlateSearchInput) {
+      guardPlateSearchInput.focus();
+    }
+  } else {
+    loadGuardResidentNotices();
+    if (shouldScroll && noticesBlock) {
+      noticesBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+}
+
 async function loadGuardData() {
   if (state.authenticatedUser?.role !== 'guardia') return;
+  setGuardTab(state.guardActiveTab || 'plates', false);
   await Promise.all([
     loadGuardVisits(),
     loadGuardResidentNotices(),
@@ -4583,6 +4671,10 @@ function renderGuardVisits() {
   if (guardVehiclesInsideBadge) {
     guardVehiclesInsideBadge.textContent = `${insideCount} en predio`;
   }
+  if (guardTabVehiclesBadge) {
+    guardTabVehiclesBadge.textContent = insideCount;
+  }
+
 
   // Filter by status tab
   const filter = state.guardVisitsFilter || 'all';
@@ -4703,45 +4795,45 @@ function renderGuardVisits() {
       return `
         <div class="guard-notice-item-card ${cardStatusClass}">
           <div class="notice-item-header">
-            <div>
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span style="font-size: 1.25rem;">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
-                <strong style="font-size: 1.05rem; color: #fff;">${escapeHTML(visit.visitorName)}</strong>
+            <div class="notice-item-who">
+              <div class="notice-item-who-title">
+                <span class="notice-item-icon">${visit.vehiclePlate ? '🚗' : '🚶'}</span>
+                <strong class="notice-item-visitor-name">${escapeHTML(visit.visitorName)}</strong>
                 ${statusBadge}
               </div>
-              <div style="font-size: 0.88rem; color: #fff; margin-top: 0.25rem;">
-                🏡 <strong>Destino: ${escapeHTML(hostFullName)}</strong> <span style="color: var(--gold);">${escapeHTML(hostLocation)}</span>
+              <div class="notice-item-destination">
+                🏡 <strong>Destino: ${escapeHTML(hostFullName)}</strong> <span class="notice-item-lot">${escapeHTML(hostLocation)}</span>
               </div>
             </div>
             <span class="notice-item-meta">📅 ${escapeHTML(visitDay)}</span>
           </div>
 
-          <div style="font-size: 0.84rem; color: var(--gold); margin-bottom: 0.25rem;">
-            🚘 <strong>Vehículo / Patente:</strong> <span style="font-family: monospace; font-size: 0.88rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(247, 199, 109, 0.15); border: 1px solid rgba(247, 199, 109, 0.3); color: var(--gold);">${plateFormatted}</span>
+          <div class="notice-item-plate-row">
+            🚘 <strong>Vehículo / Patente:</strong> <span class="notice-item-plate-chip">${plateFormatted}</span>
             · 🪪 <strong>DNI:</strong> ${escapeHTML(visit.visitorDni || 'S/D')}
           </div>
 
           <div class="notice-item-details">
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; font-size: 0.86rem;">
+            <div class="notice-item-times-row">
               <div>🟢 <strong>Ingreso:</strong> <span style="color: ${entryColor}; font-weight: 600;">${entryDisplay}</span></div>
               <div>🚪 <strong>Egreso:</strong> <span style="color: ${exitColor}; font-weight: 600;">${exitDisplay}</span></div>
             </div>
-            ${visit.notes ? `<div style="margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.82rem; color: var(--muted);">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
+            ${visit.notes ? `<div class="notice-item-notes">📝 <em>${escapeHTML(visit.notes)}</em></div>` : ''}
           </div>
 
-          <div class="guard-visit-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem;">
+          <div class="guard-visit-actions">
             ${isExpected ? `
-              <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
+              <button type="button" class="btn-inline-action success guard-confirm-entry-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}">
                 🟢 Confirmar Ingreso
               </button>
             ` : ''}
             ${isInside ? `
-              <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 700;">
-                🚪 Confirmar Egreso
+              <button type="button" class="btn-inline-action danger guard-confirm-exit-btn" data-id="${visit.id}" data-name="${escapeHTML(visit.visitorName)}" data-plate="${plateFormatted}" title="Confirmar salida">
+                🚪 Confirmar Salida
               </button>
             ` : ''}
-            <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver código QR del pase" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; font-weight: 600;">
-              📱 Ver Pase QR
+            <button type="button" class="btn-inline-action guard-view-qr-btn" data-id="${visit.id}" title="Ver Pase QR">
+              📱 Ver QR
             </button>
           </div>
         </div>
@@ -5008,6 +5100,13 @@ function renderGuardResidentNotices() {
   if (guardResidentNoticesBadge) {
     guardResidentNoticesBadge.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
   }
+  if (guardTabNoticesBadge) {
+    guardTabNoticesBadge.textContent = pendingCount;
+  }
+  if (guardPlateNoticesIndicator) {
+    guardPlateNoticesIndicator.textContent = pendingCount;
+  }
+
 
   let filtered = notices;
   const filter = state.guardNoticeFilter || 'all';
@@ -5430,11 +5529,15 @@ function renderAdminSettings() {
   const cfgWhatsAppPhone = document.getElementById('cfgWhatsAppPhone');
   if (cfgWhatsAppPhone) cfgWhatsAppPhone.value = wa.phone || '';
 
-  const waProvider = wa.provider || 'meta_cloud';
+  const waProvider = wa.provider || 'baileys';
   const waRadio = document.querySelector(`input[name="whatsappProvider"][value="${waProvider}"]`);
   if (waRadio) {
     waRadio.checked = true;
     updateWhatsAppProviderBoxes(waProvider);
+  }
+
+  if (wa.baileys) {
+    updateBaileysUI(wa.baileys);
   }
 
   const cfgWaPhoneId = document.getElementById('cfgWaPhoneId');
@@ -5479,6 +5582,111 @@ function renderAdminSettings() {
   }
 }
 
+let baileysPollInterval = null;
+
+function updateBaileysUI(data) {
+  if (!data) return;
+  const statusBadge = document.getElementById('baileysStatusBadge');
+  const statusDot = document.getElementById('baileysStatusDot');
+  const statusText = document.getElementById('baileysStatusText');
+  const connectedBox = document.getElementById('baileysConnectedBox');
+  const connectedPhoneNum = document.getElementById('baileysConnectedPhoneNum');
+  const qrBox = document.getElementById('baileysQrBox');
+  const qrImage = document.getElementById('baileysQrImage');
+  const disconnectedBox = document.getElementById('baileysDisconnectedBox');
+
+  const isConnected = data.isConnected || data.status === 'connected';
+  const isQrReady = data.status === 'qr_ready' && data.qr;
+  const isConnecting = data.status === 'connecting';
+
+  if (isConnected) {
+    if (statusBadge) {
+      statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusBadge.style.color = '#34d399';
+      statusBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+    }
+    if (statusDot) statusDot.style.background = '#10b981';
+    if (statusText) statusText.textContent = '🟢 Conectado';
+
+    if (connectedBox) connectedBox.style.display = 'block';
+    if (connectedPhoneNum) connectedPhoneNum.textContent = data.phone ? `+${data.phone}` : 'Predio / Garita';
+    if (qrBox) qrBox.style.display = 'none';
+    if (disconnectedBox) disconnectedBox.style.display = 'none';
+
+    stopBaileysPolling();
+  } else if (isQrReady) {
+    if (statusBadge) {
+      statusBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+      statusBadge.style.color = '#fbbf24';
+      statusBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+    }
+    if (statusDot) statusDot.style.background = '#f59e0b';
+    if (statusText) statusText.textContent = '🟡 Esperando escaneo de QR...';
+
+    if (connectedBox) connectedBox.style.display = 'none';
+    if (qrBox) qrBox.style.display = 'block';
+    if (qrImage) qrImage.src = data.qr;
+    if (disconnectedBox) disconnectedBox.style.display = 'none';
+
+    startBaileysPolling();
+  } else if (isConnecting) {
+    if (statusBadge) {
+      statusBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+      statusBadge.style.color = '#60a5fa';
+      statusBadge.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+    }
+    if (statusDot) statusDot.style.background = '#3b82f6';
+    if (statusText) statusText.textContent = 'Iniciando conexión...';
+
+    if (connectedBox) connectedBox.style.display = 'none';
+    if (qrBox) qrBox.style.display = 'none';
+    if (disconnectedBox) disconnectedBox.style.display = 'block';
+
+    startBaileysPolling();
+  } else {
+    if (statusBadge) {
+      statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusBadge.style.color = '#f87171';
+      statusBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    }
+    if (statusDot) statusDot.style.background = '#ef4444';
+    if (statusText) statusText.textContent = 'Desconectado';
+
+    if (connectedBox) connectedBox.style.display = 'none';
+    if (qrBox) qrBox.style.display = 'none';
+    if (disconnectedBox) disconnectedBox.style.display = 'block';
+
+    stopBaileysPolling();
+  }
+}
+
+async function refreshBaileysStatus() {
+  try {
+    const status = await API.admin.getBaileysStatus();
+    updateBaileysUI(status);
+    return status;
+  } catch (e) {
+    console.warn('Error fetching Baileys status:', e);
+  }
+}
+
+function startBaileysPolling() {
+  if (baileysPollInterval) return;
+  baileysPollInterval = setInterval(async () => {
+    const status = await refreshBaileysStatus();
+    if (status && status.isConnected) {
+      stopBaileysPolling();
+    }
+  }, 2500);
+}
+
+function stopBaileysPolling() {
+  if (baileysPollInterval) {
+    clearInterval(baileysPollInterval);
+    baileysPollInterval = null;
+  }
+}
+
 function updateEmailProviderBoxes(provider) {
   document.querySelectorAll('[data-provider-box]').forEach((box) => {
     const isSelected = box.dataset.providerBox === provider;
@@ -5499,12 +5707,20 @@ function updateWhatsAppProviderBoxes(provider) {
     box.style.borderColor = isSelected ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)';
     box.style.background = isSelected ? 'rgba(105, 210, 166, 0.08)' : 'rgba(255, 255, 255, 0.03)';
   });
+  const baileysFields = document.getElementById('waBaileysFields');
   const metaFields = document.getElementById('waMetaFields');
   const evoFields = document.getElementById('waEvolutionFields');
   const twilioFields = document.getElementById('waTwilioFields');
+  if (baileysFields) baileysFields.style.display = provider === 'baileys' ? 'grid' : 'none';
   if (metaFields) metaFields.style.display = provider === 'meta_cloud' ? 'grid' : 'none';
   if (evoFields) evoFields.style.display = provider === 'evolution_gateway' ? 'grid' : 'none';
   if (twilioFields) twilioFields.style.display = provider === 'twilio' ? 'grid' : 'none';
+
+  if (provider === 'baileys') {
+    refreshBaileysStatus();
+  } else {
+    stopBaileysPolling();
+  }
 }
 
 function setConfigSubtab(subtabName) {
@@ -5693,7 +5909,7 @@ function setupConfigEventListeners() {
       }
       try {
         const phone = document.getElementById('cfgWhatsAppPhone')?.value || '';
-        const provider = document.querySelector('input[name="whatsappProvider"]:checked')?.value || 'meta_cloud';
+        const provider = document.querySelector('input[name="whatsappProvider"]:checked')?.value || 'baileys';
         const phoneId = document.getElementById('cfgWaPhoneId')?.value || '';
         const token = document.getElementById('cfgWaToken')?.value || '';
         const apiUrl = document.getElementById('cfgWaApiUrl')?.value || '';
@@ -5728,6 +5944,77 @@ function setupConfigEventListeners() {
           saveBtn.disabled = false;
           saveBtn.textContent = '💾 Guardar Configuración de WhatsApp';
         }
+      }
+    });
+  }
+
+  // Baileys Connect Button
+  const baileysConnectBtn = document.getElementById('baileysConnectBtn');
+  if (baileysConnectBtn) {
+    baileysConnectBtn.addEventListener('click', async () => {
+      baileysConnectBtn.disabled = true;
+      baileysConnectBtn.textContent = 'Iniciando conexión...';
+      try {
+        await API.admin.connectBaileys();
+        startBaileysPolling();
+        await refreshBaileysStatus();
+      } catch (err) {
+        showToast(err.message || 'Error al conectar con WhatsApp Baileys.');
+      } finally {
+        baileysConnectBtn.disabled = false;
+        baileysConnectBtn.innerHTML = '<span>🔗</span> Vincular WhatsApp / Generar Código QR';
+      }
+    });
+  }
+
+  // Baileys Refresh QR Button
+  const baileysRefreshQrBtn = document.getElementById('baileysRefreshQrBtn');
+  if (baileysRefreshQrBtn) {
+    baileysRefreshQrBtn.addEventListener('click', async () => {
+      baileysRefreshQrBtn.disabled = true;
+      baileysRefreshQrBtn.textContent = 'Actualizando QR...';
+      try {
+        await API.admin.connectBaileys();
+        await refreshBaileysStatus();
+      } catch (err) {
+        showToast(err.message || 'Error al actualizar código QR.');
+      } finally {
+        baileysRefreshQrBtn.disabled = false;
+        baileysRefreshQrBtn.textContent = '🔄 Actualizar QR';
+      }
+    });
+  }
+
+  // Baileys Cancel Button
+  const baileysCancelConnectBtn = document.getElementById('baileysCancelConnectBtn');
+  if (baileysCancelConnectBtn) {
+    baileysCancelConnectBtn.addEventListener('click', async () => {
+      stopBaileysPolling();
+      try {
+        await API.admin.disconnectBaileys();
+        await refreshBaileysStatus();
+      } catch (e) {}
+    });
+  }
+
+  // Baileys Disconnect Button
+  const baileysDisconnectBtn = document.getElementById('baileysDisconnectBtn');
+  if (baileysDisconnectBtn) {
+    baileysDisconnectBtn.addEventListener('click', async () => {
+      if (!confirm('¿Seguro que deseás desconectar WhatsApp? Los mensajes automáticos a propietarios y visitas se pausarán hasta volver a vincular.')) {
+        return;
+      }
+      baileysDisconnectBtn.disabled = true;
+      baileysDisconnectBtn.textContent = 'Desconectando...';
+      try {
+        await API.admin.disconnectBaileys();
+        showToast('Sesión de WhatsApp desconectada.');
+        await refreshBaileysStatus();
+      } catch (err) {
+        showToast(err.message || 'Error al desconectar WhatsApp.');
+      } finally {
+        baileysDisconnectBtn.disabled = false;
+        baileysDisconnectBtn.textContent = '🔌 Desconectar WhatsApp';
       }
     });
   }
@@ -6198,7 +6485,7 @@ function renderAdminReceivedNotices() {
 
           ${responseBlock}
 
-          <div style="display: flex; justify-content: flex-end; margin-top: 0.4rem;">
+          <div class="notice-item-action-row" style="display: flex; justify-content: flex-end; margin-top: 0.4rem;">
             <button type="button" class="btn-inline-action primary admin-respond-notice-btn" data-notice-id="${notice.id}">
               💬 ${notice.response ? 'Editar Respuesta / Estado' : 'Responder al Propietario'}
             </button>
@@ -6829,14 +7116,10 @@ function attachEventListeners() {
 
   if (guardSearchPlateBtn) {
     guardSearchPlateBtn.addEventListener('click', () => {
-      const plateBlock = document.getElementById('guardPlateSearchBlock');
-      if (plateBlock) plateBlock.scrollIntoView({ behavior: 'smooth' });
-      if (guardPlateSearchInput) {
-        guardPlateSearchInput.focus();
-        guardPlateSearchInput.select();
-      }
+      setGuardTab('plates', true);
     });
   }
+
 
   if (guardNotificationsBtn) {
     guardNotificationsBtn.addEventListener('click', async () => {
@@ -6927,12 +7210,30 @@ function attachEventListeners() {
 
   // Guard Resident Notices Actions
   if (guardResidentNoticesBtn) {
-    guardResidentNoticesBtn.addEventListener('click', async () => {
-      const block = document.getElementById('guardResidentNoticesBlock');
-      if (block) block.scrollIntoView({ behavior: 'smooth' });
-      await loadGuardResidentNotices();
+    guardResidentNoticesBtn.addEventListener('click', () => {
+      setGuardTab('notices', true);
     });
   }
+
+  // Guard View Switcher Tabs and Header Buttons
+  document.querySelectorAll('.guard-view-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setGuardTab(btn.dataset.guardTab, true);
+    });
+  });
+
+  document.querySelectorAll('.guard-switch-to-notices-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setGuardTab('notices', true);
+    });
+  });
+
+  document.querySelectorAll('.guard-switch-to-plates-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setGuardTab('plates', true);
+    });
+  });
+
 
   if (guardNotifyResidentBtn) {
     guardNotifyResidentBtn.addEventListener('click', () => {
@@ -7151,10 +7452,16 @@ function attachEventListeners() {
     });
   });
 
-  // Invitations (WhatsApp) & Manual form toggle
+  // Invitations (WhatsApp) & Manual registration window
   if (openWhatsAppInviteBtn) openWhatsAppInviteBtn.addEventListener('click', openWhatsAppInvite);
   if (copyInviteLinkWhatsappBtn) copyInviteLinkWhatsappBtn.addEventListener('click', () => copyInviteLink(copyInviteLinkWhatsappBtn));
-  if (toggleManualVisitFormBtn) toggleManualVisitFormBtn.addEventListener('click', toggleManualVisitForm);
+  if (openManualVisitBtn) openManualVisitBtn.addEventListener('click', openManualVisitWindow);
+
+  window.addEventListener('focus', () => {
+    if (state.authenticatedUser && state.authenticatedUser.role === 'user') {
+      loadUserVisits();
+    }
+  });
 
   // Admin module buttons navigation (bottom navigation)
   document.querySelectorAll('.admin-nav-btn').forEach((btn) => {

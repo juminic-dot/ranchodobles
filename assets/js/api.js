@@ -363,6 +363,19 @@ const API = {
         body: data
       });
     },
+    getBaileysStatus() {
+      return API.request('/api/admin/whatsapp/baileys/status');
+    },
+    connectBaileys() {
+      return API.request('/api/admin/whatsapp/baileys/connect', {
+        method: 'POST'
+      });
+    },
+    disconnectBaileys() {
+      return API.request('/api/admin/whatsapp/baileys/disconnect', {
+        method: 'POST'
+      });
+    },
     sendEmailToOwners(data) {
       return API.request('/api/admin/send-email', {
         method: 'POST',

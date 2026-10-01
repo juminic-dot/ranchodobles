@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { authenticateToken } = require('../middleware');
+const { notify } = require('../notifier');
 
 const validSlots = [
   '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
@@ -132,27 +133,25 @@ router.post('/', authenticateToken, (req, res) => {
       now
     );
 
-    // Notify resident (personal)
-    db.prepare(`
-      INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-      VALUES (?, 'user', ?, ?, 0, ?)
-    `).run(
-      req.user.id,
-      'Reserva confirmada',
-      `Tu turno de tenis para el ${date} a las ${slot} fue confirmado.`,
-      now
-    );
+    // Notify resident (personal in-app and WhatsApp)
+    notify({
+      userId: req.user.id,
+      targetRole: 'user',
+      title: '🎾 Reserva confirmada',
+      text: `Tu turno de tenis para el ${date} a las ${slot} fue confirmado con éxito.`,
+      senderName: 'Reservas Rancho Doble S'
+    }).catch(e => console.error('[Booking Confirm Notify Error]', e));
 
-    // Notify administration (admin-only operational notice)
+    // Notify administration (admin operational notice)
     if (req.user.role !== 'admin') {
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (NULL, 'admin', ?, ?, 0, ?)
-      `).run(
-        'Nueva reserva de cancha de tenis',
-        `${fullName} reservó la cancha para el ${date} a las ${slot} hs.`,
-        now
-      );
+      notify({
+        targetRole: 'admin',
+        title: 'Nueva reserva de cancha de tenis',
+        text: `${fullName} reservó la cancha para el ${date} a las ${slot} hs.`,
+        senderId: req.user.id,
+        senderName: fullName,
+        sendWhatsApp: false
+      }).catch(e => console.error('[Booking Admin Notify Error]', e));
     }
 
     res.status(201).json({
@@ -199,15 +198,14 @@ router.post('/admin/block', authenticateToken, (req, res) => {
       const existing = db.prepare('SELECT id, userId, userName, isBlocked FROM bookings WHERE date = ? AND slot = ?').get(date, s);
       if (existing) {
         if (existing.userId !== req.user.id && !existing.isBlocked) {
-          db.prepare(`
-            INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-            VALUES (?, 'user', ?, ?, 0, ?)
-          `).run(
-            existing.userId,
-            'Turno de tenis suspendido',
-            `Tu reserva para el ${date} (${s}) fue suspendida por la administración. Motivo: ${fullReason}.`,
-            now
-          );
+          notify({
+            userId: existing.userId,
+            targetRole: 'user',
+            title: '⚠️ Turno de tenis suspendido',
+            text: `Tu reserva para el ${date} (${s}) fue suspendida por la administración. Motivo: ${fullReason}.`,
+            senderId: req.user.id,
+            senderName: 'Administración Rancho Doble S'
+          }).catch(e => console.error('[Booking Suspend Notify Error]', e));
           affectedCount++;
         }
         db.prepare(`
@@ -281,16 +279,14 @@ router.delete('/:id', authenticateToken, (req, res) => {
     if (isAdmin && !isOwner && !booking.isBlocked) {
       const customReason = req.body?.reason || req.query?.reason || '';
       const reasonText = customReason ? ` Motivo: ${customReason}.` : '';
-      const now = new Date().toISOString();
-      db.prepare(`
-        INSERT INTO notifications (userId, targetRole, title, text, read, createdAt)
-        VALUES (?, 'user', ?, ?, 0, ?)
-      `).run(
-        booking.userId,
-        'Reserva cancelada por administración',
-        `Tu reserva para el ${booking.date} (${booking.slot}) fue cancelada por la administración.${reasonText}`,
-        now
-      );
+      notify({
+        userId: booking.userId,
+        targetRole: 'user',
+        title: 'Reserva cancelada por administración',
+        text: `Tu reserva para el ${booking.date} (${booking.slot}) fue cancelada por la administración.${reasonText}`,
+        senderId: req.user.id,
+        senderName: 'Administración Rancho Doble S'
+      }).catch(e => console.error('[Booking Cancel Notify Error]', e));
     }
 
     res.json({ message: `Reserva del ${booking.date} (${booking.slot}) cancelada.` });
